@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
@@ -32,6 +32,7 @@ const PlayerPreview = dynamic(() => import('../../components/editor/PlayerPrevie
 });
 
 export default function EditorPage() {
+    const [theme, setTheme] = useState<'light' | 'dark'>('light');
     const [state, setState] = useState<ProjectState>({
         videoSrc: null,
         videoFile: null,
@@ -42,6 +43,24 @@ export default function EditorPage() {
         videoDuration: 30,
         fps: 30,
     });
+
+    useEffect(() => {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark' || saved === 'light') {
+            setTheme(saved);
+            document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setTheme('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    }, []);
+
+    const toggleTheme = () => {
+        const next = theme === 'light' ? 'dark' : 'light';
+        setTheme(next);
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -174,12 +193,12 @@ export default function EditorPage() {
                         color: 'var(--text-primary)',
                     }}
                 >
-                    <span style={{ fontSize: '22px' }}>🎬</span>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#fff', fontWeight: 800, boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)' }}>M</div>
                     <span style={{ fontSize: '18px', fontWeight: 800 }}>
                         Make<span className="gradient-text">Script</span>
                     </span>
                 </Link>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     {state.subtitles.length > 0 && (
                         <button
                             className="btn-secondary"
@@ -195,6 +214,9 @@ export default function EditorPage() {
                             )}
                         </button>
                     )}
+                    <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
+                        {theme === 'light' ? '🌙' : '☀️'}
+                    </button>
                 </div>
             </header>
 
@@ -239,7 +261,7 @@ export default function EditorPage() {
                             }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
+                                e.currentTarget.style.background = 'var(--accent-light)';
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -251,7 +273,7 @@ export default function EditorPage() {
                                     width: '80px',
                                     height: '80px',
                                     borderRadius: '50%',
-                                    background: 'rgba(99, 102, 241, 0.1)',
+                                    background: 'var(--accent-light)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -330,10 +352,11 @@ export default function EditorPage() {
                             style={{
                                 padding: '12px 16px',
                                 borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(99, 102, 241, 0.08)',
-                                border: '1px solid rgba(99, 102, 241, 0.2)',
+                                background: 'var(--accent-light)',
+                                border: '1px solid var(--accent-primary)',
+                                borderColor: 'rgba(37, 99, 235, 0.25)',
                                 fontSize: '13px',
-                                color: '#a5a6f6',
+                                color: 'var(--accent-primary)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
@@ -413,23 +436,23 @@ export default function EditorPage() {
                                                 borderRadius: 'var(--radius-sm)',
                                                 background:
                                                     state.selectedSegmentId === seg.id
-                                                        ? 'rgba(99, 102, 241, 0.12)'
-                                                        : 'rgba(255, 255, 255, 0.02)',
+                                                        ? 'var(--accent-light)'
+                                                        : 'var(--bg-card)',
                                                 border:
                                                     state.selectedSegmentId === seg.id
-                                                        ? '1px solid rgba(99, 102, 241, 0.4)'
-                                                        : '1px solid transparent',
+                                                        ? '1px solid var(--accent-primary)'
+                                                        : '1px solid var(--border-color)',
                                                 cursor: 'pointer',
                                                 transition: 'all 0.2s',
                                             }}
                                             onMouseEnter={(e) => {
                                                 if (state.selectedSegmentId !== seg.id) {
-                                                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                                                    e.currentTarget.style.background = 'var(--bg-card-hover)';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (state.selectedSegmentId !== seg.id) {
-                                                    e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                                                    e.currentTarget.style.background = 'var(--bg-card)';
                                                 }
                                             }}
                                         >
@@ -483,9 +506,9 @@ export default function EditorPage() {
                                                         gap: '4px',
                                                         padding: '3px 10px',
                                                         borderRadius: '12px',
-                                                        background: 'rgba(99, 102, 241, 0.15)',
+                                                        background: 'var(--accent-light)',
                                                         fontSize: '11px',
-                                                        color: '#a5a6f6',
+                                                        color: 'var(--accent-primary)',
                                                     }}
                                                 >
                                                     {OVERLAY_TEMPLATES.find((t) => t.type === seg.overlay?.type)?.icon}{' '}
@@ -533,7 +556,7 @@ export default function EditorPage() {
                                                         : '1px solid var(--border-color)',
                                                 background:
                                                     selectedSegment.overlay?.type === template.type
-                                                        ? 'rgba(99, 102, 241, 0.1)'
+                                                        ? 'var(--accent-light)'
                                                         : 'var(--bg-secondary)',
                                                 cursor: 'pointer',
                                                 textAlign: 'left',

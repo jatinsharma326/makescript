@@ -5,7 +5,27 @@ import React, { useEffect, useState } from 'react';
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    setMounted(true);
+    // Check for saved or OS preference
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') {
+      setTheme(saved);
+      document.documentElement.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  };
 
   return (
     <div style={{ minHeight: '100vh', overflow: 'hidden' }}>
@@ -21,14 +41,30 @@ export default function LandingPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 40px',
+          padding: '14px 40px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '28px' }}>🎬</span>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'var(--accent-gradient)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              color: '#fff',
+              fontWeight: 800,
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
+            }}
+          >
+            M
+          </div>
           <span
             style={{
-              fontSize: '22px',
+              fontSize: '20px',
               fontWeight: 800,
               letterSpacing: '-0.5px',
             }}
@@ -36,9 +72,14 @@ export default function LandingPage() {
             Make<span className="gradient-text">Script</span>
           </span>
         </div>
-        <Link href="/editor" className="btn-primary" style={{ padding: '10px 24px', fontSize: '14px' }}>
-          Get Started →
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+          <Link href="/editor" className="btn-primary" style={{ padding: '10px 24px', fontSize: '14px' }}>
+            Get Started →
+          </Link>
+        </div>
       </nav>
 
       {/* Hero Section */}
@@ -57,12 +98,12 @@ export default function LandingPage() {
         <div
           style={{
             position: 'absolute',
-            top: '10%',
+            top: '5%',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '600px',
-            height: '600px',
-            background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+            width: '700px',
+            height: '500px',
+            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -75,10 +116,12 @@ export default function LandingPage() {
             gap: '8px',
             padding: '6px 16px',
             borderRadius: '20px',
-            background: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
+            background: 'var(--accent-light)',
+            border: '1px solid var(--accent-primary)',
+            borderColor: 'rgba(37, 99, 235, 0.25)',
             fontSize: '13px',
-            color: '#a5a6f6',
+            color: 'var(--accent-primary)',
+            fontWeight: 500,
             marginBottom: '28px',
           }}
         >
@@ -88,10 +131,10 @@ export default function LandingPage() {
         <h1
           className={mounted ? 'animate-fade-in stagger-1' : ''}
           style={{
-            fontSize: 'clamp(36px, 5vw, 68px)',
+            fontSize: 'clamp(36px, 5vw, 64px)',
             fontWeight: 900,
             lineHeight: 1.1,
-            maxWidth: '800px',
+            maxWidth: '780px',
             letterSpacing: '-2px',
           }}
         >
@@ -105,36 +148,39 @@ export default function LandingPage() {
           style={{
             fontSize: '18px',
             color: 'var(--text-secondary)',
-            maxWidth: '560px',
+            maxWidth: '540px',
             lineHeight: 1.7,
             marginTop: '24px',
           }}
         >
           Upload your video. Get instant transcripts. Select any subtitle and
-          add stunning animated overlays — lower thirds, emoji reactions, highlights
-          — all powered by AI.
+          add stunning animated overlays — all powered by AI.
         </p>
 
         <div
           className={mounted ? 'animate-fade-in stagger-3' : ''}
-          style={{ display: 'flex', gap: '16px', marginTop: '40px' }}
+          style={{ display: 'flex', gap: '12px', marginTop: '36px' }}
         >
-          <Link href="/editor" className="btn-primary" style={{ fontSize: '18px', padding: '16px 36px' }}>
+          <Link href="/editor" className="btn-primary" style={{ fontSize: '17px', padding: '14px 32px' }}>
             🎬 Start Creating — Free
           </Link>
+          <a href="#how-it-works" className="btn-secondary" style={{ fontSize: '17px', padding: '14px 32px' }}>
+            How It Works
+          </a>
         </div>
 
         {/* Demo preview card */}
         <div
           className={mounted ? 'animate-fade-in stagger-4' : ''}
           style={{
-            marginTop: '60px',
+            marginTop: '56px',
             width: '90%',
-            maxWidth: '900px',
+            maxWidth: '880px',
             aspectRatio: '16 / 9',
             borderRadius: 'var(--radius-lg)',
             background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -142,153 +188,111 @@ export default function LandingPage() {
             overflow: 'hidden',
           }}
         >
-          {/* Gradient border glow */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: '-1px',
-              borderRadius: 'inherit',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7, #6366f1)',
-              opacity: 0.3,
-              zIndex: 0,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: '1px',
-              borderRadius: 'inherit',
-              background: 'var(--bg-card)',
-              zIndex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            {/* Mock editor preview */}
-            <div style={{ display: 'flex', width: '90%', gap: '16px', height: '70%' }}>
-              {/* Video area */}
+          {/* Mock editor preview */}
+          <div style={{ display: 'flex', width: '90%', gap: '16px', height: '70%' }}>
+            {/* Video area */}
+            <div
+              style={{
+                flex: 2,
+                background: 'var(--bg-secondary)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                border: '1px solid var(--border-color)',
+              }}
+            >
+              <div style={{ fontSize: '48px', opacity: 0.5 }}>🎥</div>
+              {/* Lower third preview */}
               <div
+                className="animate-slide-in"
                 style={{
-                  flex: 2,
-                  background: '#0d0d14',
-                  borderRadius: '12px',
+                  position: 'absolute',
+                  bottom: '15%',
+                  left: '10%',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
+                  flexDirection: 'column',
+                  gap: '3px',
                 }}
               >
-                <div style={{ fontSize: '48px' }}>🎥</div>
-                {/* Lower third preview */}
-                <div
-                  className="animate-slide-in"
-                  style={{
-                    position: 'absolute',
-                    bottom: '15%',
-                    left: '10%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '3px',
-                  }}
-                >
-                  <div
-                    style={{
-                      background: '#6366f1',
-                      padding: '4px 14px',
-                      borderRadius: '3px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: '#fff',
-                    }}
-                  >
-                    Jatin
-                  </div>
-                  <div
-                    style={{
-                      background: 'rgba(0,0,0,0.6)',
-                      padding: '3px 14px',
-                      borderRadius: '3px',
-                      fontSize: '9px',
-                      color: '#aaa',
-                      letterSpacing: '1px',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Founder
-                  </div>
-                </div>
-                {/* Subtitle preview */}
                 <div
                   style={{
-                    position: 'absolute',
-                    bottom: '5%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(0,0,0,0.5)',
-                    padding: '4px 16px',
-                    borderRadius: '6px',
-                    fontSize: '11px',
+                    background: 'var(--accent-primary)',
+                    padding: '4px 14px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 700,
                     color: '#fff',
                   }}
                 >
-                  <span style={{ color: '#6366f1', fontWeight: 700 }}>Welcome</span> to my channel
+                  Jatin
                 </div>
-                {/* Emoji */}
                 <div
-                  className="animate-float"
                   style={{
-                    position: 'absolute',
-                    top: '15%',
-                    right: '10%',
-                    fontSize: '28px',
+                    background: 'var(--bg-card)',
+                    padding: '3px 14px',
+                    borderRadius: '4px',
+                    fontSize: '9px',
+                    color: 'var(--text-secondary)',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase',
+                    border: '1px solid var(--border-color)',
                   }}
                 >
-                  🔥
+                  Founder
                 </div>
               </div>
-
-              {/* Sidebar */}
+              {/* Subtitle preview */}
               <div
                 style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
+                  position: 'absolute',
+                  bottom: '5%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'var(--bg-card)',
+                  padding: '4px 16px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  border: '1px solid var(--border-color)',
                 }}
               >
-                {['0:00 - Welcome back...', '0:03 - Today we talk...', '0:06 - Let me show...', '0:09 - This is really...'].map(
-                  (text, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        padding: '10px',
-                        background: i === 0 ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
-                        borderRadius: '8px',
-                        fontSize: '10px',
-                        color: i === 0 ? '#a5a6f6' : '#666',
-                        border: i === 0 ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                      }}
-                    >
-                      {text}
-                      {i === 0 && (
-                        <span
-                          style={{
-                            display: 'block',
-                            marginTop: '4px',
-                            fontSize: '9px',
-                            color: '#6366f1',
-                          }}
-                        >
-                          📛 Lower Third
-                        </span>
-                      )}
-                    </div>
-                  )
-                )}
+                <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>Welcome</span> to my channel
               </div>
+              {/* Emoji */}
+              <div
+                className="animate-float"
+                style={{ position: 'absolute', top: '15%', right: '10%', fontSize: '28px' }}
+              >
+                🔥
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {['0:00 - Welcome back...', '0:03 - Today we talk...', '0:06 - Let me show...', '0:09 - This is really...'].map(
+                (text, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '10px',
+                      background: i === 0 ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                      borderRadius: '8px',
+                      fontSize: '10px',
+                      color: i === 0 ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      border: i === 0 ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      borderColor: i === 0 ? 'rgba(37, 99, 235, 0.3)' : 'var(--border-color)',
+                    }}
+                  >
+                    {text}
+                    {i === 0 && (
+                      <span style={{ display: 'block', marginTop: '4px', fontSize: '9px', color: 'var(--accent-primary)' }}>
+                        📛 Lower Third
+                      </span>
+                    )}
+                  </div>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -296,6 +300,7 @@ export default function LandingPage() {
 
       {/* How It Works */}
       <section
+        id="how-it-works"
         style={{
           padding: '80px 40px',
           display: 'flex',
@@ -303,82 +308,51 @@ export default function LandingPage() {
           alignItems: 'center',
         }}
       >
-        <h2
-          style={{
-            fontSize: '38px',
-            fontWeight: 800,
-            marginBottom: '60px',
-            letterSpacing: '-1px',
-          }}
-        >
+        <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '16px', letterSpacing: '-1px' }}>
           How It <span className="gradient-text">Works</span>
         </h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '48px', fontSize: '16px' }}>
+          Four simple steps to transform any video
+        </p>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '24px',
-            maxWidth: '900px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '20px',
+            maxWidth: '920px',
             width: '100%',
           }}
         >
           {[
-            {
-              step: '01',
-              icon: '📤',
-              title: 'Upload Video',
-              desc: 'Drag & drop any MP4 video. We handle the rest.',
-            },
-            {
-              step: '02',
-              icon: '📝',
-              title: 'Auto Transcript',
-              desc: 'AI generates word-level subtitles with perfect timing.',
-            },
-            {
-              step: '03',
-              icon: '🎨',
-              title: 'Add Motion Graphics',
-              desc: 'Select any subtitle. Pick from overlays — lower thirds, emojis, highlights & more.',
-            },
-            {
-              step: '04',
-              icon: '⬇️',
-              title: 'Preview & Download',
-              desc: 'Preview in real-time. Download your enhanced video.',
-            },
+            { step: '01', icon: '📤', title: 'Upload Video', desc: 'Drag & drop any MP4 video. We handle the rest.' },
+            { step: '02', icon: '📝', title: 'Auto Transcript', desc: 'AI generates word-level subtitles with perfect timing.' },
+            { step: '03', icon: '🎨', title: 'Add Motion Graphics', desc: 'Select any subtitle. Pick from overlays — lower thirds, emojis & more.' },
+            { step: '04', icon: '⬇️', title: 'Preview & Download', desc: 'Preview in real-time. Download your enhanced video.' },
           ].map((item, i) => (
-            <div
-              key={i}
-              className="card"
-              style={{ padding: '32px', position: 'relative' }}
-            >
+            <div key={i} className="card" style={{ padding: '28px', position: 'relative' }}>
               <span
                 style={{
                   position: 'absolute',
-                  top: '16px',
-                  right: '16px',
-                  fontSize: '48px',
+                  top: '14px',
+                  right: '14px',
+                  fontSize: '44px',
                   fontWeight: 900,
-                  color: 'rgba(99, 102, 241, 0.08)',
+                  color: 'var(--accent-primary)',
+                  opacity: 0.08,
                 }}
               >
                 {item.step}
               </span>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>{item.icon}</div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
-                {item.title}
-              </h3>
-              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {item.desc}
-              </p>
+              <div style={{ fontSize: '32px', marginBottom: '14px' }}>{item.icon}</div>
+              <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>{item.title}</h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{item.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features / Templates */}
       <section
         style={{
           padding: '80px 40px',
@@ -388,23 +362,10 @@ export default function LandingPage() {
           background: 'var(--bg-secondary)',
         }}
       >
-        <h2
-          style={{
-            fontSize: '38px',
-            fontWeight: 800,
-            marginBottom: '16px',
-            letterSpacing: '-1px',
-          }}
-        >
+        <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '12px', letterSpacing: '-1px' }}>
           Overlay <span className="gradient-text">Templates</span>
         </h2>
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            marginBottom: '48px',
-            fontSize: '16px',
-          }}
-        >
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '44px', fontSize: '16px' }}>
           Professional motion graphics, one click away
         </p>
 
@@ -412,46 +373,41 @@ export default function LandingPage() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '16px',
+            gap: '14px',
             maxWidth: '800px',
             width: '100%',
           }}
         >
           {[
-            { icon: '📛', name: 'Lower Third', color: '#6366f1' },
-            { icon: '🔲', name: 'Highlight Box', color: '#f59e0b' },
-            { icon: '🔥', name: 'Emoji Reaction', color: '#ef4444' },
-            { icon: '🔍', name: 'Zoom Effect', color: '#22c55e' },
-            { icon: '✨', name: 'Scene Transition', color: '#8b5cf6' },
-            { icon: '💬', name: 'Animated Subtitles', color: '#06b6d4' },
+            { icon: '📛', name: 'Lower Third', color: '#2563eb' },
+            { icon: '🔲', name: 'Highlight Box', color: '#d97706' },
+            { icon: '🔥', name: 'Emoji Reaction', color: '#dc2626' },
+            { icon: '🔍', name: 'Zoom Effect', color: '#16a34a' },
+            { icon: '✨', name: 'Scene Transition', color: '#7c3aed' },
+            { icon: '💬', name: 'Animated Subtitles', color: '#0891b2' },
           ].map((feat, i) => (
             <div
               key={i}
               className="card"
-              style={{
-                padding: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-              }}
+              style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}
             >
               <div
                 style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: `${feat.color}15`,
-                  border: `1px solid ${feat.color}30`,
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  background: `${feat.color}12`,
+                  border: `1px solid ${feat.color}25`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '22px',
+                  fontSize: '20px',
                   flexShrink: 0,
                 }}
               >
                 {feat.icon}
               </div>
-              <span style={{ fontWeight: 600, fontSize: '15px' }}>{feat.name}</span>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>{feat.name}</span>
             </div>
           ))}
         </div>
@@ -476,24 +432,17 @@ export default function LandingPage() {
             transform: 'translateX(-50%)',
             width: '500px',
             height: '300px',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.06) 0%, transparent 70%)',
             pointerEvents: 'none',
           }}
         />
-        <h2 style={{ fontSize: '42px', fontWeight: 900, marginBottom: '16px', letterSpacing: '-1px' }}>
+        <h2 style={{ fontSize: '40px', fontWeight: 900, marginBottom: '14px', letterSpacing: '-1px' }}>
           Ready to <span className="gradient-text">Transform</span> Your Videos?
         </h2>
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            marginBottom: '36px',
-            fontSize: '16px',
-            maxWidth: '500px',
-          }}
-        >
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '16px', maxWidth: '480px' }}>
           No editing skills needed. Upload, click, and download — it&apos;s that simple.
         </p>
-        <Link href="/editor" className="btn-primary" style={{ fontSize: '18px', padding: '16px 40px' }}>
+        <Link href="/editor" className="btn-primary" style={{ fontSize: '17px', padding: '14px 36px' }}>
           🚀 Start Free — No Sign Up
         </Link>
       </section>
@@ -501,7 +450,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer
         style={{
-          padding: '24px 40px',
+          padding: '20px 40px',
           borderTop: '1px solid var(--border-color)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -510,7 +459,25 @@ export default function LandingPage() {
           color: 'var(--text-secondary)',
         }}
       >
-        <span>🎬 MakeScript © 2026</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '6px',
+              background: 'var(--accent-gradient)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '11px',
+              color: '#fff',
+              fontWeight: 800,
+            }}
+          >
+            M
+          </div>
+          <span>MakeScript © 2026</span>
+        </div>
         <span>Built with Remotion + Next.js</span>
       </footer>
     </div>
