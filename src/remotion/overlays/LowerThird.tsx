@@ -30,42 +30,42 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
     const localFrame = frame - startFrame;
     const duration = endFrame - startFrame;
 
-    // Accent bar slides in
-    const barWidth = spring({
+    // Stage 1: Accent line shoots in (0-8 frames)
+    const lineWidth = spring({
         frame: localFrame,
         fps,
-        config: { damping: 16, stiffness: 150, mass: 0.6 },
+        config: { damping: 16, stiffness: 180, mass: 0.6 },
     });
 
-    // Panel slides in (delayed)
+    // Stage 2: Background panel slides in (delayed 5 frames)
     const panelSlide = spring({
         frame: Math.max(0, localFrame - 5),
         fps,
         config: { damping: 14, stiffness: 100, mass: 0.7 },
     });
 
-    // Name fades in (delayed)
+    // Stage 3: Name text reveals (delayed 10 frames)
     const nameReveal = spring({
         frame: Math.max(0, localFrame - 10),
         fps,
         config: { damping: 14, stiffness: 100 },
     });
 
-    // Title fades in (delayed more)
+    // Stage 4: Title text reveals (delayed 16 frames)
     const titleReveal = spring({
         frame: Math.max(0, localFrame - 16),
         fps,
         config: { damping: 14, stiffness: 100 },
     });
 
-    // Exit — slide left and fade out
+    // Exit — smooth slide + fade
     const exitProgress = interpolate(
         localFrame,
-        [duration - 15, duration],
+        [duration - 18, duration],
         [0, 1],
         { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
     );
-    const exitSlide = interpolate(exitProgress, [0, 1], [0, -300]);
+    const exitSlide = interpolate(exitProgress, [0, 1], [0, -350]);
     const exitOpacity = interpolate(exitProgress, [0, 1], [1, 0]);
 
     return (
@@ -81,40 +81,60 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
                     opacity: exitOpacity,
                 }}
             >
-                {/* Accent bar */}
+                {/* Accent vertical bar with gradient */}
                 <div
                     style={{
-                        width: '4px',
-                        height: `${barWidth * 80}px`,
-                        background: color,
-                        borderRadius: '2px',
-                        marginRight: '14px',
+                        width: '5px',
+                        height: `${lineWidth * 85}px`,
+                        background: `linear-gradient(180deg, ${color}, #a78bfa, transparent)`,
+                        borderRadius: '3px',
+                        boxShadow: `0 0 12px ${color}60`,
+                        marginRight: '16px',
                         flexShrink: 0,
                     }}
                 />
 
-                {/* Panel */}
+                {/* Main panel */}
                 <div
                     style={{
-                        transform: `translateX(${(1 - panelSlide) * -150}px)`,
+                        transform: `translateX(${(1 - panelSlide) * -180}px)`,
                         opacity: panelSlide,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '4px',
+                        gap: '6px',
                     }}
                 >
+                    {/* Glassmorphic card */}
                     <div
                         style={{
-                            padding: '16px 28px 14px 20px',
-                            background: 'rgba(0, 0, 0, 0.7)',
-                            backdropFilter: 'blur(10px)',
-                            borderRadius: '0 10px 10px 0',
+                            position: 'relative',
+                            padding: '18px 30px 16px 22px',
+                            background: 'linear-gradient(135deg, rgba(0,0,0,0.75), rgba(15,15,40,0.6))',
+                            backdropFilter: 'blur(14px)',
+                            borderRadius: '0 12px 12px 0',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            boxShadow: `0 10px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`,
+                            overflow: 'hidden',
                         }}
                     >
+                        {/* Top accent gradient line */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: `${lineWidth * 100}%`,
+                                height: '3px',
+                                background: `linear-gradient(90deg, ${color}, #c084fc, transparent)`,
+                                boxShadow: `0 0 8px ${color}50`,
+                            }}
+                        />
+
                         {/* Name */}
                         <div
                             style={{
-                                transform: `translateY(${(1 - nameReveal) * 20}px)`,
+                                overflow: 'hidden',
+                                transform: `translateY(${(1 - nameReveal) * 25}px)`,
                                 opacity: nameReveal,
                             }}
                         >
@@ -122,8 +142,10 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
                                 style={{
                                     fontFamily: "'Inter', 'Segoe UI', sans-serif",
                                     fontSize: 34,
-                                    fontWeight: 700,
+                                    fontWeight: 800,
                                     color: '#ffffff',
+                                    letterSpacing: '-0.02em',
+                                    textShadow: '0 2px 8px rgba(0,0,0,0.5)',
                                     display: 'block',
                                 }}
                             >
@@ -131,22 +153,22 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
                             </span>
                         </div>
 
-                        {/* Divider */}
+                        {/* Gradient divider */}
                         <div
                             style={{
-                                width: `${nameReveal * 100}px`,
+                                width: `${nameReveal * 110}px`,
                                 height: '2px',
-                                background: color,
+                                background: `linear-gradient(90deg, ${color}, transparent)`,
                                 margin: '6px 0',
                                 opacity: nameReveal,
-                                borderRadius: '1px',
                             }}
                         />
 
                         {/* Title */}
                         <div
                             style={{
-                                transform: `translateY(${(1 - titleReveal) * 15}px)`,
+                                overflow: 'hidden',
+                                transform: `translateY(${(1 - titleReveal) * 18}px)`,
                                 opacity: titleReveal,
                             }}
                         >
@@ -155,9 +177,10 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
                                     fontFamily: "'Inter', 'Segoe UI', sans-serif",
                                     fontSize: 17,
                                     fontWeight: 500,
-                                    color: 'rgba(255,255,255,0.7)',
-                                    letterSpacing: '0.06em',
+                                    color: '#a5b4fc',
+                                    letterSpacing: '0.08em',
                                     textTransform: 'uppercase',
+                                    textShadow: '0 1px 4px rgba(0,0,0,0.4)',
                                     display: 'block',
                                 }}
                             >

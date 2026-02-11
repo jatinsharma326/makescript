@@ -34,7 +34,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
 
     const words = text.split(' ');
 
-    // Exit animation
+    // Exit
     const exitOpacity = interpolate(
         localFrame,
         [duration - 10, duration],
@@ -44,13 +44,13 @@ export const KineticText: React.FC<KineticTextProps> = ({
     const exitScale = interpolate(
         localFrame,
         [duration - 10, duration],
-        [1, 0.95],
+        [1, 0.92],
         { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
     );
 
     const posY = position === 'top' ? '15%' : position === 'bottom' ? '80%' : '50%';
 
-    // === Pop — each word pops in ===
+    // === Pop — words pop in with spring bounce ===
     if (style === 'pop') {
         return (
             <AbsoluteFill style={{ pointerEvents: 'none' }}>
@@ -73,13 +73,22 @@ export const KineticText: React.FC<KineticTextProps> = ({
                         const wordScale = spring({
                             frame: Math.max(0, localFrame - wordDelay),
                             fps,
-                            config: { damping: 10, stiffness: 180, mass: 0.5 },
+                            config: { damping: 8, stiffness: 200, mass: 0.5 },
                         });
                         const wordOpacity = interpolate(
                             Math.max(0, localFrame - wordDelay),
                             [0, 3],
                             [0, 1],
                             { extrapolateRight: 'clamp' }
+                        );
+                        const wordRotate = interpolate(
+                            spring({
+                                frame: Math.max(0, localFrame - wordDelay),
+                                fps,
+                                config: { damping: 10, stiffness: 180 },
+                            }),
+                            [0, 1],
+                            [-12, 0]
                         );
 
                         return (
@@ -88,12 +97,17 @@ export const KineticText: React.FC<KineticTextProps> = ({
                                 style={{
                                     display: 'inline-block',
                                     fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                                    fontSize: 56,
-                                    fontWeight: 800,
+                                    fontSize: 58,
+                                    fontWeight: 900,
+                                    letterSpacing: '-0.03em',
                                     color: '#ffffff',
-                                    transform: `scale(${wordScale})`,
+                                    transform: `scale(${wordScale}) rotate(${wordRotate}deg)`,
                                     opacity: wordOpacity,
-                                    textShadow: '0 3px 8px rgba(0,0,0,0.4)',
+                                    textShadow: `
+                                        0 0 30px ${color}40,
+                                        0 0 60px ${color}20,
+                                        0 4px 10px rgba(0,0,0,0.5)
+                                    `,
                                 }}
                             >
                                 {word}
@@ -101,6 +115,22 @@ export const KineticText: React.FC<KineticTextProps> = ({
                         );
                     })}
                 </div>
+
+                {/* Background glow */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: posY,
+                        width: '450px',
+                        height: '180px',
+                        transform: 'translate(-50%, -50%)',
+                        background: `radial-gradient(ellipse, ${color}10, transparent 70%)`,
+                        opacity: exitOpacity,
+                        filter: 'blur(16px)',
+                        zIndex: -1,
+                    }}
+                />
             </AbsoluteFill>
         );
     }
@@ -133,7 +163,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
                             config: { damping: 14, stiffness: 120, mass: 0.7 },
                         });
 
-                        const slideX = interpolate(slideProgress, [0, 1], [60 * direction, 0]);
+                        const slideX = interpolate(slideProgress, [0, 1], [70 * direction, 0]);
                         const wordOpacity = interpolate(slideProgress, [0, 0.3, 1], [0, 0.5, 1]);
 
                         return (
@@ -142,12 +172,16 @@ export const KineticText: React.FC<KineticTextProps> = ({
                                 style={{
                                     display: 'inline-block',
                                     fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                                    fontSize: 52,
-                                    fontWeight: 700,
+                                    fontSize: 54,
+                                    fontWeight: 800,
+                                    letterSpacing: '-0.02em',
                                     color: '#ffffff',
                                     transform: `translateX(${slideX}px)`,
                                     opacity: wordOpacity,
-                                    textShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                    textShadow: `
+                                        0 0 24px ${color}35,
+                                        0 3px 8px rgba(0,0,0,0.4)
+                                    `,
                                 }}
                             >
                                 {word}
@@ -159,7 +193,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
         );
     }
 
-    // === Typewriter — chars appear one by one ===
+    // === Typewriter — chars appear with cursor ===
     const totalChars = text.length;
     const charsPerFrame = totalChars / Math.max(duration * 0.6, 1);
     const visibleChars = Math.min(totalChars, Math.floor(localFrame * charsPerFrame));
@@ -179,19 +213,45 @@ export const KineticText: React.FC<KineticTextProps> = ({
             >
                 <div
                     style={{
-                        padding: '18px 26px',
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        borderRadius: '10px',
-                        backdropFilter: 'blur(8px)',
+                        padding: '20px 28px',
+                        background: 'linear-gradient(135deg, rgba(0,0,0,0.75), rgba(10,10,30,0.65))',
+                        borderRadius: '12px',
+                        border: `1px solid ${color}25`,
+                        backdropFilter: 'blur(12px)',
+                        boxShadow: `0 8px 28px rgba(0,0,0,0.4), 0 0 15px ${color}10`,
                     }}
                 >
+                    {/* Terminal dots */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: '6px',
+                            marginBottom: '12px',
+                        }}
+                    >
+                        {['#ff5f56', '#ffbd2e', '#27c93f'].map((dotColor, i) => (
+                            <div
+                                key={i}
+                                style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: dotColor,
+                                    opacity: 0.75,
+                                }}
+                            />
+                        ))}
+                    </div>
+
                     <span
                         style={{
                             fontFamily: "'JetBrains Mono', 'Consolas', monospace",
                             fontSize: 30,
-                            fontWeight: 500,
+                            fontWeight: 600,
                             color: '#e0e7ff',
+                            letterSpacing: '0.01em',
                             lineHeight: 1.4,
+                            textShadow: `0 0 16px ${color}20`,
                         }}
                     >
                         {text.substring(0, visibleChars)}
@@ -200,12 +260,13 @@ export const KineticText: React.FC<KineticTextProps> = ({
                         <span
                             style={{
                                 display: 'inline-block',
-                                width: '2px',
+                                width: '3px',
                                 height: '30px',
                                 background: color,
                                 marginLeft: '2px',
                                 verticalAlign: 'text-bottom',
                                 opacity: cursorBlink ? 1 : 0.3,
+                                boxShadow: `0 0 6px ${color}`,
                             }}
                         />
                     )}
