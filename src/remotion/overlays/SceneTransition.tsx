@@ -31,114 +31,99 @@ export const SceneTransition: React.FC<SceneTransitionProps> = ({
     const duration = endFrame - startFrame;
     const midpoint = duration / 2;
 
-    const progress = localFrame / duration;
-
+    // === Wipe — single clean line sweep ===
     if (style === 'wipe') {
-        const wipeProgress = interpolate(
+        const wipePos = interpolate(
             localFrame,
-            [0, midpoint, duration],
-            [0, 100, 0],
+            [0, duration],
+            [-5, 105],
+            { extrapolateRight: 'clamp' }
+        );
+        const wipeOpacity = interpolate(
+            localFrame,
+            [0, 4, duration - 4, duration],
+            [0, 0.7, 0.7, 0],
             { extrapolateRight: 'clamp' }
         );
 
         return (
-            <AbsoluteFill>
+            <AbsoluteFill style={{ pointerEvents: 'none' }}>
                 <div
                     style={{
                         position: 'absolute',
-                        left: 0,
+                        left: `${wipePos}%`,
                         top: 0,
-                        width: `${wipeProgress}%`,
+                        width: '3px',
                         height: '100%',
-                        background: `linear-gradient(90deg, ${color}, ${color}cc)`,
+                        background: color,
+                        opacity: wipeOpacity,
+                        boxShadow: `0 0 12px ${color}60`,
                     }}
                 />
             </AbsoluteFill>
         );
     }
 
+    // === Zoom — subtle vignette pulse ===
     if (style === 'zoom') {
-        const scale = interpolate(
+        const vignetteOpacity = interpolate(
             localFrame,
-            [0, midpoint, duration],
-            [1, 1.5, 1],
-            { extrapolateRight: 'clamp' }
-        );
-        const opacity = interpolate(
-            localFrame,
-            [0, midpoint * 0.8, midpoint, midpoint * 1.2, duration],
-            [0, 1, 1, 1, 0],
+            [0, midpoint * 0.5, midpoint, duration],
+            [0, 0.4, 0.3, 0],
             { extrapolateRight: 'clamp' }
         );
 
+        const flashOpacity = interpolate(
+            localFrame,
+            [midpoint - 3, midpoint, midpoint + 6],
+            [0, 0.3, 0],
+            { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+        );
+
         return (
-            <AbsoluteFill>
+            <AbsoluteFill style={{ pointerEvents: 'none' }}>
+                {/* Vignette */}
                 <div
                     style={{
                         position: 'absolute',
                         inset: 0,
-                        background: `${color}40`,
-                        opacity,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transform: `scale(${scale})`,
+                        background: `radial-gradient(circle, transparent 40%, ${color}20 100%)`,
+                        opacity: vignetteOpacity,
                     }}
-                >
-                    {text && (
-                        <span
-                            style={{
-                                fontSize: 48,
-                                fontWeight: 800,
-                                color: '#fff',
-                                fontFamily: "'Inter', sans-serif",
-                                textShadow: `0 0 30px ${color}`,
-                            }}
-                        >
-                            {text}
-                        </span>
-                    )}
-                </div>
+                />
+                {/* Flash */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'white',
+                        opacity: flashOpacity,
+                        mixBlendMode: 'plus-lighter',
+                    }}
+                />
             </AbsoluteFill>
         );
     }
 
-    // Default: fade
-    const fadeOpacity = interpolate(
+    // === Fade — simple flash ===
+    const flashOpacity = interpolate(
         localFrame,
-        [0, midpoint * 0.5, midpoint, duration * 0.8, duration],
-        [0, 0.8, 0.9, 0.8, 0],
+        [0, 3, 8, 15],
+        [0, 0.5, 0.1, 0],
         { extrapolateRight: 'clamp' }
     );
 
     return (
-        <AbsoluteFill>
+        <AbsoluteFill style={{ pointerEvents: 'none' }}>
             <div
                 style={{
                     position: 'absolute',
                     inset: 0,
-                    background: `radial-gradient(circle at center, ${color}60, ${color}20)`,
-                    opacity: fadeOpacity,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    background: 'white',
+                    opacity: flashOpacity,
+                    mixBlendMode: 'plus-lighter',
                 }}
-            >
-                {text && (
-                    <span
-                        style={{
-                            fontSize: 40,
-                            fontWeight: 700,
-                            color: '#fff',
-                            fontFamily: "'Inter', sans-serif",
-                            opacity: fadeOpacity > 0.5 ? 1 : 0,
-                            textShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                        }}
-                    >
-                        {text}
-                    </span>
-                )}
-            </div>
+            />
         </AbsoluteFill>
     );
 };

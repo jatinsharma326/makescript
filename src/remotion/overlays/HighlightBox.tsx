@@ -4,6 +4,7 @@ import {
     useCurrentFrame,
     useVideoConfig,
     spring,
+    interpolate,
 } from 'remotion';
 
 interface HighlightBoxProps {
@@ -27,30 +28,41 @@ export const HighlightBox: React.FC<HighlightBoxProps> = ({
     if (frame < startFrame || frame > endFrame) return null;
 
     const localFrame = frame - startFrame;
+    const duration = endFrame - startFrame;
 
-    const scaleIn = spring({
+    // Scale-in entrance
+    const cardScale = spring({
         frame: localFrame,
         fps,
-        config: { damping: 12, stiffness: 100 },
+        config: { damping: 12, stiffness: 120, mass: 0.6 },
     });
 
-    const glowPulse = Math.sin(localFrame * 0.15) * 0.3 + 0.7;
+    // Content reveal (delayed)
+    const contentReveal = spring({
+        frame: Math.max(0, localFrame - 6),
+        fps,
+        config: { damping: 14, stiffness: 120 },
+    });
 
-    const bgStyles: Record<string, React.CSSProperties> = {
-        glow: {
-            background: `${color}20`,
-            border: `2px solid ${color}`,
-            boxShadow: `0 0 ${20 * glowPulse}px ${color}60, inset 0 0 ${10 * glowPulse}px ${color}20`,
-        },
-        solid: {
-            background: `${color}30`,
-            border: `2px solid ${color}`,
-        },
-        outline: {
-            background: 'transparent',
-            border: `3px solid ${color}`,
-            boxShadow: `0 0 10px ${color}40`,
-        },
+    // Exit fade + scale
+    const exitOpacity = interpolate(
+        localFrame,
+        [duration - 12, duration],
+        [1, 0],
+        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+    const exitScale = interpolate(
+        localFrame,
+        [duration - 12, duration],
+        [1, 0.9],
+        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+
+    // Position based on style variant
+    const positions: Record<string, React.CSSProperties> = {
+        glow: { top: '12%', right: '8%' },
+        solid: { bottom: '15%', left: '8%' },
+        outline: { top: '15%', left: '8%' },
     };
 
     return (
@@ -58,26 +70,59 @@ export const HighlightBox: React.FC<HighlightBoxProps> = ({
             <div
                 style={{
                     position: 'absolute',
-                    top: '40%',
-                    left: '50%',
-                    transform: `translate(-50%, -50%) scale(${scaleIn})`,
-                    padding: '16px 32px',
-                    borderRadius: '12px',
-                    ...bgStyles[style],
-                    opacity: scaleIn,
+                    ...positions[style],
+                    transform: `scale(${cardScale * exitScale})`,
+                    opacity: exitOpacity,
+                    maxWidth: '45%',
                 }}
             >
-                <span
+                {/* Card */}
+                <div
                     style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 32,
-                        fontWeight: 700,
-                        color: '#ffffff',
-                        textShadow: `0 0 10px ${color}80`,
+                        padding: '18px 26px',
+                        borderRadius: '14px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(10px)',
+                        borderLeft: `4px solid ${color}`,
                     }}
                 >
-                    💡 {text}
-                </span>
+                    {/* Label */}
+                    <span
+                        style={{
+                            fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: color,
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            opacity: contentReveal,
+                            display: 'block',
+                            marginBottom: '10px',
+                        }}
+                    >
+                        KEY POINT
+                    </span>
+
+                    {/* Text */}
+                    <div
+                        style={{
+                            transform: `translateY(${(1 - contentReveal) * 12}px)`,
+                            opacity: contentReveal,
+                        }}
+                    >
+                        <span
+                            style={{
+                                fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                                fontSize: 24,
+                                fontWeight: 600,
+                                color: '#ffffff',
+                                lineHeight: 1.3,
+                            }}
+                        >
+                            {text}
+                        </span>
+                    </div>
+                </div>
             </div>
         </AbsoluteFill>
     );

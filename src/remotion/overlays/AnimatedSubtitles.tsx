@@ -21,7 +21,7 @@ interface AnimatedSubtitlesProps {
 
 export const AnimatedSubtitles: React.FC<AnimatedSubtitlesProps> = ({
     subtitles,
-    fontSize = 36,
+    fontSize = 42,
     color = '#ffffff',
     highlightColor = '#6366f1',
     position = 'bottom',
@@ -35,17 +35,28 @@ export const AnimatedSubtitles: React.FC<AnimatedSubtitlesProps> = ({
 
     if (!currentSub) return null;
 
-    const progress = (frame - currentSub.startFrame) / (currentSub.endFrame - currentSub.startFrame);
+    const localFrame = frame - currentSub.startFrame;
+    const duration = currentSub.endFrame - currentSub.startFrame;
+    const progress = localFrame / duration;
     const words = currentSub.text.split(' ');
     const currentWordIndex = Math.floor(progress * words.length);
 
-    const fadeIn = spring({
-        frame: frame - currentSub.startFrame,
+    // Smooth scale entrance
+    const containerScale = spring({
+        frame: localFrame,
         fps,
-        config: { damping: 20, stiffness: 100 },
+        config: { damping: 14, stiffness: 100, mass: 0.8 },
     });
 
-    const posY = position === 'bottom' ? '80%' : position === 'top' ? '15%' : '50%';
+    // Fade out at end
+    const exitOpacity = interpolate(
+        localFrame,
+        [duration - 8, duration],
+        [1, 0],
+        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+
+    const posY = position === 'bottom' ? '82%' : position === 'top' ? '12%' : '50%';
 
     return (
         <AbsoluteFill>
@@ -54,44 +65,56 @@ export const AnimatedSubtitles: React.FC<AnimatedSubtitlesProps> = ({
                     position: 'absolute',
                     left: '50%',
                     top: posY,
-                    transform: `translate(-50%, -50%) scale(${fadeIn})`,
+                    transform: `translate(-50%, -50%) scale(${containerScale})`,
+                    opacity: exitOpacity,
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    maxWidth: '80%',
-                    opacity: fadeIn,
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    maxWidth: '85%',
                 }}
             >
-                {/* Background blur */}
+                {/* Simple semi-transparent backdrop */}
                 <div
                     style={{
                         position: 'absolute',
-                        inset: '-12px -20px',
+                        inset: '-14px -24px',
                         background: 'rgba(0, 0, 0, 0.6)',
                         borderRadius: '12px',
                         backdropFilter: 'blur(8px)',
                     }}
                 />
-                {words.map((word, i) => (
-                    <span
-                        key={i}
-                        style={{
-                            position: 'relative',
-                            fontSize,
-                            fontWeight: 700,
-                            fontFamily: "'Inter', sans-serif",
-                            color: i <= currentWordIndex ? highlightColor : color,
-                            textShadow: i <= currentWordIndex
-                                ? `0 0 20px ${highlightColor}40`
-                                : '0 2px 4px rgba(0,0,0,0.5)',
-                            transition: 'color 0.1s',
-                            transform: i === currentWordIndex ? 'scale(1.1)' : 'scale(1)',
-                        }}
-                    >
-                        {word}
-                    </span>
-                ))}
+
+                {/* Words with simple highlight */}
+                <div
+                    style={{
+                        position: 'relative',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        zIndex: 1,
+                    }}
+                >
+                    {words.map((word, i) => {
+                        const isActive = i <= currentWordIndex;
+
+                        return (
+                            <span
+                                key={i}
+                                style={{
+                                    fontSize,
+                                    fontWeight: 700,
+                                    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                                    color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
+                                    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                    transition: 'color 0.15s ease',
+                                }}
+                            >
+                                {word}
+                            </span>
+                        );
+                    })}
+                </div>
             </div>
         </AbsoluteFill>
     );
