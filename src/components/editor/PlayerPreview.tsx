@@ -10,6 +10,8 @@ interface PlayerPreviewProps {
     subtitles: SubtitleSegment[];
     durationInFrames: number;
     fps: number;
+    compositionWidth?: number;
+    compositionHeight?: number;
 }
 
 const PlayerPreview: React.FC<PlayerPreviewProps> = ({
@@ -17,17 +19,13 @@ const PlayerPreview: React.FC<PlayerPreviewProps> = ({
     subtitles,
     durationInFrames,
     fps,
+    compositionWidth = 1920,
+    compositionHeight = 1080,
 }) => {
+    const aspectRatio = `${compositionWidth} / ${compositionHeight}`;
+
     return (
-        <div
-            style={{
-                width: '100%',
-                borderRadius: 'var(--radius)',
-                overflow: 'hidden',
-                background: '#000',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-            }}
-        >
+        <div className="w-full rounded-xl overflow-hidden bg-black shadow-2xl ring-1 ring-white/5 transition-shadow duration-300 hover:ring-white/10">
             <Player
                 component={VideoWithOverlays}
                 inputProps={{
@@ -38,11 +36,11 @@ const PlayerPreview: React.FC<PlayerPreviewProps> = ({
                 }}
                 durationInFrames={Math.max(1, durationInFrames)}
                 fps={fps}
-                compositionWidth={1920}
-                compositionHeight={1080}
+                compositionWidth={compositionWidth}
+                compositionHeight={compositionHeight}
                 style={{
                     width: '100%',
-                    aspectRatio: '16 / 9',
+                    aspectRatio,
                 }}
                 controls
                 autoPlay={false}

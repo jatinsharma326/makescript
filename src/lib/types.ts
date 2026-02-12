@@ -19,7 +19,10 @@ export type OverlayType =
   | 'highlight-box'
   | 'emoji-reaction'
   | 'zoom-effect'
-  | 'scene-transition';
+  | 'scene-transition'
+  | 'glowing-particles'
+  | 'kinetic-text'
+  | 'visual-illustration';
 
 export interface OverlayTemplate {
   type: OverlayType;
@@ -65,6 +68,27 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
     icon: '✨',
     defaultProps: { style: 'fade', color: '#6366f1' },
   },
+  {
+    type: 'glowing-particles',
+    name: 'Particles',
+    description: 'Floating glow particles',
+    icon: '🌟',
+    defaultProps: { color: '#6366f1', count: 20, style: 'ambient' },
+  },
+  {
+    type: 'kinetic-text',
+    name: 'Kinetic Text',
+    description: 'Animated text pop-in',
+    icon: '💫',
+    defaultProps: { color: '#6366f1', style: 'pop', position: 'center' },
+  },
+  {
+    type: 'visual-illustration',
+    name: 'Visual Illustration',
+    description: 'Animated SVG scene matching content',
+    icon: '🎨',
+    defaultProps: { scene: 'solar-system', label: '', color: '#6366f1', displayMode: 'overlay', transition: 'fade-in', soundEffect: 'none' },
+  },
 ];
 
 export interface ProjectState {
@@ -75,5 +99,7 @@ export interface ProjectState {
   isTranscribing: boolean;
   isGenerating: boolean;
   videoDuration: number;
+  videoWidth: number;
+  videoHeight: number;
   fps: number;
 }

@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@remotion/cli": "^4.0.420",
     "@remotion/player": "^4.0.420",
     "@remotion/renderer": "^4.0.420",
     "next": "16.1.6",
+    "openai": "^6.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "^4.0.420"

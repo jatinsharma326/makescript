@@ -3,16 +3,18 @@
 import React from 'react';
 import {
     AbsoluteFill,
-    OffthreadVideo,
+    Video,
     useCurrentFrame,
     useVideoConfig,
-    staticFile,
 } from 'remotion';
 import { AnimatedSubtitles } from './overlays/AnimatedSubtitles';
 import { LowerThird } from './overlays/LowerThird';
 import { HighlightBox } from './overlays/HighlightBox';
 import { EmojiReaction } from './overlays/EmojiReaction';
 import { SceneTransition } from './overlays/SceneTransition';
+import { GlowingParticles } from './overlays/GlowingParticles';
+import { KineticText } from './overlays/KineticText';
+import { VisualIllustration } from './overlays/VisualIllustration';
 import { SubtitleSegment } from '../lib/types';
 
 interface VideoWithOverlaysProps {
@@ -41,14 +43,14 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
         <AbsoluteFill style={{ backgroundColor: '#000' }}>
             {/* Base video */}
             <AbsoluteFill>
-                <OffthreadVideo src={videoSrc} />
+                <Video src={videoSrc} />
             </AbsoluteFill>
 
             {/* Animated subtitles layer */}
             {showSubtitles && (
                 <AnimatedSubtitles
                     subtitles={subtitleFrames}
-                    fontSize={32}
+                    fontSize={38}
                     highlightColor="#6366f1"
                 />
             )}
@@ -72,39 +74,81 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 endFrame={endFrame}
                             />
                         );
-                    case 'highlight-box':
+                    case 'highlight-box': {
+                        const rawStyle = String(seg.overlay.props.style || 'glow');
+                        const validStyles = ['glow', 'solid', 'outline'];
+                        const style = validStyles.includes(rawStyle) ? rawStyle : 'glow';
                         return (
                             <HighlightBox
                                 key={seg.id}
                                 text={seg.text}
                                 color={String(seg.overlay.props.color || '#f59e0b')}
-                                style={(seg.overlay.props.style as 'glow' | 'solid' | 'outline') || 'glow'}
+                                style={style as 'glow' | 'solid' | 'outline'}
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />
                         );
+                    }
                     case 'emoji-reaction':
                         return (
                             <EmojiReaction
                                 key={seg.id}
                                 emoji={String(seg.overlay.props.emoji || '🔥')}
-                                size={Number(seg.overlay.props.size || 80)}
+                                size={Number(seg.overlay.props.size || 70)}
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />
                         );
-                    case 'scene-transition':
+                    case 'scene-transition': {
+                        const rawStyle = String(seg.overlay.props.style || 'fade');
+                        const validStyles = ['fade', 'wipe', 'zoom'];
+                        const style = validStyles.includes(rawStyle) ? rawStyle : 'fade';
                         return (
                             <SceneTransition
                                 key={seg.id}
                                 color={String(seg.overlay.props.color || '#6366f1')}
-                                style={(seg.overlay.props.style as 'fade' | 'wipe' | 'zoom') || 'fade'}
+                                style={style as 'fade' | 'wipe' | 'zoom'}
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />
                         );
+                    }
+                    case 'glowing-particles': {
+                        const rawStyle = String(seg.overlay.props.style || 'ambient');
+                        const validStyles = ['ambient', 'burst', 'rain'];
+                        const pStyle = validStyles.includes(rawStyle) ? rawStyle : 'ambient';
+                        return (
+                            <GlowingParticles
+                                key={seg.id}
+                                color={String(seg.overlay.props.color || '#6366f1')}
+                                count={Number(seg.overlay.props.count || 20)}
+                                style={pStyle as 'ambient' | 'burst' | 'rain'}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    }
+                    case 'kinetic-text': {
+                        const rawStyle = String(seg.overlay.props.style || 'pop');
+                        const validStyles = ['pop', 'slide', 'typewriter'];
+                        const kStyle = validStyles.includes(rawStyle) ? rawStyle : 'pop';
+                        const rawPos = String(seg.overlay.props.position || 'center');
+                        const validPos = ['center', 'top', 'bottom'];
+                        const kPos = validPos.includes(rawPos) ? rawPos : 'center';
+                        return (
+                            <KineticText
+                                key={seg.id}
+                                text={String(seg.overlay.props.text || seg.text)}
+                                color={String(seg.overlay.props.color || '#6366f1')}
+                                style={kStyle as 'pop' | 'slide' | 'typewriter'}
+                                position={kPos as 'center' | 'top' | 'bottom'}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    }
                     case 'zoom-effect':
-                        // Zoom effect is a simple scale on the video itself
+                        // Zoom effect is a subtle overlay
                         return (
                             <AbsoluteFill
                                 key={seg.id}
@@ -125,6 +169,19 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                     }}
                                 />
                             </AbsoluteFill>
+                        );
+                    case 'visual-illustration':
+                        return (
+                            <VisualIllustration
+                                key={seg.id}
+                                scene={String(seg.overlay.props.scene || 'solar-system')}
+                                label={String(seg.overlay.props.label || '')}
+                                color={String(seg.overlay.props.color || '#6366f1')}
+                                displayMode={String(seg.overlay.props.displayMode || 'overlay')}
+                                transition={String(seg.overlay.props.transition || 'fade-in')}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
                         );
                     default:
                         return null;
