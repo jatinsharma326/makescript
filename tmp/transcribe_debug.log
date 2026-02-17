@@ -1,0 +1,605 @@
+[2026-02-11T08:32:40.436Z] --- Starting new transcription request ---
+[2026-02-11T08:32:41.394Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-11T08:32:42.342Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770798761424.mp4
+[2026-02-11T08:32:42.362Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770798761424.mp4" base
+[2026-02-11T08:32:42.731Z] stdout length: 118
+[2026-02-11T08:32:42.753Z] Script returned error: Critical script failure: Popen.__init__() got an unexpected keyword argument 'checkFor'
+[2026-02-11T08:32:42.773Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770798761424.mp4
+[2026-02-11T08:52:04.244Z] --- Starting new transcription request ---
+[2026-02-11T08:52:04.753Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-11T08:52:04.957Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770799924758.mp4
+[2026-02-11T08:52:04.968Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770799924758.mp4" base
+[2026-02-11T08:53:16.776Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 21%|##1       | 2608/12260 [00:06<00:25, 379.08frames/s] 46%|####5     | 5604/12260 [00:15<00:18, 356.86frames/s] 70%|######9   | 8568/12260 [00:25<00:11, 320.85frames/s] 70%|######9   | 8568/12260 [00:40<00:11, 320.85frames/s] 92%|#########1| 1
+[2026-02-11T08:53:16.901Z] stdout length: 8015
+[2026-02-11T08:53:16.947Z] Success! 46 segments, language: en
+[2026-02-11T08:53:17.027Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770799924758.mp4
+[2026-02-11T09:01:30.977Z] --- Starting new transcription request ---
+[2026-02-11T09:01:34.182Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-11T09:01:34.445Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770800494188.mp4
+[2026-02-11T09:01:34.500Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770800494188.mp4" base
+[2026-02-11T09:02:49.374Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 21%|##1       | 2608/12260 [00:16<01:02, 154.33frames/s] 21%|##1       | 2608/12260 [00:30<01:02, 154.33frames/s] 46%|####5     | 5604/12260 [00:36<00:43, 152.59frames/s] 70%|######9   | 8568/12260 [00:46<00:18, 197.95frames/s] 92%|#########1| 1
+[2026-02-11T09:02:49.429Z] stdout length: 8015
+[2026-02-11T09:02:49.456Z] Success! 46 segments, language: en
+[2026-02-11T09:02:49.505Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770800494188.mp4
+[2026-02-11T09:21:13.716Z] --- Starting new transcription request ---
+[2026-02-11T09:21:14.074Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-11T09:21:14.236Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770801674078.mp4
+[2026-02-11T09:21:14.240Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770801674078.mp4" base
+[2026-02-11T09:22:30.064Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 21%|##1       | 2608/12260 [00:09<00:33, 289.13frames/s] 46%|####5     | 5604/12260 [00:18<00:22, 298.00frames/s] 46%|####5     | 5604/12260 [00:30<00:22, 298.00frames/s] 70%|######9   | 8568/12260 [00:30<00:13, 274.76frames/s] 92%|#########1| 1
+[2026-02-11T09:22:30.238Z] stdout length: 8015
+[2026-02-11T09:22:30.245Z] Success! 46 segments, language: en
+[2026-02-11T09:22:30.262Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770801674078.mp4
+[2026-02-11T10:30:25.332Z] --- Starting new transcription request ---
+[2026-02-11T10:30:25.746Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-11T10:30:25.924Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770805825750.mp4
+[2026-02-11T10:30:25.934Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770805825750.mp4" base
+[2026-02-11T10:35:26.026Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2996/9415 [00:12<00:26, 241.29frames/s] 63%|######2   | 5924/9415 [00:27<00:16, 213.80frames/s] 92%|#########1| 8660/9415 [00:38<00:03, 224.15frames/s]100%|##########| 9415/9415 [00:41<00:00, 226.30frames/s]100%|##########| 9415/9
+[2026-02-11T10:35:26.058Z] stdout length: 7257
+[2026-02-11T10:35:26.071Z] Success! 37 segments, language: en
+[2026-02-11T10:35:26.109Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770805825750.mp4
+[2026-02-11T10:35:54.947Z] --- Starting new transcription request ---
+[2026-02-11T10:35:56.019Z] Received file: thehive.ai.mp4, size: 21879511 bytes
+[2026-02-11T10:35:56.200Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770806156024.mp4
+[2026-02-11T10:35:56.210Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770806156024.mp4" base
+[2026-02-11T10:36:49.494Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12433 [00:00<?, ?frames/s] 17%|#6        | 2100/12433 [00:06<00:29, 346.18frames/s] 35%|###5      | 4400/12433 [00:11<00:21, 382.45frames/s] 59%|#####8    | 7300/12433 [00:18<00:12, 405.63frames/s] 78%|#######8  | 9700/12433 [00:24<00:06, 402.31frames/s]100%|##########| 1
+[2026-02-11T10:36:49.501Z] stdout length: 4632
+[2026-02-11T10:36:49.507Z] Success! 18 segments, language: en
+[2026-02-11T10:36:49.516Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770806156024.mp4
+[2026-02-11T10:50:47.717Z] --- Starting new transcription request ---
+[2026-02-11T10:50:48.224Z] Received file: 38523.mp4, size: 25024254 bytes
+[2026-02-11T10:50:48.404Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770807048230.mp4
+[2026-02-11T10:50:48.412Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770807048230.mp4" base
+[2026-02-11T10:51:58.045Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:09<00:34, 284.77frames/s] 44%|####4     | 5640/12717 [00:19<00:24, 283.57frames/s] 67%|######6   | 8460/12717 [00:29<00:15, 281.40frames/s] 89%|########9 | 11360/12717 [00:39<00:04, 286.09frames/s]100%|##########| 
+[2026-02-11T10:51:58.060Z] stdout length: 8838
+[2026-02-11T10:51:58.065Z] Success! 42 segments, language: en
+[2026-02-11T10:51:58.088Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770807048230.mp4
+[2026-02-11T10:58:23.633Z] --- Starting new transcription request ---
+[2026-02-11T10:58:24.370Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-11T10:58:24.748Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770807504419.mp4
+[2026-02-11T10:58:24.757Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770807504419.mp4" base
+[2026-02-11T10:59:21.551Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:07<00:35, 311.51frames/s] 37%|###6      | 4832/13209 [00:12<00:21, 396.71frames/s] 54%|#####3    | 7084/13209 [00:18<00:16, 381.94frames/s] 71%|#######   | 9348/13209 [00:24<00:09, 387.96frames/s] 92%|#########2| 1
+[2026-02-11T10:59:21.582Z] stdout length: 5313
+[2026-02-11T10:59:21.591Z] Success! 32 segments, language: en
+[2026-02-11T10:59:21.621Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770807504419.mp4
+[2026-02-11T11:06:56.164Z] --- Starting new transcription request ---
+[2026-02-11T11:06:57.291Z] Received file: 9 (2).mp4, size: 40274258 bytes
+[2026-02-11T11:06:57.481Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770808017295.mp4
+[2026-02-11T11:06:57.488Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770808017295.mp4" base
+[2026-02-11T11:07:52.147Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9243 [00:00<?, ?frames/s] 31%|###       | 2834/9243 [00:10<00:24, 266.00frames/s] 61%|######1   | 5650/9243 [00:22<00:14, 249.46frames/s] 93%|#########2| 8582/9243 [00:34<00:02, 249.84frames/s]100%|##########| 9243/9243 [00:36<00:00, 253.45frames/s]100%|##########| 9243/9
+[2026-02-11T11:07:52.150Z] stdout length: 7362
+[2026-02-11T11:07:52.153Z] Success! 50 segments, language: en
+[2026-02-11T11:07:52.158Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770808017295.mp4
+[2026-02-11T11:20:23.330Z] --- Starting new transcription request ---
+[2026-02-11T11:20:24.040Z] Received file: video_vid_1768042985626mp.mp4, size: 27013686 bytes
+[2026-02-11T11:20:24.205Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770808824044.mp4
+[2026-02-11T11:20:24.211Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770808824044.mp4" base
+[2026-02-11T11:21:18.699Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:07<00:26, 367.24frames/s] 44%|####4     | 5640/12717 [00:16<00:21, 327.93frames/s] 67%|######6   | 8460/12717 [00:26<00:13, 313.44frames/s] 89%|########9 | 11360/12717 [00:36<00:04, 296.59frames/s]100%|##########| 
+[2026-02-11T11:21:18.718Z] stdout length: 8838
+[2026-02-11T11:21:18.726Z] Success! 42 segments, language: en
+[2026-02-11T11:21:18.756Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770808824044.mp4
+[2026-02-11T11:41:46.893Z] --- Starting new transcription request ---
+[2026-02-11T11:41:47.824Z] Received file: output.mp4, size: 30074034 bytes
+[2026-02-11T11:41:48.017Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770810107828.mp4
+[2026-02-11T11:41:48.025Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770810107828.mp4" base
+[2026-02-11T11:42:30.409Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 19%|#9        | 2340/12260 [00:04<00:21, 469.35frames/s] 43%|####2     | 5212/12260 [00:10<00:14, 503.04frames/s] 65%|######5   | 7996/12260 [00:15<00:08, 514.80frames/s] 88%|########8 | 10816/12260 [00:21<00:02, 507.13frames/s]100%|##########| 
+[2026-02-11T11:42:30.413Z] stdout length: 7080
+[2026-02-11T11:42:30.416Z] Success! 33 segments, language: en
+[2026-02-11T11:42:30.432Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770810107828.mp4
+[2026-02-11T11:50:14.917Z] --- Starting new transcription request ---
+[2026-02-11T11:50:15.917Z] Received file: 38594.mp4, size: 31744298 bytes
+[2026-02-11T11:50:16.116Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770810615960.mp4
+[2026-02-11T11:50:16.150Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770810615960.mp4" base
+[2026-02-11T11:51:03.143Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:08<00:28, 346.74frames/s] 44%|####4     | 5640/12717 [00:15<00:18, 373.52frames/s] 67%|######6   | 8460/12717 [00:22<00:10, 393.10frames/s] 89%|########9 | 11360/12717 [00:28<00:03, 409.12frames/s]100%|##########| 
+[2026-02-11T11:51:03.147Z] stdout length: 8838
+[2026-02-11T11:51:03.151Z] Success! 42 segments, language: en
+[2026-02-11T11:51:03.167Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770810615960.mp4
+[2026-02-11T14:01:33.636Z] --- Starting new transcription request ---
+[2026-02-11T14:01:33.965Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-11T14:01:34.070Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770818494003.mp4
+[2026-02-11T14:01:34.073Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770818494003.mp4" base
+[2026-02-11T14:02:22.186Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2996/9415 [00:07<00:15, 423.79frames/s] 63%|######2   | 5924/9415 [00:14<00:08, 398.41frames/s] 92%|#########1| 8660/9415 [00:24<00:02, 335.50frames/s]100%|##########| 9415/9415 [00:29<00:00, 290.88frames/s]100%|##########| 9415/9
+[2026-02-11T14:02:22.220Z] stdout length: 7257
+[2026-02-11T14:02:22.236Z] Success! 37 segments, language: en
+[2026-02-11T14:02:22.267Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770818494003.mp4
+[2026-02-12T07:22:09.540Z] --- Starting new transcription request ---
+[2026-02-12T07:22:10.863Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-12T07:22:11.157Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770880930872.mp4
+[2026-02-12T07:22:11.163Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770880930872.mp4" base
+[2026-02-12T07:27:11.357Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:05<00:25, 426.08frames/s] 37%|###6      | 4832/13209 [00:10<00:18, 443.85frames/s] 54%|#####3    | 7084/13209 [00:18<00:17, 353.66frames/s] 71%|#######   | 9348/13209 [00:27<00:12, 306.52frames/s] 92%|#########2| 1
+[2026-02-12T07:27:11.577Z] stdout length: 5313
+[2026-02-12T07:27:11.604Z] Success! 32 segments, language: en
+[2026-02-12T07:27:11.700Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770880930872.mp4
+[2026-02-12T07:32:48.792Z] --- Starting new transcription request ---
+[2026-02-12T07:32:55.026Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-12T07:32:55.278Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770881575034.mp4
+[2026-02-12T07:32:55.283Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770881575034.mp4" base
+[2026-02-12T07:34:30.395Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:05<00:26, 410.54frames/s] 37%|###6      | 4832/13209 [00:14<00:25, 332.52frames/s] 37%|###6      | 4832/13209 [00:31<00:25, 332.52frames/s] 54%|#####3    | 7084/13209 [00:56<01:00, 101.60frames/s] 71%|#######   | 9
+[2026-02-12T07:34:30.494Z] stdout length: 5313
+[2026-02-12T07:34:30.517Z] Success! 32 segments, language: en
+[2026-02-12T07:34:30.562Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770881575034.mp4
+[2026-02-12T08:04:36.790Z] --- Starting new transcription request ---
+[2026-02-12T08:04:37.605Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-12T08:04:37.912Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770883477621.mp4
+[2026-02-12T08:04:37.925Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770883477621.mp4" base
+[2026-02-12T08:05:57.669Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:06<00:33, 331.96frames/s] 37%|###6      | 4832/13209 [00:16<00:28, 297.25frames/s] 54%|#####3    | 7084/13209 [00:23<00:20, 305.52frames/s] 71%|#######   | 9348/13209 [00:32<00:14, 273.17frames/s] 92%|#########2| 1
+[2026-02-12T08:05:57.755Z] stdout length: 5313
+[2026-02-12T08:05:57.773Z] Success! 32 segments, language: en
+[2026-02-12T08:05:57.840Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770883477621.mp4
+[2026-02-12T08:16:04.356Z] --- Starting new transcription request ---
+[2026-02-12T08:16:04.738Z] Received file: 9.mp4, size: 10004838 bytes
+[2026-02-12T08:16:04.882Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770884164789.mp4
+[2026-02-12T08:16:04.893Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770884164789.mp4" base
+[2026-02-12T08:17:52.916Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9243 [00:00<?, ?frames/s] 31%|###       | 2834/9243 [00:20<00:47, 136.36frames/s] 31%|###       | 2834/9243 [00:40<00:47, 136.36frames/s] 61%|######1   | 5650/9243 [00:43<00:27, 130.53frames/s] 61%|######1   | 5650/9243 [01:00<00:27, 130.53frames/s] 93%|#########2| 8582/9
+[2026-02-12T08:17:53.060Z] stdout length: 7362
+[2026-02-12T08:17:53.092Z] Success! 50 segments, language: en
+[2026-02-12T08:17:53.165Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770884164789.mp4
+[2026-02-12T08:29:01.108Z] --- Starting new transcription request ---
+[2026-02-12T08:29:01.637Z] Received file: video_vid_1768042985626mp.mp4, size: 27013686 bytes
+[2026-02-12T08:29:01.828Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770884941641.mp4
+[2026-02-12T08:29:01.834Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770884941641.mp4" base
+[2026-02-12T08:30:34.247Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:13<00:46, 212.64frames/s] 44%|####4     | 5640/12717 [00:29<00:37, 186.41frames/s] 44%|####4     | 5640/12717 [00:40<00:37, 186.41frames/s] 67%|######6   | 8460/12717 [00:50<00:26, 159.60frames/s] 67%|######6   | 8
+[2026-02-12T08:30:34.374Z] stdout length: 8838
+[2026-02-12T08:30:34.406Z] Success! 42 segments, language: en
+[2026-02-12T08:30:34.463Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770884941641.mp4
+[2026-02-12T08:47:54.992Z] --- Starting new transcription request ---
+[2026-02-12T08:47:55.692Z] Received file: thehive.ai.mp4, size: 21879511 bytes
+[2026-02-12T08:47:56.096Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770886075696.mp4
+[2026-02-12T08:47:56.113Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770886075696.mp4" base
+[2026-02-12T08:49:13.856Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12433 [00:00<?, ?frames/s] 17%|#6        | 2100/12433 [00:10<00:49, 207.98frames/s] 35%|###5      | 4400/12433 [00:17<00:30, 265.98frames/s] 59%|#####8    | 7300/12433 [00:25<00:16, 311.74frames/s] 78%|#######8  | 9700/12433 [00:32<00:08, 309.78frames/s]100%|##########| 1
+[2026-02-12T08:49:14.142Z] stdout length: 4632
+[2026-02-12T08:49:14.163Z] Success! 18 segments, language: en
+[2026-02-12T08:49:14.213Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770886075696.mp4
+[2026-02-12T08:59:36.617Z] --- Starting new transcription request ---
+[2026-02-12T08:59:37.582Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-12T08:59:38.619Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770886777613.mp4
+[2026-02-12T08:59:38.625Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770886777613.mp4" base
+[2026-02-12T09:00:48.986Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 21%|##1       | 2608/12260 [00:09<00:33, 287.63frames/s] 21%|##1       | 2608/12260 [00:20<00:33, 287.63frames/s] 46%|####5     | 5604/12260 [00:20<00:24, 276.24frames/s] 70%|######9   | 8568/12260 [00:29<00:12, 298.12frames/s] 92%|#########1| 1
+[2026-02-12T09:00:49.039Z] stdout length: 8015
+[2026-02-12T09:00:49.054Z] Success! 46 segments, language: en
+[2026-02-12T09:00:49.083Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770886777613.mp4
+[2026-02-12T09:13:52.972Z] --- Starting new transcription request ---
+[2026-02-12T09:13:53.353Z] Received file: havenapp.mp4, size: 6668686 bytes
+[2026-02-12T09:13:53.387Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770887633356.mp4
+[2026-02-12T09:13:53.391Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770887633356.mp4" base
+[2026-02-12T09:14:08.810Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+
+[2026-02-12T09:14:08.815Z] stdout length: 1920
+[2026-02-12T09:14:08.818Z] Script returned error: Failed to load audio: ffmpeg version 6.0.1 Copyright (c) 2000-2023 the FFmpeg developers
+  built with clang version 17.0.4
+  configuration: --prefix=/d/bld/ffmpeg_1699623939241/_h_env/Library --cc=clang.exe --cxx=clang++.exe --nm=llvm-nm --ar=llvm-ar --disable-doc --disable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --ld=lld-link --target-os=win64 --enable-cross-compile --toolchain=msvc --host-cc=clang.exe --extra-libs=ucrt.lib --extra-libs=vcruntime.lib --extra-libs=oldnames.lib --strip=llvm-strip --disable-stripping --host-extralibs= --enable-gpl --enable-libx264 --enable-libx265 --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --disable-static --enable-version3 --enable-zlib --enable-libopus --pkg-config=/d/bld/ffmpeg_1699623939241/_build_env/Library/bin/pkg-config
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770887633356.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:12.22, start: 0.000000, bitrate: 738 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 382x850, 734 kb/s, 41.11 fps, 59.94 tbr, 90k tbn (default)
+    Metadata:
+      vendor_id       : [0][0][0][0]
+Output #0, s16le, to 'pipe:':
+[out#0/s16le @ 00000217EAFBC300] Output file does not contain any stream
+
+[2026-02-12T09:14:08.828Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770887633356.mp4
+[2026-02-12T09:26:12.806Z] --- Starting new transcription request ---
+[2026-02-12T09:26:12.915Z] Received file: havenapp.mp4, size: 6668686 bytes
+[2026-02-12T09:26:12.935Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888372919.mp4
+[2026-02-12T09:26:12.940Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888372919.mp4" base
+[2026-02-12T09:26:24.233Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+
+[2026-02-12T09:26:24.236Z] stdout length: 1920
+[2026-02-12T09:26:24.237Z] Script returned error: Failed to load audio: ffmpeg version 6.0.1 Copyright (c) 2000-2023 the FFmpeg developers
+  built with clang version 17.0.4
+  configuration: --prefix=/d/bld/ffmpeg_1699623939241/_h_env/Library --cc=clang.exe --cxx=clang++.exe --nm=llvm-nm --ar=llvm-ar --disable-doc --disable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --ld=lld-link --target-os=win64 --enable-cross-compile --toolchain=msvc --host-cc=clang.exe --extra-libs=ucrt.lib --extra-libs=vcruntime.lib --extra-libs=oldnames.lib --strip=llvm-strip --disable-stripping --host-extralibs= --enable-gpl --enable-libx264 --enable-libx265 --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --disable-static --enable-version3 --enable-zlib --enable-libopus --pkg-config=/d/bld/ffmpeg_1699623939241/_build_env/Library/bin/pkg-config
+  libavutil      58.  2.100 / 58.  2.100
+  libavcodec     60.  3.100 / 60.  3.100
+  libavformat    60.  3.100 / 60.  3.100
+  libavdevice    60.  1.100 / 60.  1.100
+  libavfilter     9.  3.100 /  9.  3.100
+  libswscale      7.  1.100 /  7.  1.100
+  libswresample   4. 10.100 /  4. 10.100
+  libpostproc    57.  1.100 / 57.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888372919.mp4':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:12.22, start: 0.000000, bitrate: 738 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 382x850, 734 kb/s, 41.11 fps, 59.94 tbr, 90k tbn (default)
+    Metadata:
+      vendor_id       : [0][0][0][0]
+Output #0, s16le, to 'pipe:':
+[out#0/s16le @ 0000016784F5EE80] Output file does not contain any stream
+
+[2026-02-12T09:26:24.244Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888372919.mp4
+[2026-02-12T09:27:23.400Z] --- Starting new transcription request ---
+[2026-02-12T09:27:23.877Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-12T09:27:24.054Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888443882.mp4
+[2026-02-12T09:27:24.059Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888443882.mp4" base
+[2026-02-12T09:28:19.573Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2996/9415 [00:14<00:30, 208.35frames/s] 63%|######2   | 5924/9415 [00:27<00:16, 214.49frames/s] 92%|#########1| 8660/9415 [00:37<00:03, 237.52frames/s]100%|##########| 9415/9415 [00:42<00:00, 224.40frames/s]100%|##########| 9415/9
+[2026-02-12T09:28:19.603Z] stdout length: 7257
+[2026-02-12T09:28:19.609Z] Success! 37 segments, language: en
+[2026-02-12T09:28:19.626Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770888443882.mp4
+[2026-02-12T10:32:45.209Z] --- Starting new transcription request ---
+[2026-02-12T10:32:45.309Z] Received file: havenapp.mp4, size: 6668686 bytes
+[2026-02-12T10:32:45.342Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770892365313.mp4
+[2026-02-12T10:32:45.348Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770892365313.mp4" base
+[2026-02-12T10:32:48.357Z] stdout length: 121
+[2026-02-12T10:32:48.361Z] Script returned error: no_audio_stream
+[2026-02-12T10:32:48.368Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770892365313.mp4
+[2026-02-12T10:37:53.969Z] --- Starting new transcription request ---
+[2026-02-12T10:37:54.945Z] Received file: video_vid_1768042985626mp.mp4, size: 27013686 bytes
+[2026-02-12T10:37:55.364Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770892674991.mp4
+[2026-02-12T10:37:55.376Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770892674991.mp4" base
+[2026-02-12T10:39:36.289Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:14<00:49, 200.47frames/s] 44%|####4     | 5640/12717 [00:27<00:33, 209.15frames/s] 44%|####4     | 5640/12717 [00:40<00:33, 209.15frames/s] 67%|######6   | 8460/12717 [00:41<00:20, 203.47frames/s] 89%|########9 | 1
+[2026-02-12T10:39:36.389Z] stdout length: 8901
+[2026-02-12T10:39:36.446Z] Success! 42 segments (filtered 0 hallucinations), confidence: 0.879, language: en
+[2026-02-12T10:39:36.519Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770892674991.mp4
+[2026-02-12T10:58:07.485Z] --- Starting new transcription request ---
+[2026-02-12T10:58:08.207Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-12T10:58:08.312Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770893888209.mp4
+[2026-02-12T10:58:08.317Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770893888209.mp4" base
+[2026-02-12T10:59:39.339Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2996/9415 [00:21<00:45, 141.93frames/s] 63%|######2   | 5924/9415 [00:38<00:22, 155.63frames/s] 63%|######2   | 5924/9415 [00:50<00:22, 155.63frames/s] 92%|#########1| 8660/9415 [00:57<00:05, 149.90frames/s]100%|##########| 9415/9
+[2026-02-12T10:59:39.433Z] stdout length: 7320
+[2026-02-12T10:59:39.465Z] Success! 37 segments (filtered 0 hallucinations), confidence: 0.826, language: en
+[2026-02-12T10:59:39.514Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770893888209.mp4
+[2026-02-12T11:08:55.639Z] --- Starting new transcription request ---
+[2026-02-12T11:08:55.759Z] Received file: havenapp.mp4, size: 6668686 bytes
+[2026-02-12T11:08:55.849Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770894535768.mp4
+[2026-02-12T11:08:55.856Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770894535768.mp4" base
+[2026-02-12T11:08:58.122Z] stdout length: 121
+[2026-02-12T11:08:58.126Z] Script returned error: no_audio_stream
+[2026-02-12T11:08:58.137Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770894535768.mp4
+[2026-02-12T11:15:59.707Z] --- Starting new transcription request ---
+[2026-02-12T11:16:00.801Z] Received file: groks scandal.mp4, size: 41563287 bytes
+[2026-02-12T11:16:01.028Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770894960809.mp4
+[2026-02-12T11:16:01.032Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770894960809.mp4" base
+[2026-02-12T11:18:02.094Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13444 [00:00<?, ?frames/s] 19%|#9        | 2572/13444 [00:13<00:56, 194.13frames/s] 38%|###7      | 5072/13444 [00:21<00:34, 241.97frames/s] 38%|###7      | 5072/13444 [00:40<00:34, 241.97frames/s] 58%|#####8    | 7832/13444 [01:18<01:07, 82.84frames/s]  58%|#####8    | 7
+[2026-02-12T11:18:02.172Z] stdout length: 5788
+[2026-02-12T11:18:02.196Z] Success! 21 segments (filtered 4 hallucinations), confidence: 0.802, language: en
+[2026-02-12T11:18:02.235Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770894960809.mp4
+[2026-02-12T11:33:00.603Z] --- Starting new transcription request ---
+[2026-02-12T11:33:01.579Z] Received file: groks scandal.mp4, size: 41563287 bytes
+[2026-02-12T11:33:01.835Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770895981600.mp4
+[2026-02-12T11:33:01.839Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770895981600.mp4" small
+[2026-02-12T11:36:46.025Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13444 [00:00<?, ?frames/s] 21%|##        | 2776/13444 [00:49<03:07, 56.89frames/s] 21%|##        | 2776/13444 [01:00<03:07, 56.89frames/s] 41%|####1     | 5548/13444 [01:33<02:11, 60.01frames/s] 41%|####1     | 5548/13444 [01:50<02:11, 60.01frames/s] 62%|######1   | 8332/
+[2026-02-12T11:36:46.161Z] stdout length: 7148
+[2026-02-12T11:36:46.200Z] Success! 36 segments (filtered 0 hallucinations), confidence: 0.747, language: en
+[2026-02-12T11:36:46.278Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770895981600.mp4
+[2026-02-13T05:19:47.777Z] --- Starting new transcription request ---
+[2026-02-13T05:19:48.686Z] Received file: Front_Camera_Mouse_Playing_Video_Game.mp4, size: 1907109 bytes
+[2026-02-13T05:19:48.908Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770959988754.mp4
+[2026-02-13T05:19:49.030Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770959988754.mp4" small
+[2026-02-13T05:20:29.086Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/800 [00:00<?, ?frames/s]  0%|          | 0/800 [00:06<?, ?frames/s]
+
+[2026-02-13T05:20:29.145Z] stdout length: 108
+[2026-02-13T05:20:29.152Z] Success! 0 segments (filtered 0 hallucinations), confidence: 1, language: en
+[2026-02-13T05:20:29.191Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770959988754.mp4
+[2026-02-13T05:24:37.632Z] --- Starting new transcription request ---
+[2026-02-13T05:24:41.315Z] Received file: 9 (2).mp4, size: 40274258 bytes
+[2026-02-13T05:24:41.455Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770960281336.mp4
+[2026-02-13T05:24:41.459Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770960281336.mp4" small
+[2026-02-13T05:26:31.019Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9243 [00:00<?, ?frames/s] 31%|###       | 2836/9243 [00:24<00:54, 117.80frames/s] 31%|###       | 2836/9243 [00:40<00:54, 117.80frames/s] 61%|######1   | 5652/9243 [00:44<00:28, 127.18frames/s] 61%|######1   | 5652/9243 [01:00<00:28, 127.18frames/s] 93%|#########2| 8584/9
+[2026-02-13T05:26:31.071Z] stdout length: 7383
+[2026-02-13T05:26:31.083Z] Success! 49 segments (filtered 0 hallucinations), confidence: 0.974, language: en
+[2026-02-13T05:26:31.121Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770960281336.mp4
+[2026-02-13T05:39:01.273Z] --- Starting new transcription request ---
+[2026-02-13T05:39:03.755Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-13T05:39:03.902Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770961143760.mp4
+[2026-02-13T05:39:03.906Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770961143760.mp4" small
+[2026-02-13T05:41:46.743Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2994/9415 [00:44<01:36, 66.65frames/s] 32%|###1      | 2994/9415 [01:00<01:36, 66.65frames/s] 62%|######1   | 5822/9415 [01:21<00:49, 72.78frames/s] 62%|######1   | 5822/9415 [01:40<00:49, 72.78frames/s] 91%|#########1| 8582/9415 
+[2026-02-13T05:41:46.865Z] stdout length: 6937
+[2026-02-13T05:41:46.890Z] Success! 33 segments (filtered 4 hallucinations), confidence: 0.972, language: en
+[2026-02-13T05:41:46.971Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770961143760.mp4
+[2026-02-13T06:02:46.794Z] --- Starting new transcription request ---
+[2026-02-13T06:02:49.739Z] Received file: coworker.mp4, size: 51490895 bytes
+[2026-02-13T06:02:50.525Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770962569745.mp4
+[2026-02-13T06:02:50.601Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770962569745.mp4" small
+[2026-02-13T06:05:53.774Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13341 [00:00<?, ?frames/s] 20%|##        | 2700/13341 [00:43<02:51, 62.22frames/s] 20%|##        | 2700/13341 [01:01<02:51, 62.22frames/s] 40%|###9      | 5300/13341 [01:23<02:06, 63.36frames/s] 40%|###9      | 5300/13341 [01:42<02:06, 63.36frames/s] 57%|#####6    | 7600/
+[2026-02-13T06:05:53.877Z] stdout length: 6407
+[2026-02-13T06:05:53.906Z] Success! 32 segments (filtered 0 hallucinations), confidence: 0.747, language: en
+[2026-02-13T06:05:54.058Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770962569745.mp4
+[2026-02-13T06:19:43.181Z] --- Starting new transcription request ---
+[2026-02-13T06:19:45.154Z] Received file: 38594.mp4, size: 31744298 bytes
+[2026-02-13T06:19:45.360Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770963585174.mp4
+[2026-02-13T06:19:45.389Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770963585174.mp4" small
+[2026-02-13T06:22:19.760Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:33<01:55, 85.56frames/s] 22%|##2       | 2840/12717 [00:50<01:55, 85.56frames/s] 44%|####4     | 5640/12717 [01:12<01:33, 76.09frames/s] 67%|######6   | 8460/12717 [01:30<00:42, 100.36frames/s] 67%|######6   | 8460
+[2026-02-13T06:22:19.834Z] stdout length: 7546
+[2026-02-13T06:22:19.851Z] Success! 28 segments (filtered 4 hallucinations), confidence: 0.987, language: en
+[2026-02-13T06:22:19.899Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770963585174.mp4
+[2026-02-13T06:28:45.113Z] --- Starting new transcription request ---
+[2026-02-13T06:28:47.957Z] Received file: output.mp4, size: 30074034 bytes
+[2026-02-13T06:28:48.701Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770964128442.mp4
+[2026-02-13T06:28:48.709Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770964128442.mp4" small
+[2026-02-13T06:31:14.656Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 23%|##3       | 2844/12260 [00:29<01:37, 96.79frames/s] 23%|##3       | 2844/12260 [00:41<01:37, 96.79frames/s] 47%|####7     | 5792/12260 [01:11<01:22, 78.34frames/s] 47%|####7     | 5792/12260 [01:22<01:22, 78.34frames/s] 71%|#######1  | 8740/
+[2026-02-13T06:31:14.751Z] stdout length: 8999
+[2026-02-13T06:31:14.773Z] Success! 63 segments (filtered 2 hallucinations), confidence: 0.981, language: en
+[2026-02-13T06:31:14.806Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770964128442.mp4
+[2026-02-13T07:31:26.438Z] --- Starting new transcription request ---
+[2026-02-13T07:31:28.807Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-13T07:31:29.187Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770967888832.mp4
+[2026-02-13T07:31:29.223Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770967888832.mp4" small
+[2026-02-13T07:35:01.782Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2994/9415 [00:35<01:17, 83.26frames/s] 32%|###1      | 2994/9415 [00:50<01:17, 83.26frames/s] 62%|######1   | 5822/9415 [01:22<00:52, 68.30frames/s] 62%|######1   | 5822/9415 [01:40<00:52, 68.30frames/s] 91%|#########1| 8582/9415 
+[2026-02-13T07:35:01.951Z] stdout length: 6937
+[2026-02-13T07:35:01.996Z] Success! 33 segments (filtered 4 hallucinations), confidence: 0.972, language: en
+[2026-02-13T07:35:02.104Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770967888832.mp4
+[2026-02-13T07:40:05.700Z] --- Starting new transcription request ---
+[2026-02-13T07:40:06.567Z] Received file: thehive.ai.mp4, size: 21879511 bytes
+[2026-02-13T07:40:06.699Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770968406571.mp4
+[2026-02-13T07:40:06.708Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770968406571.mp4" small
+[2026-02-13T07:43:31.000Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12433 [00:00<?, ?frames/s] 23%|##3       | 2908/12433 [00:32<01:46, 89.37frames/s] 23%|##3       | 2908/12433 [00:51<01:46, 89.37frames/s] 43%|####3     | 5404/12433 [00:52<01:06, 106.28frames/s] 43%|####3     | 5404/12433 [01:11<01:06, 106.28frames/s] 64%|######3   | 793
+[2026-02-13T07:43:31.132Z] stdout length: 4392
+[2026-02-13T07:43:31.166Z] Success! 19 segments (filtered 7 hallucinations), confidence: 0.929, language: en
+[2026-02-13T07:43:31.246Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770968406571.mp4
+[2026-02-13T15:52:24.098Z] --- Starting new transcription request ---
+[2026-02-13T15:52:25.133Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-13T15:52:25.324Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770997945179.mp4
+[2026-02-13T15:52:25.334Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770997945179.mp4" small
+[2026-02-13T15:54:37.215Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2994/9415 [00:32<01:10, 91.54frames/s] 32%|###1      | 2994/9415 [00:50<01:10, 91.54frames/s] 62%|######1   | 5822/9415 [01:00<00:37, 96.75frames/s] 62%|######1   | 5822/9415 [01:20<00:37, 96.75frames/s] 91%|#########1| 8582/9415 
+[2026-02-13T15:54:37.288Z] stdout length: 6937
+[2026-02-13T15:54:37.321Z] Success! 33 segments (filtered 4 hallucinations), confidence: 0.972, language: en
+[2026-02-13T15:54:37.389Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1770997945179.mp4
+[2026-02-14T06:28:02.002Z] --- Starting new transcription request ---
+[2026-02-14T06:28:02.594Z] Received file: 38523.mp4, size: 25024254 bytes
+[2026-02-14T06:28:02.702Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771050482600.mp4
+[2026-02-14T06:28:02.705Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771050482600.mp4" small
+[2026-02-14T06:31:25.274Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:36<02:07, 77.63frames/s] 22%|##2       | 2840/12717 [00:50<02:07, 77.63frames/s] 44%|####4     | 5640/12717 [01:46<02:20, 50.37frames/s] 44%|####4     | 5640/12717 [02:00<02:20, 50.37frames/s] 67%|######6   | 8460/
+[2026-02-14T06:31:25.441Z] stdout length: 7546
+[2026-02-14T06:31:25.469Z] Success! 28 segments (filtered 4 hallucinations), confidence: 0.987, language: en
+[2026-02-14T06:31:25.638Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771050482600.mp4
+[2026-02-14T07:46:29.396Z] --- Starting new transcription request ---
+[2026-02-14T07:46:29.495Z] Received file: havenapp.mp4, size: 6668686 bytes
+[2026-02-14T07:46:29.516Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771055189497.mp4
+[2026-02-14T07:46:29.522Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771055189497.mp4" small
+[2026-02-14T07:46:31.621Z] stdout length: 121
+[2026-02-14T07:46:31.626Z] Script returned error: no_audio_stream
+[2026-02-14T07:46:31.635Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771055189497.mp4
+[2026-02-14T08:00:11.285Z] --- Starting new transcription request ---
+[2026-02-14T08:00:12.088Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-14T08:00:12.369Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771056012145.mp4
+[2026-02-14T08:00:12.374Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771056012145.mp4" small
+[2026-02-14T08:03:42.746Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 23%|##3       | 2844/12260 [00:28<01:33, 100.52frames/s] 23%|##3       | 2844/12260 [00:40<01:33, 100.52frames/s] 47%|####7     | 5792/12260 [00:58<01:05, 99.26frames/s]  47%|####7     | 5792/12260 [01:10<01:05, 99.26frames/s] 71%|#######1  | 87
+[2026-02-14T08:03:42.873Z] stdout length: 9382
+[2026-02-14T08:03:42.908Z] Success! 67 segments (filtered 2 hallucinations), confidence: 0.978, language: en
+[2026-02-14T08:03:43.024Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771056012145.mp4
+[2026-02-14T08:23:19.496Z] --- Starting new transcription request ---
+[2026-02-14T08:23:21.726Z] Received file: thehive.ai.mp4, size: 21879511 bytes
+[2026-02-14T08:23:21.897Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771057401731.mp4
+[2026-02-14T08:23:21.945Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771057401731.mp4" small
+[2026-02-14T08:25:46.349Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12433 [00:00<?, ?frames/s] 23%|##3       | 2908/12433 [00:23<01:16, 124.71frames/s] 23%|##3       | 2908/12433 [00:40<01:16, 124.71frames/s] 43%|####3     | 5404/12433 [00:43<00:56, 124.68frames/s] 43%|####3     | 5404/12433 [01:00<00:56, 124.68frames/s] 64%|######3   | 7
+[2026-02-14T08:25:46.503Z] stdout length: 4392
+[2026-02-14T08:25:46.537Z] Success! 19 segments (filtered 7 hallucinations), confidence: 0.929, language: en
+[2026-02-14T08:25:46.619Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771057401731.mp4
+[2026-02-16T05:55:27.997Z] --- Starting new transcription request ---
+[2026-02-16T05:55:28.333Z] Received file: output (3).mp4, size: 15975149 bytes
+[2026-02-16T05:55:28.444Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771221328336.mp4
+[2026-02-16T05:55:28.447Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771221328336.mp4" small
+[2026-02-16T05:57:17.832Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/7999 [00:00<?, ?frames/s] 33%|###3      | 2640/7999 [00:29<01:00, 89.15frames/s] 33%|###3      | 2640/7999 [00:39<01:00, 89.15frames/s] 64%|######4   | 5144/7999 [00:47<00:25, 111.52frames/s] 64%|######4   | 5144/7999 [00:59<00:25, 111.52frames/s] 98%|#########8| 7840/799
+[2026-02-16T05:57:17.888Z] stdout length: 3766
+[2026-02-16T05:57:17.901Z] Success! 12 segments (filtered 7 hallucinations), confidence: 0.783, language: en
+[2026-02-16T05:57:17.938Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771221328336.mp4
+[2026-02-16T06:44:28.510Z] --- Starting new transcription request ---
+[2026-02-16T06:44:32.325Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-16T06:44:32.711Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771224272339.mp4
+[2026-02-16T06:44:32.752Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771224272339.mp4" small
+[2026-02-16T06:48:11.429Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 23%|##3       | 2844/12260 [00:28<01:33, 100.96frames/s] 23%|##3       | 2844/12260 [00:40<01:33, 100.96frames/s] 47%|####7     | 5792/12260 [01:15<01:27, 74.12frames/s]  47%|####7     | 5792/12260 [01:30<01:27, 74.12frames/s] 71%|#######1  | 87
+[2026-02-16T06:48:11.515Z] stdout length: 9382
+[2026-02-16T06:48:11.548Z] Success! 67 segments (filtered 2 hallucinations), confidence: 0.978, language: en
+[2026-02-16T06:48:11.612Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771224272339.mp4
+[2026-02-16T06:59:51.540Z] --- Starting new transcription request ---
+[2026-02-16T06:59:52.450Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-16T06:59:54.655Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771225192684.mp4
+[2026-02-16T06:59:54.658Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771225192684.mp4" small
+[2026-02-16T07:02:52.475Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 23%|##3       | 2844/12260 [00:33<01:52, 84.04frames/s] 23%|##3       | 2844/12260 [00:50<01:52, 84.04frames/s] 47%|####7     | 5792/12260 [01:12<01:21, 79.19frames/s] 47%|####7     | 5792/12260 [01:30<01:21, 79.19frames/s] 71%|#######1  | 8740/
+[2026-02-16T07:02:52.546Z] stdout length: 9382
+[2026-02-16T07:02:52.579Z] Success! 67 segments (filtered 2 hallucinations), confidence: 0.978, language: en
+[2026-02-16T07:02:52.623Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771225192684.mp4
+[2026-02-16T07:20:22.313Z] --- Starting new transcription request ---
+[2026-02-16T07:20:23.433Z] Received file: output (1).mp4, size: 29978338 bytes
+[2026-02-16T07:20:23.793Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771226423481.mp4
+[2026-02-16T07:20:23.799Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771226423481.mp4" small
+[2026-02-16T07:23:49.437Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12260 [00:00<?, ?frames/s] 23%|##3       | 2844/12260 [00:34<01:53, 83.26frames/s] 23%|##3       | 2844/12260 [00:50<01:53, 83.26frames/s] 47%|####7     | 5792/12260 [01:18<01:29, 71.93frames/s] 47%|####7     | 5792/12260 [01:30<01:29, 71.93frames/s] 71%|#######1  | 8740/
+[2026-02-16T07:23:49.580Z] stdout length: 9382
+[2026-02-16T07:23:49.619Z] Success! 67 segments (filtered 2 hallucinations), confidence: 0.978, language: en
+[2026-02-16T07:23:49.697Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771226423481.mp4
+[2026-02-16T07:28:02.095Z] --- Starting new transcription request ---
+[2026-02-16T07:28:05.070Z] Received file: thehive.ai.mp4, size: 21879511 bytes
+[2026-02-16T07:28:05.640Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771226885199.mp4
+[2026-02-16T07:28:05.691Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771226885199.mp4" small
+[2026-02-16T07:30:49.165Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12433 [00:00<?, ?frames/s] 23%|##3       | 2908/12433 [00:24<01:20, 118.50frames/s] 23%|##3       | 2908/12433 [00:40<01:20, 118.50frames/s] 43%|####3     | 5404/12433 [00:41<00:53, 132.38frames/s] 43%|####3     | 5404/12433 [01:00<00:53, 132.38frames/s] 64%|######3   | 7
+[2026-02-16T07:30:49.282Z] stdout length: 4392
+[2026-02-16T07:30:49.313Z] Success! 19 segments (filtered 7 hallucinations), confidence: 0.929, language: en
+[2026-02-16T07:30:49.385Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771226885199.mp4
+[2026-02-16T07:32:12.772Z] --- Starting new transcription request ---
+[2026-02-16T07:32:14.872Z] Received file: 38523.mp4, size: 25024254 bytes
+[2026-02-16T07:32:15.263Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771227134881.mp4
+[2026-02-16T07:32:15.288Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771227134881.mp4" small
+[2026-02-16T07:35:18.332Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:33<01:57, 83.80frames/s] 22%|##2       | 2840/12717 [00:50<01:57, 83.80frames/s] 44%|####4     | 5640/12717 [01:02<01:17, 90.97frames/s] 44%|####4     | 5640/12717 [01:20<01:17, 90.97frames/s] 67%|######6   | 8460/
+[2026-02-16T07:35:18.419Z] stdout length: 7546
+[2026-02-16T07:35:18.448Z] Success! 28 segments (filtered 4 hallucinations), confidence: 0.987, language: en
+[2026-02-16T07:35:18.505Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771227134881.mp4
+[2026-02-16T08:15:59.170Z] --- Starting new transcription request ---
+[2026-02-16T08:16:00.630Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-16T08:16:01.231Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771229760645.mp4
+[2026-02-16T08:16:01.260Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771229760645.mp4" small
+[2026-02-16T08:18:41.292Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:17<01:24, 130.35frames/s] 17%|#6        | 2224/13209 [00:29<01:24, 130.35frames/s] 37%|###6      | 4836/13209 [00:34<00:58, 142.46frames/s] 37%|###6      | 4836/13209 [00:50<00:58, 142.46frames/s] 54%|#####4    | 7
+[2026-02-16T08:18:41.414Z] stdout length: 4566
+[2026-02-16T08:18:41.454Z] Success! 25 segments (filtered 6 hallucinations), confidence: 0.8, language: en
+[2026-02-16T08:18:41.529Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771229760645.mp4
+[2026-02-16T08:21:21.475Z] --- Starting new transcription request ---
+[2026-02-16T08:21:22.140Z] Received file: output (3).mp4, size: 15975149 bytes
+[2026-02-16T08:21:22.261Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771230082177.mp4
+[2026-02-16T08:21:22.266Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771230082177.mp4" small
+[2026-02-16T08:23:47.258Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/7999 [00:00<?, ?frames/s] 33%|###3      | 2640/7999 [00:27<00:56, 95.03frames/s] 33%|###3      | 2640/7999 [00:40<00:56, 95.03frames/s] 64%|######4   | 5144/7999 [00:59<00:33, 84.45frames/s] 64%|######4   | 5144/7999 [01:10<00:33, 84.45frames/s] 98%|#########8| 7840/7999 
+[2026-02-16T08:23:47.390Z] stdout length: 3766
+[2026-02-16T08:23:47.430Z] Success! 12 segments (filtered 7 hallucinations), confidence: 0.783, language: en
+[2026-02-16T08:23:47.505Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771230082177.mp4
+[2026-02-16T08:33:34.623Z] --- Starting new transcription request ---
+[2026-02-16T08:33:34.998Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-16T08:33:35.242Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771230815026.mp4 (uploaded: 18309290 bytes, written: 18309290 bytes)
+[2026-02-16T08:33:35.247Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771230815026.mp4" small
+[2026-02-16T08:36:24.922Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2994/9415 [00:45<01:37, 65.88frames/s] 32%|###1      | 2994/9415 [01:00<01:37, 65.88frames/s] 62%|######1   | 5820/9415 [01:22<00:50, 71.39frames/s] 62%|######1   | 5820/9415 [01:40<00:50, 71.39frames/s] 91%|######### | 8548/9415 
+[2026-02-16T08:36:25.105Z] stdout length: 7197
+[2026-02-16T08:36:25.155Z] Success! 34 segments (raw: 34, filtered: 0), confidence: 0.885, audio covered: 94.12s, language: en
+[2026-02-16T08:36:25.264Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771230815026.mp4
+[2026-02-16T09:05:25.057Z] --- Starting new transcription request ---
+[2026-02-16T09:05:25.945Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-16T09:05:26.186Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771232725948.mp4 (uploaded: 39618799 bytes, written: 39618799 bytes)
+[2026-02-16T09:05:26.195Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771232725948.mp4" small
+[2026-02-16T09:07:29.928Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:15<01:17, 141.64frames/s] 17%|#6        | 2224/13209 [00:30<01:17, 141.64frames/s] 39%|###8      | 5116/13209 [00:33<00:52, 155.47frames/s] 55%|#####5    | 7284/13209 [00:47<00:37, 156.23frames/s] 55%|#####5    | 7
+[2026-02-16T09:07:30.067Z] stdout length: 4259
+[2026-02-16T09:07:30.091Z] Success! 20 segments (raw: 24, filtered: 4), confidence: 0.377, audio covered: 130.74s, language: en
+[2026-02-16T09:07:30.176Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771232725948.mp4
+[2026-02-16T09:10:58.519Z] --- Starting new transcription request ---
+[2026-02-16T09:10:58.987Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-16T09:10:59.217Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771233059123.mp4 (uploaded: 18309290 bytes, written: 18309290 bytes)
+[2026-02-16T09:10:59.225Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771233059123.mp4" small
+[2026-02-16T09:13:52.145Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2994/9415 [00:41<01:29, 71.38frames/s] 32%|###1      | 2994/9415 [01:00<01:29, 71.38frames/s] 62%|######1   | 5820/9415 [01:14<00:45, 79.51frames/s] 62%|######1   | 5820/9415 [01:30<00:45, 79.51frames/s] 91%|######### | 8548/9415 
+[2026-02-16T09:13:52.232Z] stdout length: 7197
+[2026-02-16T09:13:52.260Z] Success! 34 segments (raw: 34, filtered: 0), confidence: 0.885, audio covered: 94.12s, language: en
+[2026-02-16T09:13:52.302Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771233059123.mp4
+[2026-02-16T09:15:19.044Z] --- Starting new transcription request ---
+[2026-02-16T09:15:19.899Z] Received file: 38594.mp4, size: 31744298 bytes
+[2026-02-16T09:15:20.141Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771233319912.mp4 (uploaded: 31744298 bytes, written: 31744298 bytes)
+[2026-02-16T09:15:20.150Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771233319912.mp4" small
+[2026-02-16T09:17:52.014Z] stderr (partial): C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarning: FP16 is not supported on CPU; using FP32 instead
+  warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+  0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:34<01:58, 83.24frames/s] 22%|##2       | 2840/12717 [00:50<01:58, 83.24frames/s] 44%|####4     | 5646/12717 [00:55<01:06, 106.65frames/s] 44%|####4     | 5646/12717 [01:10<01:06, 106.65frames/s] 67%|######6   | 846
+[2026-02-16T09:17:52.087Z] stdout length: 8442
+[2026-02-16T09:17:52.109Z] Success! 34 segments (raw: 34, filtered: 0), confidence: 0.969, audio covered: 126.96s, language: en
+[2026-02-16T09:17:52.150Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771233319912.mp4
+[2026-02-16T17:41:28.063Z] --- Starting new transcription request ---
+[2026-02-16T17:41:28.398Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-16T17:41:28.547Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771263688429.mp4 (uploaded: 18309290 bytes, written: 18309290 bytes)
+[2026-02-16T17:41:28.554Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771263688429.mp4" small
+[2026-02-16T17:46:28.709Z] Execution Error Exception: Command failed: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771263688429.mp4" small
+
+[2026-02-16T17:46:28.790Z] Stack: Error: Command failed: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771263688429.mp4" small
+
+    at genericNodeError (node:internal/errors:985:15)
+    at wrappedFn (node:internal/errors:539:14)
+    at ChildProcess.exithandler (node:child_process:417:12)
+    at ChildProcess.emit (node:events:508:28)
+    at maybeClose (node:internal/child_process:1101:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5)
+    at Process.callbackTrampoline (node:internal/async_hooks:130:17)
+[2026-02-16T17:46:28.862Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771263688429.mp4
+[2026-02-16T17:53:40.961Z] --- Starting new transcription request ---
+[2026-02-16T17:53:41.670Z] Received file: 38523.mp4, size: 25024254 bytes
+[2026-02-16T17:53:41.882Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771264421700.mp4 (uploaded: 25024254 bytes, written: 25024254 bytes)
+[2026-02-16T17:53:41.888Z] Running command: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771264421700.mp4" small
+[2026-02-16T17:58:42.096Z] Execution Error Exception: Command failed: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771264421700.mp4" small
+
+[2026-02-16T17:58:42.281Z] Stack: Error: Command failed: "C:\Users\jatin\miniconda3\python.exe" "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771264421700.mp4" small
+
+    at genericNodeError (node:internal/errors:985:15)
+    at wrappedFn (node:internal/errors:539:14)
+    at ChildProcess.exithandler (node:child_process:417:12)
+    at ChildProcess.emit (node:events:508:28)
+    at maybeClose (node:internal/child_process:1101:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5)
+    at Process.callbackTrampoline (node:internal/async_hooks:130:17)
+[2026-02-16T17:58:42.347Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771264421700.mp4

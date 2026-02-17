@@ -19,7 +19,12 @@ export type OverlayType =
   | 'highlight-box'
   | 'emoji-reaction'
   | 'zoom-effect'
-  | 'scene-transition';
+  | 'scene-transition'
+  | 'glowing-particles'
+  | 'kinetic-text'
+  | 'visual-illustration'
+  | 'image-card'
+  | 'ai-generated-image';
 
 export interface OverlayTemplate {
   type: OverlayType;
@@ -65,9 +70,90 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
     icon: '✨',
     defaultProps: { style: 'fade', color: '#6366f1' },
   },
+  {
+    type: 'glowing-particles',
+    name: 'Particles',
+    description: 'Floating glow particles',
+    icon: '🌟',
+    defaultProps: { color: '#6366f1', count: 20, style: 'ambient' },
+  },
+  {
+    type: 'kinetic-text',
+    name: 'Kinetic Text',
+    description: 'Animated text pop-in',
+    icon: '💫',
+    defaultProps: { color: '#6366f1', style: 'pop', position: 'center' },
+  },
+  {
+    type: 'visual-illustration',
+    name: 'Visual Illustration',
+    description: 'Animated SVG scene matching content',
+    icon: '🎨',
+    defaultProps: { scene: 'solar-system', label: '', color: '#6366f1', displayMode: 'overlay', transition: 'fade-in', soundEffect: 'none' },
+  },
+  {
+    type: 'image-card',
+    name: 'Image Card',
+    description: 'Web image with animated card overlay',
+    icon: '🖼️',
+    defaultProps: { imageUrl: '', keyword: '', label: '', displayMode: 'card', position: 'center', transition: 'slide-in', cardStyle: 'glass' },
+  },
+  {
+    type: 'ai-generated-image',
+    name: 'AI Generated Image',
+    description: 'Custom AI-generated image based on your script',
+    icon: '🤖',
+    defaultProps: { imagePrompt: '', imageUrl: '', displayMode: 'full', transition: 'fade-in', style: 'cinematic' },
+  },
 ];
 
+export interface VideoFilters {
+  brightness: number;   // 0-200, default 100
+  contrast: number;     // 0-200, default 100
+  saturation: number;   // 0-200, default 100
+  blur: number;         // 0-20, default 0
+  vignette: number;     // 0-100, default 0
+  temperature: number;  // -50 to 50, default 0
+}
+
+export const DEFAULT_FILTERS: VideoFilters = {
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+  blur: 0,
+  vignette: 0,
+  temperature: 0,
+};
+
+export interface TrimPoint {
+  inPoint: number;   // seconds
+  outPoint: number;  // seconds
+}
+
+export interface TextOverlay {
+  id: string;
+  text: string;
+  x: number;         // 0-100 percent
+  y: number;         // 0-100 percent
+  fontSize: number;
+  color: string;
+  fontWeight: number;
+  startTime: number;  // seconds
+  endTime: number;    // seconds
+}
+
+export type EditorTab = 'filters' | 'trim' | 'speed' | 'text';
+
+export type TranscriptStatus =
+  | 'none'           // No transcript yet
+  | 'transcribing'   // Whisper is processing
+  | 'real'           // Real audio-to-text transcript
+  | 'mock-no-audio'  // Fallback: video has no audio track
+  | 'mock-error'     // Fallback: transcription failed
+  | 'mock-empty';    // Fallback: no speech detected
+
 export interface ProjectState {
+  projectId: string | null;
   videoSrc: string | null;
   videoFile: File | null;
   subtitles: SubtitleSegment[];
@@ -75,5 +161,39 @@ export interface ProjectState {
   isTranscribing: boolean;
   isGenerating: boolean;
   videoDuration: number;
+  videoWidth: number;
+  videoHeight: number;
   fps: number;
+  filters: VideoFilters;
+  trimPoints: TrimPoint;
+  playbackSpeed: number;
+  textOverlays: TextOverlay[];
+  activeEditorTab: EditorTab;
+  showEditorPanel: boolean;
+  transcriptStatus: TranscriptStatus;
+}
+
+export interface ProjectMeta {
+  id: string;
+  name: string;
+  createdAt: number;
+  duration: number;
+  segmentCount: number;
+  overlayCount: number;
+  transcriptStatus: TranscriptStatus;
+}
+
+export interface ProjectData {
+  meta: ProjectMeta;
+  subtitles: SubtitleSegment[];
+  filters: VideoFilters;
+  trimPoints: TrimPoint;
+  playbackSpeed: number;
+  textOverlays: TextOverlay[];
+  videoWidth: number;
+  videoHeight: number;
+  fps: number;
+  videoBuffer: ArrayBuffer;
+  videoType: string;
+  videoName: string;
 }

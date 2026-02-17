@@ -4,36 +4,70 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
-    SubtitleSegment,
     OverlayType,
     OVERLAY_TEMPLATES,
     ProjectState,
+    ProjectMeta,
+    DEFAULT_FILTERS,
+    EditorTab,
+    TranscriptStatus,
 } from '../../lib/types';
-import { generateMockTranscript, formatTime } from '../../lib/transcribe';
-import { autoSuggestOverlays } from '../../lib/ai';
+import { transcribeVideo, generateMockTranscript } from '../../lib/transcribe';
+import { suggestOverlaysWithAI, generateDynamicOverlays as autoSuggestOverlays } from '../../lib/ai';
+import {
+    saveProject,
+    loadProject,
+    deleteProject,
+    getProjectList,
+    reconstructFile,
+} from '../../lib/projectStorage';
+import { useToast } from '../../components/ui/Toast';
+import { useUndoRedo } from '../../lib/useUndoRedo';
+import { Button } from '../../components/ui/Button';
+import { cn } from '../../lib/utils';
+import {
+    Sun,
+    Moon,
+    Sparkles,
+    Upload,
+    Film,
+    Download,
+    Settings,
+    FileText,
+    ChevronLeft,
+    Clock,
+    Layers,
+    Sliders
+} from 'lucide-react';
+import { ProjectSidebar } from '../../components/dashboard/ProjectSidebar';
+import { Dashboard } from '../../components/dashboard/Dashboard';
 
-// Dynamic import of Player to avoid SSR issues with Remotion
+const ExportModal = dynamic(() => import('../../components/ui/ExportModal'), { ssr: false });
+const ConfirmDialog = dynamic(() => import('../../components/ui/ConfirmDialog'), { ssr: false });
+const KeyboardShortcutsModal = dynamic(() => import('../../components/ui/KeyboardShortcutsModal'), { ssr: false });
+
+const EditorPanel = dynamic(() => import('../../components/editor/EditorPanel'), { ssr: false });
+const Timeline = dynamic(() => import('../../components/editor/Timeline'), { ssr: false });
+import { OverlayContextMenu } from '../../components/editor/OverlayContextMenu';
+
 const PlayerPreview = dynamic(() => import('../../components/editor/PlayerPreview'), {
     ssr: false,
     loading: () => (
-        <div style={{
-            width: '100%',
-            aspectRatio: '16/9',
-            background: 'var(--bg-card)',
-            borderRadius: 'var(--radius)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--text-secondary)',
-        }}>
-            Loading preview...
+        <div className="w-full aspect-video rounded-xl flex items-center justify-center border border-border/40 bg-muted animate-pulse">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto mb-3" />
+                <span className="text-xs text-muted-foreground font-medium">Loading preview...</span>
+            </div>
         </div>
     ),
 });
 
 export default function EditorPage() {
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const [mounted, setMounted] = useState(false);
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [projectList, setProjectList] = useState<ProjectMeta[]>([]);
     const [state, setState] = useState<ProjectState>({
+        projectId: null,
         videoSrc: null,
         videoFile: null,
         subtitles: [],
@@ -41,560 +75,570 @@ export default function EditorPage() {
         isTranscribing: false,
         isGenerating: false,
         videoDuration: 30,
+        videoWidth: 1920,
+        videoHeight: 1080,
         fps: 30,
+        filters: { ...DEFAULT_FILTERS },
+        trimPoints: { inPoint: 0, outPoint: 30 },
+        playbackSpeed: 1,
+        textOverlays: [],
+        activeEditorTab: 'filters',
+        showEditorPanel: false,
+        transcriptStatus: 'none',
     });
 
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [activePopup, setActivePopup] = useState<{ segmentId: string; top: number; left: number } | null>(null);
+    const { toast } = useToast();
+    const { pushSnapshot, undo, redo, pushToFuture, resetHistory } = useUndoRedo();
+
+    // Refs
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const stateRef = useRef(state);
+    stateRef.current = state;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const newUploadInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
+        setMounted(true);
         const saved = localStorage.getItem('theme');
         if (saved === 'dark' || saved === 'light') {
             setTheme(saved);
             document.documentElement.setAttribute('data-theme', saved);
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            setTheme('dark');
+        } else {
             document.documentElement.setAttribute('data-theme', 'dark');
         }
+        setProjectList(getProjectList());
     }, []);
 
     const toggleTheme = () => {
         const next = theme === 'light' ? 'dark' : 'light';
         setTheme(next);
-        document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('theme', next);
+        document.documentElement.setAttribute('data-theme', next);
     };
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    // Handle video upload
-    const handleUpload = useCallback((file: File) => {
-        if (!file.type.startsWith('video/')) {
-            alert('Please upload a video file (MP4, WebM, etc.)');
-            return;
+    // ===== Project Storage Helpers =====
+    const saveCurrentProject = useCallback(async (st?: ProjectState) => {
+        const s = st || stateRef.current;
+        if (!s.projectId || !s.videoFile) return;
+        try {
+            const buffer = await s.videoFile.arrayBuffer();
+            await saveProject({
+                meta: {
+                    id: s.projectId,
+                    name: s.videoFile.name,
+                    createdAt: Date.now(),
+                    duration: s.videoDuration,
+                    segmentCount: s.subtitles.length,
+                    overlayCount: s.subtitles.filter(seg => seg.overlay).length,
+                    transcriptStatus: s.transcriptStatus,
+                },
+                subtitles: s.subtitles,
+                filters: s.filters,
+                trimPoints: s.trimPoints,
+                playbackSpeed: s.playbackSpeed,
+                textOverlays: s.textOverlays,
+                videoWidth: s.videoWidth,
+                videoHeight: s.videoHeight,
+                fps: s.fps,
+                videoBuffer: buffer,
+                videoType: s.videoFile.type,
+                videoName: s.videoFile.name,
+            });
+            setProjectList(getProjectList());
+        } catch (e) {
+            console.error('Failed to save project:', e);
         }
-        if (file.size > 50 * 1024 * 1024) {
-            alert('File too large. Please upload a video under 50MB.');
+    }, [setProjectList]);
+
+    // Auto-save
+    useEffect(() => {
+        if (!state.projectId) return;
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+            saveCurrentProject(state);
+        }, 2000);
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, [
+        state.subtitles,
+        state.filters,
+        state.trimPoints,
+        state.playbackSpeed,
+        state.textOverlays,
+        state.projectId,
+        saveCurrentProject
+    ]);
+
+    // Undo/Redo registration
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    const next = redo();
+                    if (next) setState(prev => ({ ...prev, ...next }));
+                } else {
+                    const prev = undo();
+                    if (prev) setState(curr => ({ ...curr, ...prev }));
+                }
+            }
+            if (e.key === '/') {
+                e.preventDefault();
+                setShowShortcuts(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [undo, redo]);
+
+    // State updaters
+    const updateState = (updates: Partial<ProjectState>) => {
+        setState(prev => {
+            const next = { ...prev, ...updates };
+            // Snapshot for undo
+            if (
+                updates.subtitles !== undefined ||
+                updates.trimPoints !== undefined ||
+                updates.filters !== undefined ||
+                updates.textOverlays !== undefined
+            ) {
+                pushSnapshot({
+                    subtitles: next.subtitles,
+                    filters: next.filters,
+                    trimPoints: next.trimPoints,
+                    textOverlays: next.textOverlays,
+                    playbackSpeed: next.playbackSpeed
+                });
+            }
+            return next;
+        });
+    };
+
+    const handleUpload = useCallback(async (file: File) => {
+        if (file.size > 2 * 1024 * 1024 * 1024) {
+            toast('File size exceeds 2GB limit', 'error');
             return;
         }
 
         const url = URL.createObjectURL(file);
-        setState((prev) => ({ ...prev, videoSrc: url, videoFile: file }));
-
-        // Get video duration
         const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.onloadedmetadata = () => {
-            const duration = video.duration;
-            setState((prev) => ({ ...prev, videoDuration: duration }));
-            URL.revokeObjectURL(video.src);
-        };
         video.src = url;
-    }, []);
 
-    // Handle drag and drop
-    const handleDrop = useCallback(
-        (e: React.DragEvent) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files[0];
-            if (file) handleUpload(file);
-        },
-        [handleUpload]
-    );
+        await new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+                resolve(null);
+            };
+        });
 
-    // Generate transcript
-    const handleTranscribe = useCallback(() => {
-        setState((prev) => ({ ...prev, isTranscribing: true }));
-        // Simulate transcription delay
-        setTimeout(() => {
-            const transcript = generateMockTranscript(state.videoDuration);
-            setState((prev) => ({
-                ...prev,
+        const duration = video.duration || 30;
+        const width = video.videoWidth || 1920;
+        const height = video.videoHeight || 1080;
+
+        const projectId = `proj_${Date.now()}`;
+
+        setState((prev) => ({
+            ...prev,
+            projectId,
+            videoSrc: url,
+            videoFile: file,
+            videoDuration: duration,
+            trimPoints: { inPoint: 0, outPoint: duration },
+            videoWidth: width,
+            videoHeight: height,
+            isTranscribing: true,
+            transcriptStatus: 'transcribing'
+        }));
+
+        toast('Analyzing video and transcribing audio...', 'info');
+
+        try {
+            const { subtitles: transcript, isReal, noAudio } = await transcribeVideo(file, duration);
+
+            if (noAudio) {
+                toast('No speech detected. Using timeline only.', 'info');
+                updateState({
+                    subtitles: [],
+                    isTranscribing: false,
+                    transcriptStatus: 'mock-no-audio'
+                });
+                return;
+            }
+
+            const status = isReal ? 'real' : 'mock-error';
+            updateState({
                 subtitles: transcript,
                 isTranscribing: false,
-            }));
-        }, 1500);
-    }, [state.videoDuration]);
+                transcriptStatus: status
+            });
 
-    // Auto-suggest overlays via AI
-    const handleAutoSuggest = useCallback(() => {
-        setState((prev) => ({ ...prev, isGenerating: true }));
-        setTimeout(() => {
-            setState((prev) => ({
-                ...prev,
-                subtitles: autoSuggestOverlays(prev.subtitles),
+            toast(isReal ? 'Transcription complete!' : 'Using mock transcript (API unavailable)', isReal ? 'success' : 'warning');
+
+            // Auto-generate overlays if transcript exists
+            if (transcript.length > 0) {
+                handleGenerateOverlays(transcript);
+            }
+
+        } catch (err) {
+            console.error(err);
+            toast('Detailed transcription failed. Using basic mode.', 'error');
+            updateState({ isTranscribing: false, transcriptStatus: 'mock-error' });
+        }
+    }, [saveCurrentProject, toast]); // Added updateState dependency implicitly via component scope
+
+    const handleGenerateOverlays = async (currentSubtitles = state.subtitles) => {
+        if (state.isGenerating || currentSubtitles.length === 0) return;
+
+        updateState({ isGenerating: true });
+        toast('Generating dynamic overlays...', 'info');
+
+        try {
+            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles);
+
+            updateState({
+                subtitles: newSubtitles,
                 isGenerating: false,
-            }));
-        }, 1000);
-    }, []);
+            });
+            toast('AI overlays applied successfully!', 'success');
+        } catch (e) {
+            console.error(e);
+            // Fallback
+            const fallback = autoSuggestOverlays(currentSubtitles);
+            updateState({
+                subtitles: fallback,
+                isGenerating: false,
+            });
+            toast('AI unavailable, used basic rules instead.', 'warning');
+        }
+    };
 
-    // Apply overlay to selected segment
-    const applyOverlay = useCallback(
-        (type: OverlayType) => {
-            if (!state.selectedSegmentId) return;
-            const template = OVERLAY_TEMPLATES.find((t) => t.type === type);
-            if (!template) return;
+    // ... handlers for timeline, layout etc ...
+    const handleSegmentUpdate = (id: string, updates: any) => {
+        const newSubs = state.subtitles.map(s => s.id === id ? { ...s, ...updates } : s);
+        updateState({ subtitles: newSubs });
+    };
 
-            setState((prev) => ({
-                ...prev,
-                subtitles: prev.subtitles.map((seg) =>
-                    seg.id === prev.selectedSegmentId
-                        ? { ...seg, overlay: { type, props: { ...template.defaultProps } } }
-                        : seg
-                ),
-            }));
-        },
-        [state.selectedSegmentId]
-    );
 
-    // Remove overlay from segment
-    const removeOverlay = useCallback((segId: string) => {
-        setState((prev) => ({
-            ...prev,
-            subtitles: prev.subtitles.map((seg) =>
-                seg.id === segId ? { ...seg, overlay: undefined } : seg
-            ),
-        }));
-    }, []);
 
-    // Select a segment
-    const selectSegment = useCallback((id: string) => {
-        setState((prev) => ({
-            ...prev,
-            selectedSegmentId: prev.selectedSegmentId === id ? null : id,
-        }));
-    }, []);
 
-    const selectedSegment = state.subtitles.find(
-        (s) => s.id === state.selectedSegmentId
-    );
+    // Helper for formatting time
+    const fmtTime = (seconds: number) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        const pad = (num: number) => num.toString().padStart(2, '0');
+        return `${pad(minutes)}:${pad(remainingSeconds)}`;
+    };
+
+    const handleUndo = () => {
+        const prev = undo();
+        if (prev) setState(curr => ({ ...curr, ...prev }));
+    };
+
+    const handleRedo = () => {
+        const next = redo();
+        if (next) setState(prev => ({ ...prev, ...next }));
+    };
+
+    const handleAutoSuggest = () => {
+        handleGenerateOverlays();
+    };
+
+    const handleSwitchProject = useCallback(async (projectId: string) => {
+        try {
+            const loaded = await loadProject(projectId);
+            if (loaded) {
+                const videoFile = await reconstructFile(loaded.videoBuffer, loaded.videoName, loaded.videoType);
+                const videoSrc = URL.createObjectURL(videoFile);
+
+                setState(prev => ({
+                    ...prev,
+                    projectId: loaded.meta.id,
+                    videoSrc,
+                    videoFile,
+                    subtitles: loaded.subtitles,
+                    filters: loaded.filters,
+                    trimPoints: loaded.trimPoints,
+                    playbackSpeed: loaded.playbackSpeed,
+                    textOverlays: loaded.textOverlays,
+                    videoDuration: loaded.meta.duration,
+                    videoWidth: loaded.videoWidth,
+                    videoHeight: loaded.videoHeight,
+                    fps: loaded.fps,
+                    transcriptStatus: loaded.meta.transcriptStatus,
+                    selectedSegmentId: null,
+                    isTranscribing: false,
+                    isGenerating: false,
+                }));
+                resetHistory(); // Clear undo/redo history for new project
+                toast(`"${loaded.meta.name}" loaded successfully.`, 'success');
+            }
+        } catch (e) {
+            console.error('Failed to load project:', e);
+            toast('Failed to load project.', 'error');
+        }
+    }, [toast, resetHistory]);
+
+    const handleDeleteProject = useCallback((id: string) => {
+        deleteProject(id);
+        setProjectList(getProjectList());
+        if (state.projectId === id) {
+            setState(prev => ({ ...prev, projectId: null, videoSrc: null, videoFile: null, subtitles: [], textOverlays: [] }));
+        }
+    }, [state.projectId]);
+
+    const overlayCount = state.subtitles.filter(seg => seg.overlay).length;
+
+    const applyOverlay = (segmentId: string, overlayType: OverlayType, props: any) => {
+        const newSubtitles = state.subtitles.map(s =>
+            s.id === segmentId ? { ...s, overlay: { type: overlayType, props } } : s
+        );
+        updateState({ subtitles: newSubtitles });
+        setActivePopup(null);
+        toast(`${overlayType} overlay added.`, 'success');
+    };
+
+    const handleClearOverlay = (segmentId: string) => {
+        const newSubtitles = state.subtitles.map(s =>
+            s.id === segmentId ? { ...s, overlay: undefined } : s
+        );
+        updateState({ subtitles: newSubtitles });
+        setActivePopup(null);
+        toast('Overlay removed.', 'info');
+    };
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Top bar */}
-            <header
-                className="glass"
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 24px',
-                    borderBottom: '1px solid var(--border-color)',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 50,
-                }}
-            >
-                <Link
-                    href="/"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        textDecoration: 'none',
-                        color: 'var(--text-primary)',
-                    }}
-                >
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#fff', fontWeight: 800, boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)' }}>M</div>
-                    <span style={{ fontSize: '18px', fontWeight: 800 }}>
-                        Make<span className="gradient-text">Script</span>
-                    </span>
-                </Link>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {state.subtitles.length > 0 && (
-                        <button
-                            className="btn-secondary"
-                            onClick={handleAutoSuggest}
-                            disabled={state.isGenerating}
-                        >
-                            {state.isGenerating ? (
+        <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }} suppressHydrationWarning>
+            {!mounted ? (
+                <div className="flex-1 flex items-center justify-center"><div className="spinner w-8 h-8" /></div>
+            ) : (
+                <>
+                    {/* ===== Header ===== */}
+                    <header className="h-11 flex items-center justify-between px-3 border-b border-border z-20 shrink-0" style={{ background: 'var(--bg-card)', opacity: 0.95, backdropFilter: 'blur(16px)' }}>
+                        <div className="flex items-center gap-3">
+                            <Link href="/" className="flex items-center gap-2 group">
+                                <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-black"
+                                    style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>M</div>
+                            </Link>
+                            {state.videoFile && (
                                 <>
-                                    <span className="spinner" /> Suggesting...
+                                    <span className="w-px h-4 bg-border" />
+                                    <span className="text-[12px] font-medium text-foreground/70 truncate max-w-[180px]">{state.videoFile.name}</span>
                                 </>
-                            ) : (
-                                '🤖 AI Auto-Suggest'
                             )}
-                        </button>
-                    )}
-                    <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
-                        {theme === 'light' ? '🌙' : '☀️'}
-                    </button>
-                </div>
-            </header>
-
-            {/* Main editor layout */}
-            <div
-                style={{
-                    display: 'flex',
-                    flex: 1,
-                    overflow: 'hidden',
-                }}
-            >
-                {/* Left: Video + Preview */}
-                <div
-                    style={{
-                        flex: 2,
-                        padding: '20px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '16px',
-                        overflowY: 'auto',
-                    }}
-                >
-                    {/* Step 1: Upload */}
-                    {!state.videoSrc ? (
-                        <div
-                            onDrop={handleDrop}
-                            onDragOver={(e) => e.preventDefault()}
-                            onClick={() => fileInputRef.current?.click()}
-                            style={{
-                                width: '100%',
-                                aspectRatio: '16/9',
-                                borderRadius: 'var(--radius-lg)',
-                                border: '2px dashed var(--border-color)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '16px',
-                                cursor: 'pointer',
-                                background: 'var(--bg-card)',
-                                transition: 'all 0.3s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                                e.currentTarget.style.background = 'var(--accent-light)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--border-color)';
-                                e.currentTarget.style.background = 'var(--bg-card)';
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: '80px',
-                                    height: '80px',
-                                    borderRadius: '50%',
-                                    background: 'var(--accent-light)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '36px',
-                                }}
-                            >
-                                📤
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontSize: '18px', fontWeight: 600, marginBottom: '6px' }}>
-                                    Drop your video here
-                                </p>
-                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                    or click to browse • MP4, WebM • Max 50MB
-                                </p>
-                            </div>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="video/*"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) handleUpload(file);
-                                }}
-                            />
                         </div>
-                    ) : (
-                        <>
-                            {/* Video preview with Remotion Player or native video */}
-                            {state.subtitles.length > 0 ? (
-                                <PlayerPreview
-                                    videoSrc={state.videoSrc}
-                                    subtitles={state.subtitles}
-                                    durationInFrames={Math.ceil(state.videoDuration * state.fps)}
-                                    fps={state.fps}
-                                />
-                            ) : (
-                                <div style={{ position: 'relative' }}>
-                                    <video
-                                        ref={videoRef}
-                                        src={state.videoSrc}
-                                        controls
-                                        style={{
-                                            width: '100%',
-                                            borderRadius: 'var(--radius)',
-                                            background: '#000',
-                                        }}
-                                    />
-                                </div>
-                            )}
 
-                            {/* Transcribe button */}
-                            {state.subtitles.length === 0 && (
+                        {/* Center: Undo / Redo / AI */}
+                        <div className="flex items-center gap-1">
+                            <button onClick={handleUndo} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Undo (Ctrl+Z)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                            </button>
+                            <button onClick={handleRedo} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Redo (Ctrl+Shift+Z)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+                            </button>
+                            {state.subtitles.length > 0 && (
+                                <>
+                                    <span className="w-px h-4 bg-border mx-1" />
+                                    <button className="h-7 px-3 rounded-md text-[11px] font-semibold flex items-center gap-1.5 transition-all hover:bg-muted"
+                                        style={{ color: '#a78bfa' }}
+                                        onClick={handleAutoSuggest} disabled={state.isGenerating}>
+                                        {state.isGenerating ? <><span className="spinner w-3 h-3" /> Generating…</> : <><Sparkles /> AI Suggest</>}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Right side */}
+                        <div className="flex items-center gap-1">
+                            {overlayCount > 0 && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md mr-1" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}>
+                                    {overlayCount} fx
+                                </span>
+                            )}
+                            {state.videoSrc && (
                                 <button
-                                    className="btn-primary"
-                                    onClick={handleTranscribe}
-                                    disabled={state.isTranscribing}
-                                    style={{ alignSelf: 'center' }}
+                                    className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${state.showEditorPanel ? 'bg-indigo-500/15 text-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                                    onClick={() => setState(prev => ({ ...prev, showEditorPanel: !prev.showEditorPanel }))}
+                                    title="Editor panel"
                                 >
-                                    {state.isTranscribing ? (
-                                        <>
-                                            <span className="spinner" /> Generating Transcript...
-                                        </>
-                                    ) : (
-                                        '📝 Generate Transcript'
-                                    )}
+                                    <Sliders />
                                 </button>
                             )}
-                        </>
-                    )}
-
-                    {/* Instructions */}
-                    {state.videoSrc && state.subtitles.length > 0 && (
-                        <div
-                            style={{
-                                padding: '12px 16px',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'var(--accent-light)',
-                                border: '1px solid var(--accent-primary)',
-                                borderColor: 'rgba(37, 99, 235, 0.25)',
-                                fontSize: '13px',
-                                color: 'var(--accent-primary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                            }}
-                        >
-                            💡 Click any subtitle on the right → Pick a motion graphic to apply to that moment
+                            <button className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" onClick={toggleTheme} title="Toggle theme" suppressHydrationWarning>
+                                {mounted ? (theme === 'light' ? <Moon /> : <Sun />) : <Moon />}
+                            </button>
+                            <button className="h-7 px-3.5 rounded-md text-[11px] font-bold flex items-center gap-1.5 text-white transition-all ml-1"
+                                style={{ background: state.videoSrc ? 'linear-gradient(135deg, #6366f1, #7c3aed)' : 'rgba(255,255,255,0.06)', color: state.videoSrc ? '#fff' : 'var(--text-secondary)' }}
+                                onClick={() => state.videoSrc ? setShowExportModal(true) : toast('Upload a video first', 'warning')}
+                                disabled={!state.videoSrc}>
+                                <Download /> Export
+                            </button>
                         </div>
-                    )}
-                </div>
+                    </header>
 
-                {/* Right: Subtitle Timeline + Overlay Picker */}
-                {state.videoSrc && (
-                    <div
-                        style={{
-                            flex: 1,
-                            minWidth: '340px',
-                            maxWidth: '420px',
-                            borderLeft: '1px solid var(--border-color)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            background: 'var(--bg-secondary)',
-                        }}
-                    >
-                        {/* Subtitle list */}
-                        <div
-                            style={{
-                                flex: 1,
-                                overflowY: 'auto',
-                                padding: '16px',
+                    {/* ===== Main ===== */}
+                    <div className="flex-1 flex overflow-hidden">
+                        <ProjectSidebar
+                            projects={projectList}
+                            activeProjectId={state.projectId}
+                            onSelectProject={handleSwitchProject}
+                            onNewProject={() => {
+                                if (newUploadInputRef.current) {
+                                    newUploadInputRef.current.value = '';
+                                    newUploadInputRef.current.click();
+                                }
                             }}
-                        >
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: '14px',
-                                }}
-                            >
-                                <h3 style={{ fontSize: '15px', fontWeight: 700 }}>
-                                    📝 Subtitles
-                                    {state.subtitles.length > 0 && (
-                                        <span
-                                            style={{
-                                                marginLeft: '8px',
-                                                fontSize: '12px',
-                                                color: 'var(--text-secondary)',
-                                                fontWeight: 400,
-                                            }}
-                                        >
-                                            ({state.subtitles.length} segments)
-                                        </span>
-                                    )}
-                                </h3>
-                            </div>
+                            onDeleteProject={(id) => setConfirmDelete(id)}
+                        />
 
-                            {state.subtitles.length === 0 ? (
-                                <div
-                                    style={{
-                                        textAlign: 'center',
-                                        color: 'var(--text-secondary)',
-                                        padding: '40px 20px',
-                                        fontSize: '14px',
+                        {/* Hidden file input for new project uploads */}
+                        <input
+                            ref={newUploadInputRef}
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ''; }}
+                            className="hidden"
+                        />
+
+                        {/* Main Stage */}
+                        <main className="flex-1 flex flex-col min-w-0 bg-background relative">
+                            {!state.videoSrc ? (
+                                <Dashboard
+                                    projects={projectList}
+                                    onNewProject={() => {
+                                        if (newUploadInputRef.current) newUploadInputRef.current.click();
                                     }}
-                                >
-                                    <p style={{ fontSize: '32px', marginBottom: '12px' }}>📝</p>
-                                    <p>Click &quot;Generate Transcript&quot; to get started</p>
-                                </div>
+                                    onSelectProject={handleSwitchProject}
+                                    onImport={() => {
+                                        if (newUploadInputRef.current) newUploadInputRef.current.click();
+                                    }}
+                                />
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    {state.subtitles.map((seg) => (
-                                        <div
-                                            key={seg.id}
-                                            onClick={() => selectSegment(seg.id)}
-                                            style={{
-                                                padding: '12px',
-                                                borderRadius: 'var(--radius-sm)',
-                                                background:
-                                                    state.selectedSegmentId === seg.id
-                                                        ? 'var(--accent-light)'
-                                                        : 'var(--bg-card)',
-                                                border:
-                                                    state.selectedSegmentId === seg.id
-                                                        ? '1px solid var(--accent-primary)'
-                                                        : '1px solid var(--border-color)',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (state.selectedSegmentId !== seg.id) {
-                                                    e.currentTarget.style.background = 'var(--bg-card-hover)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (state.selectedSegmentId !== seg.id) {
-                                                    e.currentTarget.style.background = 'var(--bg-card)';
-                                                }
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    marginBottom: '4px',
-                                                }}
-                                            >
-                                                <span
-                                                    style={{
-                                                        fontSize: '11px',
-                                                        color: 'var(--accent-primary)',
-                                                        fontWeight: 600,
-                                                        fontFamily: 'monospace',
-                                                    }}
-                                                >
-                                                    {formatTime(seg.startTime)} — {formatTime(seg.endTime)}
-                                                </span>
-                                                {seg.overlay && (
-                                                    <button
-                                                        className="btn-ghost"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            removeOverlay(seg.id);
-                                                        }}
-                                                        style={{ padding: '2px 6px', fontSize: '11px' }}
-                                                        title="Remove overlay"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <p
-                                                style={{
-                                                    fontSize: '13px',
-                                                    color: 'var(--text-primary)',
-                                                    lineHeight: 1.5,
-                                                }}
-                                            >
-                                                {seg.text}
-                                            </p>
-                                            {seg.overlay && (
-                                                <div
-                                                    style={{
-                                                        marginTop: '6px',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px',
-                                                        padding: '3px 10px',
-                                                        borderRadius: '12px',
-                                                        background: 'var(--accent-light)',
-                                                        fontSize: '11px',
-                                                        color: 'var(--accent-primary)',
-                                                    }}
-                                                >
-                                                    {OVERLAY_TEMPLATES.find((t) => t.type === seg.overlay?.type)?.icon}{' '}
-                                                    {OVERLAY_TEMPLATES.find((t) => t.type === seg.overlay?.type)?.name}
-                                                </div>
-                                            )}
+                                <>
+                                    {/* Viewport Area */}
+                                    <div className="flex-1 relative flex items-center justify-center p-8 overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
+                                        <div className="relative shadow-2xl bg-black max-w-full max-h-full flex flex-col" style={{
+                                            width: 'auto',
+                                            height: 'auto',
+                                            aspectRatio: state.videoWidth && state.videoHeight ? `${state.videoWidth}/${state.videoHeight}` : '16/9',
+                                        }}>
+                                            <PlayerPreview videoSrc={state.videoSrc} subtitles={state.subtitles} fps={30}
+                                                durationInFrames={Math.ceil((state.videoDuration || 10) * 30)}
+                                                compositionWidth={state.videoWidth} compositionHeight={state.videoHeight}
+                                                filters={state.filters}
+                                                textOverlays={state.textOverlays}
+                                                playbackRate={state.playbackSpeed} />
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                    </div>
 
-                        {/* Overlay picker - shown when a segment is selected */}
-                        {selectedSegment && (
-                            <div
-                                style={{
-                                    borderTop: '1px solid var(--border-color)',
-                                    padding: '16px',
-                                    background: 'var(--bg-card)',
-                                }}
-                            >
-                                <h4 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
-                                    🎨 Add Motion Graphic
-                                </h4>
-                                <p
-                                    style={{
-                                        fontSize: '11px',
-                                        color: 'var(--text-secondary)',
-                                        marginBottom: '12px',
-                                    }}
-                                >
-                                    Applying to: &quot;{selectedSegment.text.substring(0, 40)}...&quot;
-                                </p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                    {OVERLAY_TEMPLATES.map((template) => (
-                                        <button
-                                            key={template.type}
-                                            onClick={() => applyOverlay(template.type)}
-                                            style={{
-                                                padding: '12px',
-                                                borderRadius: 'var(--radius-sm)',
-                                                border:
-                                                    selectedSegment.overlay?.type === template.type
-                                                        ? '1px solid var(--accent-primary)'
-                                                        : '1px solid var(--border-color)',
-                                                background:
-                                                    selectedSegment.overlay?.type === template.type
-                                                        ? 'var(--accent-light)'
-                                                        : 'var(--bg-secondary)',
-                                                cursor: 'pointer',
-                                                textAlign: 'left',
-                                                transition: 'all 0.2s',
-                                                color: 'var(--text-primary)',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (selectedSegment.overlay?.type !== template.type) {
-                                                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                                                }
-                                            }}
-                                        >
-                                            <div style={{ fontSize: '20px', marginBottom: '4px' }}>
-                                                {template.icon}
-                                            </div>
-                                            <div style={{ fontSize: '12px', fontWeight: 600 }}>
-                                                {template.name}
-                                            </div>
-                                            <div
-                                                style={{
-                                                    fontSize: '10px',
-                                                    color: 'var(--text-secondary)',
-                                                    marginTop: '2px',
-                                                }}
-                                            >
-                                                {template.description}
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                                    {/* Timeline Area (Bottom of Stage) */}
+                                    <Timeline
+                                        duration={state.videoDuration}
+                                        subtitles={state.subtitles}
+                                        trimPoints={state.trimPoints}
+                                        currentTime={0}
+                                        onSeek={() => { }}
+                                        selectedSegmentId={state.selectedSegmentId}
+                                    />
+
+                                    {/* Status bar */}
+                                    <div className="h-8 border-t border-border px-4 flex items-center justify-between text-[10px] text-muted-foreground/60 shrink-0" style={{ background: 'var(--bg-card)' }}>
+                                        <div className="flex items-center gap-3 font-mono tabular-nums">
+                                            <span>{fmtTime(0)} / {fmtTime(state.videoDuration)}</span>
+                                            <span className="text-border">|</span>
+                                            <span>{state.playbackSpeed !== 1 ? `${state.playbackSpeed}x` : '1x'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 font-mono tabular-nums">
+                                            <span>{state.videoWidth}x{state.videoHeight}</span>
+                                            <span className="text-border">|</span>
+                                            <span>{state.fps}fps</span>
+                                            <span className="text-border">|</span>
+                                            <button onClick={() => setShowShortcuts(true)} className="hover:text-muted-foreground transition-colors cursor-pointer font-sans font-medium text-muted-foreground/40">
+                                                ?
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </main>
+
+                        {/* Editor Panel (Right Sidebar) */}
+                        {state.showEditorPanel && state.videoSrc && (
+                            <EditorPanel
+                                activeTab={state.activeEditorTab}
+                                onTabChange={(tab: EditorTab) => setState(prev => ({ ...prev, activeEditorTab: tab }))}
+                                filters={state.filters}
+                                onFiltersChange={(filters) => setState(prev => ({ ...prev, filters }))}
+                                trimPoints={state.trimPoints}
+                                onTrimChange={(trimPoints) => setState(prev => ({ ...prev, trimPoints }))}
+                                speed={state.playbackSpeed}
+                                onSpeedChange={(playbackSpeed) => setState(prev => ({ ...prev, playbackSpeed }))}
+                                textOverlays={state.textOverlays}
+                                onTextOverlaysChange={(textOverlays) => setState(prev => ({ ...prev, textOverlays }))}
+                                duration={state.videoDuration}
+                                onClose={() => setState(prev => ({ ...prev, showEditorPanel: false }))}
+                            />
                         )}
                     </div>
-                )}
-            </div>
+
+                    {/* Context menu */}
+                    {activePopup && (() => {
+                        const seg = state.subtitles.find((s) => s.id === activePopup.segmentId);
+                        return (
+                            <OverlayContextMenu key={activePopup.segmentId} segmentId={activePopup.segmentId}
+                                segmentText={seg?.text || ''} existingOverlayType={seg?.overlay?.type}
+                                existingProps={seg?.overlay?.props} onApply={(type, props) => applyOverlay(activePopup.segmentId, type, props)}
+                                onApplyConfig={(config) => {
+                                    const targetId = activePopup?.segmentId || state.selectedSegmentId;
+                                    if (!targetId) return;
+                                    pushSnapshot({ subtitles: state.subtitles });
+                                    setState((prev) => ({ ...prev, subtitles: prev.subtitles.map((s) => s.id === targetId ? { ...s, overlay: config } : s) }));
+                                    setActivePopup(null);
+                                    toast('Overlay applied', 'success', 1500);
+                                }}
+                                onClear={() => handleClearOverlay(activePopup.segmentId)} onClose={() => setActivePopup(null)}
+                                position={{ top: activePopup.top, left: activePopup.left }} />
+                        );
+                    })()}
+
+                    {/* Export Modal */}
+                    <ExportModal
+                        isOpen={showExportModal}
+                        onClose={() => setShowExportModal(false)}
+                        videoDuration={state.videoDuration}
+                        videoWidth={state.videoWidth}
+                        videoHeight={state.videoHeight}
+                        videoFileName={state.videoFile?.name || 'video'}
+                        videoSrc={state.videoSrc || ''}
+                    />
+
+                    {/* Keyboard Shortcuts Modal */}
+                    <KeyboardShortcutsModal
+                        isOpen={showShortcuts}
+                        onClose={() => setShowShortcuts(false)}
+                    />
+
+                    {/* Delete Confirmation Dialog */}
+                    <ConfirmDialog
+                        isOpen={!!confirmDelete}
+                        title="Delete Project"
+                        message="This will permanently delete the project and its video. This action cannot be undone."
+                        confirmLabel="Delete"
+                        variant="danger"
+                        onConfirm={() => {
+                            if (confirmDelete) {
+                                handleDeleteProject(confirmDelete);
+                                toast('Project deleted', 'info');
+                            }
+                            setConfirmDelete(null);
+                        }}
+                        onCancel={() => setConfirmDelete(null)}
+                    />
+                </>
+            )}
         </div>
     );
 }
