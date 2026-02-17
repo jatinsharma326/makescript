@@ -50,12 +50,12 @@ export async function transcribeVideo(
             return { subtitles: data.subtitles || [], isReal: true, lowConfidence };
         }
 
-        // API returned error or fallback flag
-        console.warn('Using mock transcript — API error:', data.error || 'Unknown error');
-        return { subtitles: generateMockTranscript(duration), isReal: false };
+        // API returned error or fallback flag — return empty so editor can decide
+        console.warn('Transcription failed:', data.error || 'Unknown error');
+        return { subtitles: [], isReal: false };
     } catch (error) {
         console.error('Transcription network request failed:', error);
-        return { subtitles: generateMockTranscript(duration), isReal: false };
+        return { subtitles: [], isReal: false };
     }
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
-import { writeFile, unlink, mkdir, appendFile } from 'fs/promises';
+import { writeFile, unlink, mkdir, appendFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { promisify } from 'util';
 
@@ -60,8 +60,11 @@ export async function POST(request: NextRequest) {
         tempFilePath = join(tempDir, `upload_${Date.now()}.${ext}`);
 
         const bytes = await file.arrayBuffer();
-        await writeFile(tempFilePath, Buffer.from(bytes));
-        await logToFile(`Saved temp file: ${tempFilePath}`);
+        const buffer = Buffer.from(bytes);
+        await writeFile(tempFilePath, buffer);
+        // Verify file was written completely
+        const fileStats = await stat(tempFilePath);
+        await logToFile(`Saved temp file: ${tempFilePath} (uploaded: ${file.size} bytes, written: ${fileStats.size} bytes)`);
 
         // Run the Python Whisper transcription script
         const scriptPath = join(process.cwd(), 'scripts', 'transcribe.py');
@@ -121,8 +124,13 @@ export async function POST(request: NextRequest) {
         if (result.error) {
             await logToFile(`Script returned error: ${result.error}`);
 
-            // Special handling for no audio stream
-            if (result.error === 'no_audio_stream') {
+            // Detect no-audio errors (both from pre-check and from ffmpeg/whisper)
+            const isNoAudio = result.error === 'no_audio_stream'
+                || result.error.includes('does not contain any stream')
+                || result.error.includes('no audio')
+                || result.error.includes('Output file does not contain');
+
+            if (isNoAudio) {
                 return NextResponse.json({
                     subtitles: [],
                     fallback: true,
@@ -140,7 +148,10 @@ export async function POST(request: NextRequest) {
 
         const filteredCount = result.filtered_count || 0;
         const avgConfidence = result.avg_confidence || 1.0;
-        await logToFile(`Success! ${result.segments.length} segments (filtered ${filteredCount} hallucinations), confidence: ${avgConfidence}, language: ${result.language}`);
+        const totalRaw = result.total_raw || 0;
+        // Log audio coverage: last segment's endTime tells us how far Whisper got
+        const lastEnd = result.segments.length > 0 ? result.segments[result.segments.length - 1].endTime : 0;
+        await logToFile(`Success! ${result.segments.length} segments (raw: ${totalRaw}, filtered: ${filteredCount}), confidence: ${avgConfidence}, audio covered: ${lastEnd}s, language: ${result.language}`);
 
         return NextResponse.json({
             subtitles: result.segments,

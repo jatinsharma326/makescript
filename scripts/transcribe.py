@@ -127,28 +127,39 @@ def transcribe(file_path: str, model_name: str = "base") -> dict:
                 file_path,
                 verbose=False,
                 word_timestamps=False,
+                condition_on_previous_text=False,  # Prevents cascade hallucinations / early stopping
             )
 
         raw_segments = result.get("segments", [])
         total_raw = len(raw_segments)
 
+        # Log audio coverage info to stderr for debugging
+        if raw_segments:
+            last_end = max(s.get("end", 0) for s in raw_segments)
+            print(f"[Whisper] Raw: {total_raw} segments, audio covered: {last_end:.1f}s, language: {result.get('language', '?')}", file=sys.stderr)
+
         # Build segments with hallucination filtering
         segments = []
         speech_probs = []
+        filtered_reasons = {"no_speech": 0, "hallucination": 0, "empty": 0, "repetition": 0}
         for i, seg in enumerate(raw_segments):
             no_speech_prob = seg.get("no_speech_prob", 0.0)
             text = seg.get("text", "").strip()
 
-            # Skip segments with high no_speech probability (likely hallucination)
-            if no_speech_prob > 0.6:
+            # Skip segments with very high no_speech probability (likely hallucination)
+            # Using 0.8 threshold — 0.6 was too aggressive and dropped real speech with background music
+            if no_speech_prob > 0.8:
+                filtered_reasons["no_speech"] += 1
                 continue
 
             # Skip segments that match known hallucination patterns
             if is_hallucinated(text):
+                filtered_reasons["hallucination"] += 1
                 continue
 
             # Skip empty segments
             if not text:
+                filtered_reasons["empty"] += 1
                 continue
 
             speech_probs.append(1.0 - no_speech_prob)
@@ -162,6 +173,7 @@ def transcribe(file_path: str, model_name: str = "base") -> dict:
         # Second pass: detect repetitive hallucinations
         repetition_indices = detect_repetition(segments)
         if repetition_indices:
+            filtered_reasons["repetition"] = len(repetition_indices)
             segments = [s for i, s in enumerate(segments) if i not in repetition_indices]
             speech_probs = [p for i, p in enumerate(speech_probs) if i not in repetition_indices]
 
@@ -172,6 +184,10 @@ def transcribe(file_path: str, model_name: str = "base") -> dict:
         # Calculate average confidence
         avg_confidence = round(sum(speech_probs) / len(speech_probs), 3) if speech_probs else 0.0
         filtered_count = total_raw - len(segments)
+
+        # Log filtering details
+        if filtered_count > 0:
+            print(f"[Whisper] Filtered {filtered_count}: {filtered_reasons}", file=sys.stderr)
 
         return {
             "segments": segments,

@@ -2,424 +2,435 @@
 
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
-
-/* ===== Inline SVG Icons ===== */
-const Icons = {
-  ArrowRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>,
-  Sun: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>,
-  Moon: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>,
-  Upload: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>,
-  FileText: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
-  Wand: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 4V2" /><path d="M15 16v-2" /><path d="M8 9h2" /><path d="M20 9h2" /><path d="M17.8 11.8L19 13" /><path d="M15 9h0" /><path d="M17.8 6.2L19 5" /><path d="M11.2 6.2L10 5" /><path d="M6.5 12.5L3 16l2 2 3.5-3.5" /><path d="m3 16 2 2" /><path d="M12.2 11.8L2 22" /></svg>,
-  Download: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
-  Play: () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-20"><polygon points="5 3 19 12 5 21 5 3" /></svg>,
-  Layers: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>,
-  Zap: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>,
-  Type: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>,
-  Smile: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>,
-  ZoomIn: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>,
-  Repeat: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></svg>,
-  MessageSquare: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>,
-  Github: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg>,
-  Twitter: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>,
-  Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
-  Sparkles: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" /></svg>,
-};
+import { cn } from '../lib/utils';
+import { Button } from '../components/ui/Button';
+import {
+    Film, ArrowRight, FileText, Sparkles, Download, Upload,
+    Layers, Wand2, Play, Check, Moon, Sun
+} from 'lucide-react';
 
 export default function LandingPage() {
-  const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [mounted, setMounted] = useState(false);
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [email, setEmail] = useState('');
+    const [emailSubmitted, setEmailSubmitted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark' || saved === 'light') {
-      setTheme(saved);
-      document.documentElement.setAttribute('data-theme', saved);
-    } else {
-      document.documentElement.setAttribute('data-theme', 'dark');
+    useEffect(() => {
+        setMounted(true);
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark') {
+            setTheme(saved);
+            document.documentElement.setAttribute('data-theme', saved);
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    }, []);
+
+    const toggleTheme = () => {
+        const next = theme === 'light' ? 'dark' : 'light';
+        setTheme(next);
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    };
+
+    if (!mounted) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[var(--lp-bg)]">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--lp-text-faint)]" />
+            </div>
+        );
     }
-  }, []);
 
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-  };
-
-  if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#09090b' }}>
-        <div className="spinner w-8 h-8" />
-      </div>
-    );
-  }
+        <div className="min-h-screen flex flex-col bg-[var(--lp-bg)] text-[var(--lp-text)] transition-colors duration-300">
 
-  const features = [
-    { icon: <Icons.Layers />, name: 'Lower Third', desc: 'Professional name tags & titles' },
-    { icon: <Icons.Type />, name: 'Highlight', desc: 'Emphasize key text on screen' },
-    { icon: <Icons.Smile />, name: 'Emoji Burst', desc: 'Animated reaction overlays' },
-    { icon: <Icons.ZoomIn />, name: 'Zoom Effect', desc: 'Dynamic zoom into action' },
-    { icon: <Icons.Repeat />, name: 'Transitions', desc: 'Cinematic scene changes' },
-    { icon: <Icons.MessageSquare />, name: 'Captions', desc: 'Animated subtitle overlays' },
-  ];
+            {/* ── Navbar ── */}
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--lp-nav)] backdrop-blur-md border-b border-[var(--lp-border)]">
+                <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2">
+                        <Film className="w-5 h-5 text-[var(--lp-text)]" />
+                        <span className="font-semibold text-[15px] tracking-[-0.01em]">MakeScript</span>
+                    </Link>
 
-  const steps = [
-    { num: '01', icon: <Icons.Upload />, title: 'Upload', desc: 'Drag & drop any video file. MP4, WebM supported up to 50MB.' },
-    { num: '02', icon: <Icons.FileText />, title: 'Transcribe', desc: 'Whisper AI generates word-level subtitles with millisecond accuracy.' },
-    { num: '03', icon: <Icons.Wand />, title: 'Enhance', desc: 'AI suggests motion graphics or pick from our template library manually.' },
-    { num: '04', icon: <Icons.Download />, title: 'Export', desc: 'Preview in real-time and download your enhanced video in full quality.' },
-  ];
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden noise">
-
-      {/* ===== Navigation ===== */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-              M
-            </div>
-            <span className="text-lg font-bold tracking-tight">
-              Make<span className="gradient-text">Script</span>
-            </span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-1">
-            <a href="#features" className="btn-ghost text-xs">Features</a>
-            <a href="#how-it-works" className="btn-ghost text-xs">How It Works</a>
-            <a href="#pricing" className="btn-ghost text-xs">Pricing</a>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} className="btn-ghost p-2" title="Toggle theme">
-              {theme === 'light' ? <Icons.Moon /> : <Icons.Sun />}
-            </button>
-            <Link href="/editor" className="btn-primary text-xs py-2 px-5 hidden sm:inline-flex">
-              Open Editor <Icons.ArrowRight />
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* ===== Hero ===== */}
-      <section className="relative pt-32 pb-16 md:pt-44 md:pb-24 px-6 flex flex-col items-center text-center overflow-hidden">
-        {/* Ambient orbs */}
-        <div className="orb w-[600px] h-[600px] -top-40 left-1/2 -translate-x-1/2"
-          style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 70%)' }} />
-        <div className="orb w-[400px] h-[400px] top-20 -right-32"
-          style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08), transparent 70%)', animationDelay: '4s' }} />
-        <div className="orb w-[300px] h-[300px] top-60 -left-20"
-          style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.06), transparent 70%)', animationDelay: '8s' }} />
-
-        <div className="relative z-10 max-w-4xl">
-          <div className="badge mb-8 animate-fade-in">
-            <Icons.Sparkles />
-            AI-Powered Video Enhancement
-          </div>
-
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mb-6 text-balance animate-fade-in stagger-1 leading-[1.05]">
-            <span className="gradient-text-hero">Add Motion Graphics</span>
-            <br />
-            <span className="gradient-text-hero">to Any Video</span>
-          </h1>
-
-          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed mb-10 animate-fade-in stagger-2">
-            Upload a video, get instant AI transcripts, and add stunning animated overlays — lower thirds, emoji bursts, zoom effects, and more.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center animate-fade-in stagger-3">
-            <Link href="/editor" className="btn-primary text-sm px-8 py-3.5 rounded-xl">
-              <Icons.Sparkles /> Start Creating — Free
-            </Link>
-            <a href="#how-it-works" className="btn-secondary text-sm px-8 py-3.5 rounded-xl">
-              See How It Works
-            </a>
-          </div>
-        </div>
-
-        {/* ===== Demo Preview ===== */}
-        <div className="relative mt-16 md:mt-20 w-full max-w-5xl animate-fade-in stagger-4">
-          {/* Glow behind card */}
-          <div className="absolute -inset-4 rounded-3xl opacity-60" style={{ background: 'radial-gradient(ellipse at center, rgba(99, 102, 241, 0.1), transparent 70%)' }} />
-
-          <div className="card-premium p-1 rounded-2xl relative">
-            <div className="rounded-xl overflow-hidden bg-background/50">
-              <div className="flex h-full aspect-[16/9.5] gap-0">
-                {/* Video Preview Area */}
-                <div className="flex-[2.5] relative flex items-center justify-center overflow-hidden grid-bg p-4">
-                  <Icons.Play />
-
-                  {/* Mockup lower third */}
-                  <div className="absolute bottom-14 left-8 flex flex-col gap-1 animate-slide-in" style={{ animationDelay: '1s' }}>
-                    <div className="px-3 py-1.5 rounded-md text-sm font-bold text-white shadow-lg"
-                      style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-                      Jatin Sharma
-                    </div>
-                    <div className="bg-background/80 backdrop-blur text-muted-foreground text-[10px] px-3 py-0.5 rounded border border-border uppercase tracking-widest font-semibold">
-                      CEO & Founder
-                    </div>
-                  </div>
-
-                  {/* Floating emoji */}
-                  <div className="absolute top-10 right-10 animate-float" style={{ animationDelay: '0.5s' }}>
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-lg"
-                      style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)', boxShadow: '0 0 20px rgba(249, 115, 22, 0.3)' }}>
-                      🔥
-                    </div>
-                  </div>
-
-                  {/* Caption bar */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 glass-card px-5 py-2 rounded-lg text-sm">
-                    <span className="gradient-text font-bold">Welcome</span>
-                    <span className="text-foreground/80"> to my channel</span>
-                  </div>
-                </div>
-
-                {/* Sidebar mockup */}
-                <div className="hidden md:flex flex-1 flex-col gap-1.5 p-3 border-l border-border/40">
-                  <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest px-2 py-1.5">Transcript</div>
-                  {[
-                    { time: '0:00', text: 'Welcome back everyone...', active: true },
-                    { time: '0:03', text: 'Today we\'re going to...', active: false },
-                    { time: '0:06', text: 'Let me show you how...', active: false },
-                    { time: '0:09', text: 'This is really exciting...', active: false },
-                  ].map((item, i) => (
-                    <div key={i} className={`p-2.5 rounded-lg text-[11px] leading-relaxed transition-all border ${item.active
-                      ? 'glass-card border-indigo-500/20 text-foreground'
-                      : 'border-transparent text-muted-foreground/70 hover:bg-white/[0.02]'
-                      }`}>
-                      <span className="font-mono text-[9px] opacity-40 mr-1.5">{item.time}</span>
-                      {item.text}
-                      {item.active && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <span className="w-1 h-1 rounded-full bg-indigo-400" />
-                          <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Lower Third</span>
+                    <div className="flex items-center gap-6">
+                        <div className="hidden md:flex items-center gap-6">
+                            <a href="#features" className="text-[13px] text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] transition-colors">Features</a>
+                            <a href="#how-it-works" className="text-[13px] text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] transition-colors">How it works</a>
+                            <a href="#pricing" className="text-[13px] text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] transition-colors">Pricing</a>
                         </div>
-                      )}
+                        <button
+                            onClick={toggleTheme}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] hover:bg-[var(--lp-hover-s)] transition-all"
+                        >
+                            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        </button>
+                        <Link href="/editor">
+                            <Button className="h-8 px-4 text-[13px] font-medium bg-[var(--lp-btn)] text-[var(--lp-btn-fg)] hover:bg-[var(--lp-btn-hover)] rounded-lg transition-colors">
+                                Open Editor
+                            </Button>
+                        </Link>
                     </div>
-                  ))}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            </nav>
 
-        {/* Social proof */}
-        <div className="mt-12 flex flex-col items-center gap-3 animate-fade-in stagger-5">
-          <div className="flex -space-x-2.5">
-            {['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e'].map((c, i) => (
-              <div key={i} className="w-8 h-8 rounded-full border-2 border-background flex items-center justify-center text-white text-[10px] font-bold" style={{ background: c }}>
-                {String.fromCharCode(65 + i)}
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Trusted by <span className="text-foreground font-semibold">500+</span> creators worldwide
-          </p>
-        </div>
-      </section>
+            {/* ── Hero ── */}
+            <section className="pt-32 md:pt-40 pb-4 px-6">
+                <div className="max-w-3xl mx-auto text-center">
+                    <p className="text-[13px] text-[var(--lp-text-muted)] font-medium mb-6 tracking-wide">
+                        Currently in beta &mdash; free to use
+                    </p>
 
-      {/* ===== Features Grid ===== */}
-      <section id="features" className="py-24 px-6 relative">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight gradient-text-hero">
-              Everything You Need
-            </h2>
-            <p className="text-muted-foreground text-base max-w-xl mx-auto">
-              Professional motion graphics, one click away. No After Effects knowledge required.
-            </p>
-          </div>
+                    <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-bold tracking-[-0.035em] leading-[1.08] text-[var(--lp-text)] mb-6">
+                        Motion graphics for{'\u00A0'}your videos, automated
+                    </h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map((feat, i) => (
-              <div key={i} className="card-premium p-6 flex flex-col gap-3 group" style={{ animationDelay: `${i * 0.08}s` }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-indigo-400 group-hover:text-indigo-300 transition-colors"
-                  style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
-                  {feat.icon}
+                    <p className="text-[17px] md:text-[19px] text-[var(--lp-text-sub)] max-w-xl mx-auto leading-relaxed mb-10">
+                        Upload a video. AI transcribes it, finds the key moments,
+                        and adds lower thirds, kinetic text, and particle effects — automatically.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Link href="/editor">
+                            <Button className="h-11 px-7 text-[14px] font-medium bg-[var(--lp-btn)] text-[var(--lp-btn-fg)] hover:bg-[var(--lp-btn-hover)] rounded-lg gap-2 transition-colors">
+                                Try it free <ArrowRight className="w-4 h-4" />
+                            </Button>
+                        </Link>
+                        <a href="#how-it-works">
+                            <Button variant="outline" className="h-11 px-7 text-[14px] font-medium border-[var(--lp-outline-border)] text-[var(--lp-text-sub)] hover:text-[var(--lp-text)] hover:border-[var(--lp-outline-hover)] rounded-lg gap-2 transition-colors">
+                                See how it works
+                            </Button>
+                        </a>
+                    </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-sm mb-1">{feat.name}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{feat.desc}</p>
+            </section>
+
+            {/* ── Editor Mockup (stays dark in both themes — it's showing the product) ── */}
+            <section className="px-6 pt-16 pb-24">
+                <div className="max-w-5xl mx-auto">
+                    <div className="rounded-xl overflow-hidden border border-[var(--lp-border-s)] bg-[#111113]" style={{ boxShadow: 'var(--lp-shadow)' }}>
+                        {/* Title bar */}
+                        <div className="h-10 bg-[#161618] border-b border-white/[0.06] flex items-center px-4">
+                            <div className="flex gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+                                <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+                                <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+                            </div>
+                            <div className="flex-1 text-center">
+                                <span className="text-[11px] font-mono text-zinc-600">MakeScript Editor</span>
+                            </div>
+                            <div className="w-12" />
+                        </div>
+
+                        {/* Editor body */}
+                        <div className="flex" style={{ height: '420px' }}>
+                            {/* Left: Segments */}
+                            <div className="w-56 shrink-0 hidden lg:flex flex-col border-r border-white/[0.06] bg-[#0d0d0f]">
+                                <div className="p-3 border-b border-white/[0.06]">
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-2">Transcript</div>
+                                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div className="h-full w-full bg-emerald-500/60 rounded-full" />
+                                    </div>
+                                    <div className="text-[9px] text-zinc-700 mt-1">6 segments detected</div>
+                                </div>
+                                <div className="flex-1 p-2 space-y-0.5 overflow-hidden">
+                                    {[
+                                        { time: '0:00', text: 'Welcome to our product...', overlay: 'Lower Third', color: 'bg-blue-400' },
+                                        { time: '0:05', text: '50K users in 6 months', overlay: 'Highlight', color: 'bg-amber-400' },
+                                        { time: '0:12', text: 'Let me show the numbers', overlay: 'Kinetic Text', color: 'bg-rose-400' },
+                                        { time: '0:18', text: 'Revenue hit $2M ARR', overlay: 'Particles', color: 'bg-violet-400' },
+                                        { time: '0:25', text: 'Here is the growth chart', overlay: 'Scene Cut', color: 'bg-emerald-400' },
+                                        { time: '0:31', text: 'Thanks for watching', overlay: null, color: '' },
+                                    ].map((seg, i) => (
+                                        <div key={i} className={cn(
+                                            "px-2.5 py-2 rounded-md text-[11px]",
+                                            i === 1 ? "bg-white/[0.04] ring-1 ring-white/[0.08]" : "hover:bg-white/[0.02]"
+                                        )}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-mono text-zinc-700 w-5 shrink-0">{seg.time}</span>
+                                                <span className={cn("truncate", i === 1 ? "text-zinc-200" : "text-zinc-500")}>{seg.text}</span>
+                                            </div>
+                                            {seg.overlay && (
+                                                <div className="ml-7 mt-1 flex items-center gap-1.5">
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full", seg.color)} />
+                                                    <span className="text-[9px] text-zinc-600 font-medium">{seg.overlay}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Center: Video canvas */}
+                            <div className="flex-1 flex flex-col bg-black">
+                                <div className="flex-1 flex items-center justify-center p-6 md:p-8 relative">
+                                    <div className="relative w-full max-w-[520px] aspect-video rounded-lg overflow-hidden bg-zinc-900 border border-white/[0.04]">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/40 via-zinc-900 to-black" />
+
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/10">
+                                                <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                                            </div>
+                                        </div>
+
+                                        <div className="absolute bottom-8 left-4">
+                                            <div className="bg-white text-black px-3 py-1 text-[11px] font-semibold rounded-sm">
+                                                Jatin Sharma
+                                            </div>
+                                            <div className="bg-zinc-900 text-zinc-400 px-3 py-0.5 text-[9px] font-medium uppercase tracking-wider">
+                                                CEO &amp; Founder
+                                            </div>
+                                        </div>
+
+                                        <div className="absolute top-4 right-4 bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[10px] font-bold px-2.5 py-1 rounded">
+                                            50K Users
+                                        </div>
+
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-800">
+                                            <div className="h-full w-[35%] bg-white/70" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="h-14 border-t border-white/[0.06] bg-[#0d0d0f] px-3 flex items-center gap-[2px]">
+                                    {Array.from({ length: 48 }).map((_, i) => {
+                                        const h = 6 + Math.sin(i * 0.55) * 10 + Math.abs(Math.sin(i * 1.3)) * 8;
+                                        return (
+                                            <div key={i} className="flex-1 flex items-end justify-center h-full py-2.5">
+                                                <div
+                                                    className={cn("w-[2px] rounded-full", i < 17 ? "bg-white/25" : "bg-zinc-800")}
+                                                    style={{ height: `${h}px` }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Right: Properties */}
+                            <div className="w-52 shrink-0 hidden xl:flex flex-col border-l border-white/[0.06] bg-[#0d0d0f] p-3">
+                                <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-3">Properties</div>
+                                <div className="space-y-2">
+                                    {[
+                                        { label: 'Type', value: 'Highlight Box' },
+                                        { label: 'Start', value: '0:05.200' },
+                                        { label: 'End', value: '0:11.800' },
+                                        { label: 'Text', value: '50K Users' },
+                                    ].map((prop, i) => (
+                                        <div key={i} className="p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                                            <div className="text-[9px] text-zinc-600 mb-0.5">{prop.label}</div>
+                                            <div className="text-[11px] text-zinc-300 font-medium font-mono">{prop.value}</div>
+                                        </div>
+                                    ))}
+                                    <div className="p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                                        <div className="text-[9px] text-zinc-600 mb-2">Opacity</div>
+                                        <div className="h-1 bg-zinc-800 rounded-full">
+                                            <div className="h-full w-[80%] bg-white/30 rounded-full" />
+                                        </div>
+                                    </div>
+                                    <div className="p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                                        <div className="text-[9px] text-zinc-600 mb-2">Scale</div>
+                                        <div className="h-1 bg-zinc-800 rounded-full">
+                                            <div className="h-full w-[100%] bg-white/30 rounded-full" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <div className="section-divider max-w-5xl mx-auto" />
+            {/* ── Features ── */}
+            <section id="features" className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
+                <div className="max-w-5xl mx-auto">
+                    <div className="max-w-2xl mb-14">
+                        <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-4">
+                            Built for speed,<br />not complexity
+                        </h2>
+                        <p className="text-[var(--lp-text-muted)] text-[16px] leading-relaxed">
+                            Most video tools make you do the work. MakeScript reads your content
+                            and makes the creative decisions for you.
+                        </p>
+                    </div>
 
-      {/* ===== How It Works ===== */}
-      <section id="how-it-works" className="py-24 px-6 relative overflow-hidden">
-        <div className="orb w-[500px] h-[500px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-          style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.06), transparent 70%)' }} />
-
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight gradient-text-hero">How It Works</h2>
-            <p className="text-muted-foreground text-base">Four steps to transform your content.</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            {steps.map((item, i) => (
-              <div key={i} className="card-premium p-8 relative group">
-                <div className="absolute top-6 right-6 text-5xl font-black select-none"
-                  style={{ color: 'rgba(99, 102, 241, 0.06)' }}>
-                  {item.num}
+                    <div className="grid md:grid-cols-3 gap-px bg-[var(--lp-border-s)] rounded-xl overflow-hidden border border-[var(--lp-border-s)]">
+                        {[
+                            {
+                                icon: Wand2,
+                                title: 'AI overlay selection',
+                                desc: 'Reads your transcript, identifies stats, names, and topics, then picks the right overlay for each moment.'
+                            },
+                            {
+                                icon: FileText,
+                                title: 'Whisper transcription',
+                                desc: 'Word-level accuracy from OpenAI Whisper. Auto-segments your video into chapters with timestamps.'
+                            },
+                            {
+                                icon: Layers,
+                                title: '30+ overlay types',
+                                desc: 'Lower thirds, kinetic text, highlight boxes, particle effects, scene transitions — all customizable.'
+                            },
+                            {
+                                icon: Upload,
+                                title: 'Drag and drop',
+                                desc: 'Drop any MP4, WebM, or MOV into the editor. Processing starts immediately, no setup needed.'
+                            },
+                            {
+                                icon: Download,
+                                title: '4K export',
+                                desc: 'Preview overlays in real-time with Remotion, then export at 1080p or 4K with everything baked in.'
+                            },
+                            {
+                                icon: Sparkles,
+                                title: 'Dynamic labels',
+                                desc: 'AI generates contextual labels from your transcript — stats, quotes, key phrases — unique to each video.'
+                            },
+                        ].map((feat, i) => (
+                            <div key={i} className="p-7 bg-[var(--lp-s1)] hover:bg-[var(--lp-cell-hover)] transition-colors group">
+                                <feat.icon className="w-[18px] h-[18px] text-[var(--lp-text-faint)] mb-4 group-hover:text-[var(--lp-text-sub)] transition-colors" />
+                                <h3 className="text-[14px] font-semibold text-[var(--lp-text)] mb-2">{feat.title}</h3>
+                                <p className="text-[13px] text-[var(--lp-text-muted)] leading-relaxed">{feat.desc}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 text-indigo-400"
-                  style={{ background: 'rgba(99, 102, 241, 0.1)' }}>
-                  {item.icon}
+            </section>
+
+            {/* ── How It Works ── */}
+            <section id="how-it-works" className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
+                <div className="max-w-5xl mx-auto">
+                    <div className="max-w-2xl mb-16">
+                        <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-4">
+                            Upload to export<br />in four steps
+                        </h2>
+                    </div>
+
+                    <div className="grid md:grid-cols-4 gap-10 md:gap-8">
+                        {[
+                            { num: '1', title: 'Upload', desc: 'Drag a video file into the editor. MP4, WebM, MOV — up to 2GB.' },
+                            { num: '2', title: 'Transcribe', desc: 'AI generates word-level captions and splits your video into segments.' },
+                            { num: '3', title: 'Enhance', desc: 'Each segment gets an overlay — lower third, highlight, particles — automatically.' },
+                            { num: '4', title: 'Export', desc: 'Preview everything in real-time, tweak what you want, then download.' },
+                        ].map((step, i) => (
+                            <div key={i}>
+                                <div className="text-[56px] font-bold text-[var(--lp-step-num)] leading-none mb-3 tracking-tight">{step.num}</div>
+                                <h3 className="text-[15px] font-semibold text-[var(--lp-text)] mb-2">{step.title}</h3>
+                                <p className="text-[13px] text-[var(--lp-text-muted)] leading-relaxed">{step.desc}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <div className="section-divider max-w-5xl mx-auto" />
+            {/* ── Pricing ── */}
+            <section id="pricing" className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
+                <div className="max-w-5xl mx-auto">
+                    <div className="max-w-2xl mb-14">
+                        <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-4">
+                            Simple pricing
+                        </h2>
+                        <p className="text-[var(--lp-text-muted)] text-[16px]">
+                            Start free. No credit card required.
+                        </p>
+                    </div>
 
-      {/* ===== Pricing/CTA ===== */}
-      <section id="pricing" className="py-24 px-6 relative">
-        <div className="max-w-lg mx-auto text-center relative">
-          <div className="orb w-[400px] h-[400px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.08), transparent 70%)' }} />
+                    <div className="grid md:grid-cols-2 gap-px bg-[var(--lp-border-s)] rounded-xl overflow-hidden border border-[var(--lp-border-s)] max-w-2xl">
+                        {/* Free */}
+                        <div className="p-8 bg-[var(--lp-s1)]">
+                            <div className="text-[13px] font-medium text-[var(--lp-text-muted)] mb-1">Free</div>
+                            <div className="text-4xl font-bold text-[var(--lp-text)] mb-6">$0</div>
+                            <div className="space-y-3 mb-8">
+                                {['3 videos / month', 'AI transcription', '10 overlay types', '1080p export'].map(f => (
+                                    <div key={f} className="flex items-center gap-2.5 text-[13px] text-[var(--lp-text-sub)]">
+                                        <Check className="w-3.5 h-3.5 text-[var(--lp-check-free)] shrink-0" />
+                                        {f}
+                                    </div>
+                                ))}
+                            </div>
+                            <Link href="/editor" className="block">
+                                <Button variant="outline" className="w-full h-10 text-[13px] font-medium border-[var(--lp-outline-border)] hover:border-[var(--lp-outline-hover)] text-[var(--lp-text-sub)] rounded-lg transition-colors">
+                                    Get started
+                                </Button>
+                            </Link>
+                        </div>
 
-          <div className="card-premium p-10 md:p-14 relative z-10">
-            <div className="badge mb-6 mx-auto">
-              Free during beta
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight gradient-text-hero">
-              Start Creating Today
-            </h2>
-            <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-              No account needed. No watermarks. Just upload and go.
-            </p>
-
-            <div className="flex flex-col gap-3 mb-8 text-left mx-auto max-w-xs">
-              {['Unlimited video uploads', 'AI-powered transcription', 'All motion graphic templates', 'Full quality export'].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
-                    <Icons.Check />
-                  </div>
-                  <span className="text-muted-foreground">{item}</span>
+                        {/* Pro */}
+                        <div className="p-8 bg-[var(--lp-s2)]">
+                            <div className="text-[13px] font-medium text-[var(--lp-text-muted)] mb-1">Pro</div>
+                            <div className="flex items-baseline gap-1 mb-6">
+                                <span className="text-4xl font-bold text-[var(--lp-text)]">$29</span>
+                                <span className="text-[var(--lp-text-faint)] text-sm">/mo</span>
+                            </div>
+                            <div className="space-y-3 mb-8">
+                                {['Unlimited videos', 'Priority processing', '30+ overlay types', '4K export', 'Custom branding', 'API access'].map(f => (
+                                    <div key={f} className="flex items-center gap-2.5 text-[13px] text-[var(--lp-text-2)]">
+                                        <Check className="w-3.5 h-3.5 text-[var(--lp-check-pro)] shrink-0" />
+                                        {f}
+                                    </div>
+                                ))}
+                            </div>
+                            <Link href="/editor" className="block">
+                                <Button className="w-full h-10 text-[13px] font-medium bg-[var(--lp-btn)] text-[var(--lp-btn-fg)] hover:bg-[var(--lp-btn-hover)] rounded-lg transition-colors">
+                                    Start free trial
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
                 </div>
-              ))}
-            </div>
+            </section>
 
-            <Link href="/editor" className="btn-primary w-full py-3.5 rounded-xl text-sm">
-              Open Editor — It&apos;s Free <Icons.ArrowRight />
-            </Link>
-          </div>
-        </div>
-      </section>
+            {/* ── CTA ── */}
+            <section className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
+                <div className="max-w-xl mx-auto text-center">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">
+                        Try MakeScript today
+                    </h2>
+                    <p className="text-[var(--lp-text-muted)] mb-8">
+                        Free to start. No watermarks, no limits on preview.
+                    </p>
 
-      <div className="section-divider max-w-5xl mx-auto" />
-
-      {/* ===== Suggestions Row ===== */}
-      <section id="suggestions" className="py-24 px-6 relative overflow-hidden">
-        <div className="orb w-[500px] h-[500px] top-1/2 -right-40"
-          style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.07), transparent 70%)', animationDelay: '3s' }} />
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight gradient-text-hero">
-              What You Can Build
-            </h2>
-            <p className="text-muted-foreground text-base max-w-xl mx-auto">
-              Explore creative possibilities with MakeScript — perfect for every content format.
-            </p>
-          </div>
-
-          {/* Horizontal scrollable row */}
-          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {[
-              {
-                icon: '🎬',
-                gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                title: 'YouTube Intros',
-                desc: 'Create eye-catching animated intros with lower thirds, name tags, and dynamic text overlays for your YouTube videos.',
-              },
-              {
-                icon: '📱',
-                gradient: 'linear-gradient(135deg, #ec4899, #f43f5e)',
-                title: 'Social Reels',
-                desc: 'Transform clips into scroll-stopping Instagram Reels and TikToks with emoji reactions, captions, and zoom effects.',
-              },
-              {
-                icon: '🎙️',
-                gradient: 'linear-gradient(135deg, #f97316, #eab308)',
-                title: 'Podcast Clips',
-                desc: 'Turn podcast audio into shareable video clips with animated transcripts, speaker labels, and highlight moments.',
-              },
-              {
-                icon: '📊',
-                gradient: 'linear-gradient(135deg, #22c55e, #14b8a6)',
-                title: 'Product Demos',
-                desc: 'Enhance product walkthroughs with callout boxes, step indicators, and professional scene transitions.',
-              },
-              {
-                icon: '🎓',
-                gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                title: 'Course Content',
-                desc: 'Add chapter markers, key-point highlights, and animated subtitles to educational videos automatically.',
-              },
-              {
-                icon: '📰',
-                gradient: 'linear-gradient(135deg, #a855f7, #6366f1)',
-                title: 'News & Updates',
-                desc: 'Create branded update videos with lower thirds, ticker overlays, and dynamic text for company announcements.',
-              },
-            ].map((item, i) => (
-              <div key={i}
-                className="card-premium p-6 min-w-[280px] md:min-w-[300px] flex-shrink-0 snap-center group cursor-default"
-                style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 shadow-lg"
-                  style={{ background: item.gradient }}>
-                  {item.icon}
+                    {emailSubmitted ? (
+                        <div className="inline-flex items-center gap-2 text-sm text-[var(--lp-text-sub)]">
+                            <Check className="w-4 h-4 text-emerald-500" />
+                            You&apos;re on the list.
+                        </div>
+                    ) : (
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!email.includes('@')) return;
+                            const list = JSON.parse(localStorage.getItem('makescript-waitlist') || '[]');
+                            list.push({ email, date: new Date().toISOString() });
+                            localStorage.setItem('makescript-waitlist', JSON.stringify(list));
+                            setEmailSubmitted(true);
+                        }} className="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
+                            <input
+                                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                                placeholder="you@email.com" required
+                                className="flex-1 h-10 px-3 rounded-lg text-[13px] bg-[var(--lp-input-bg)] border border-[var(--lp-input-border)] text-[var(--lp-text)] placeholder:text-[var(--lp-input-ph)] focus:outline-none focus:border-[var(--lp-input-focus)] transition-colors"
+                            />
+                            <Button type="submit" className="h-10 px-5 text-[13px] font-medium bg-[var(--lp-btn)] text-[var(--lp-btn-fg)] hover:bg-[var(--lp-btn-hover)] rounded-lg shrink-0 transition-colors">
+                                Join waitlist
+                            </Button>
+                        </form>
+                    )}
                 </div>
-                <h3 className="font-bold text-base mb-2 group-hover:text-indigo-400 transition-colors">{item.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
+            </section>
 
-          {/* Scroll hint */}
-          <div className="flex justify-center mt-6 gap-1.5">
-            {[0, 1, 2, 3, 4, 5].map((_, i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full transition-all"
-                style={{ background: i === 0 ? '#6366f1' : 'rgba(99, 102, 241, 0.2)' }} />
-            ))}
-          </div>
+            {/* ── Footer ── */}
+            <footer className="border-t border-[var(--lp-border)] py-8 px-6">
+                <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Film className="w-4 h-4 text-[var(--lp-text-faint)]" />
+                        <span className="text-[13px] text-[var(--lp-text-faint)]">MakeScript</span>
+                    </div>
+                    <div className="flex items-center gap-6 text-[12px] text-[var(--lp-text-dim)]">
+                        <a href="#" className="hover:text-[var(--lp-text-sub)] transition-colors">Privacy</a>
+                        <a href="#" className="hover:text-[var(--lp-text-sub)] transition-colors">Terms</a>
+                        <a href="#" className="hover:text-[var(--lp-text-sub)] transition-colors">Contact</a>
+                        <span>&copy; 2026</span>
+                    </div>
+                </div>
+            </footer>
         </div>
-      </section>
-
-      {/* ===== Footer ===== */}
-      <footer className="py-8 px-6 border-t border-border mt-auto">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>M</div>
-            <span className="font-medium">MakeScript © 2026</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            <span className="w-px h-3 bg-border" />
-            <a href="#" className="hover:text-foreground transition-colors inline-flex items-center gap-1.5"><Icons.Twitter /> Twitter</a>
-            <a href="#" className="hover:text-foreground transition-colors inline-flex items-center gap-1.5"><Icons.Github /> GitHub</a>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+    );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import {
     AbsoluteFill,
     useCurrentFrame,
@@ -20,6 +20,7 @@ interface VisualIllustrationProps {
 // ==================== SCENE COMPONENTS ====================
 
 const SolarSystemScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
     const orbitAngle = (frame * 3) % 360;
     const moonAngle = (frame * 8) % 360;
     const sunPulse = 1 + Math.sin(frame * 0.08) * 0.05;
@@ -40,19 +41,19 @@ const SolarSystemScene: React.FC<{ frame: number; fps: number; color: string }> 
             ))}
             {/* Sun glow */}
             <defs>
-                <radialGradient id="sunGlow">
+                <radialGradient id={`${id}-sunGlow`}>
                     <stop offset="0%" stopColor="#fbbf24" stopOpacity={sunGlow} />
                     <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
                 </radialGradient>
-                <radialGradient id="sunCore">
+                <radialGradient id={`${id}-sunCore`}>
                     <stop offset="0%" stopColor="#fef3c7" />
                     <stop offset="50%" stopColor="#fbbf24" />
                     <stop offset="100%" stopColor="#f59e0b" />
                 </radialGradient>
             </defs>
-            <circle cx="150" cy="150" r="70" fill="url(#sunGlow)" />
+            <circle cx="150" cy="150" r="70" fill={`url(#${id}-sunGlow)`} />
             {/* Sun */}
-            <circle cx="150" cy="150" r={30 * sunPulse} fill="url(#sunCore)" />
+            <circle cx="150" cy="150" r={30 * sunPulse} fill={`url(#${id}-sunCore)`} />
             {/* Sun corona rays */}
             {[...Array(8)].map((_, i) => {
                 const rayAngle = (i * 45 + frame * 0.5) * (Math.PI / 180);
@@ -101,6 +102,7 @@ const SolarSystemScene: React.FC<{ frame: number; fps: number; color: string }> 
 };
 
 const GrowthChartScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
     const progress = Math.min(1, frame / 40);
     const bars = [0.3, 0.45, 0.35, 0.6, 0.55, 0.75, 0.9];
 
@@ -119,12 +121,12 @@ const GrowthChartScene: React.FC<{ frame: number; fps: number; color: string }> 
                 return (
                     <g key={`bar-${i}`}>
                         <defs>
-                            <linearGradient id={`barGrad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id={`${id}-barGrad-${i}`} x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor={color} stopOpacity="0.9" />
                                 <stop offset="100%" stopColor={color} stopOpacity="0.4" />
                             </linearGradient>
                         </defs>
-                        <rect x={x} y={220 - barHeight} width="24" height={barHeight} rx="4" fill={`url(#barGrad-${i})`} />
+                        <rect x={x} y={220 - barHeight} width="24" height={barHeight} rx="4" fill={`url(#${id}-barGrad-${i})`} />
                         {/* Bar glow */}
                         <rect x={x} y={220 - barHeight} width="24" height="2" rx="1" fill="#fff" opacity={0.5 * barProgress} />
                     </g>
@@ -159,27 +161,28 @@ const GrowthChartScene: React.FC<{ frame: number; fps: number; color: string }> 
 };
 
 const GlobeScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
     const rotation = (frame * 2) % 360;
     const pulse = 1 + Math.sin(frame * 0.05) * 0.02;
 
     return (
         <svg viewBox="0 0 300 300" width="100%" height="100%">
             <defs>
-                <radialGradient id="globeGrad" cx="40%" cy="35%">
+                <radialGradient id={`${id}-globeGrad`} cx="40%" cy="35%">
                     <stop offset="0%" stopColor="#60a5fa" />
                     <stop offset="60%" stopColor="#3b82f6" />
                     <stop offset="100%" stopColor="#1e3a5f" />
                 </radialGradient>
-                <clipPath id="globeClip">
+                <clipPath id={`${id}-globeClip`}>
                     <circle cx="150" cy="150" r={90 * pulse} />
                 </clipPath>
             </defs>
             {/* Globe glow */}
             <circle cx="150" cy="155" r="95" fill={color} opacity="0.08" filter="blur(8px)" />
             {/* Globe body */}
-            <circle cx="150" cy="150" r={90 * pulse} fill="url(#globeGrad)" />
+            <circle cx="150" cy="150" r={90 * pulse} fill={`url(#${id}-globeGrad)`} />
             {/* Meridian lines */}
-            <g clipPath="url(#globeClip)">
+            <g clipPath={`url(#${id}-globeClip)`}>
                 {[-60, -20, 20, 60].map((offset, i) => {
                     const x = 150 + offset + Math.sin(rotation * Math.PI / 180) * 30;
                     return (
@@ -552,6 +555,7 @@ const ClockScene: React.FC<{ frame: number; fps: number; color: string }> = ({ f
 };
 
 const HeartbeatScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
     const heartScale = 1 + Math.sin(frame * 0.3) * 0.15;
     const lineOffset = (frame * 4) % 300;
 
@@ -596,10 +600,10 @@ const HeartbeatScene: React.FC<{ frame: number; fps: number; color: string }> = 
             </g>
             {/* EKG line */}
             <g>
-                <clipPath id="ekgClip">
+                <clipPath id={`${id}-ekgClip`}>
                     <rect x="20" y="70" width="260" height="160" />
                 </clipPath>
-                <g clipPath="url(#ekgClip)">
+                <g clipPath={`url(#${id}-ekgClip)`}>
                     <path
                         d={generatePath(-lineOffset)}
                         fill="none"
@@ -847,6 +851,7 @@ const CookingScene: React.FC<{ frame: number; fps: number; color: string }> = ({
 };
 
 const NatureTreeScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
     const windSway = Math.sin(frame * 0.06) * 5;
     const leafDrift = (frame * 0.8) % 400;
     const sunGlow = 0.5 + Math.sin(frame * 0.04) * 0.2;
@@ -855,12 +860,12 @@ const NatureTreeScene: React.FC<{ frame: number; fps: number; color: string }> =
         <svg viewBox="0 0 400 400" width="100%" height="100%">
             {/* Sky gradient */}
             <defs>
-                <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={`${id}-skyGrad`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#0c4a6e" />
                     <stop offset="100%" stopColor="#164e63" />
                 </linearGradient>
             </defs>
-            <rect x="0" y="0" width="400" height="400" fill="url(#skyGrad)" />
+            <rect x="0" y="0" width="400" height="400" fill={`url(#${id}-skyGrad)`} />
             {/* Sun */}
             <circle cx="320" cy="80" r={40 + sunGlow * 5} fill="#fbbf24" opacity={sunGlow * 0.15} />
             <circle cx="320" cy="80" r="25" fill="#fbbf24" opacity="0.6" />
@@ -1191,6 +1196,1484 @@ const CodeTerminalScene: React.FC<{ frame: number; fps: number; color: string }>
     );
 };
 
+// ==================== NEW ANIMATED SVG SCENE COMPONENTS ====================
+
+const FireBlazeScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const flicker = Math.sin(frame * 0.4) * 0.3 + 0.7;
+    const heatWave = Math.sin(frame * 0.08) * 3;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <radialGradient id={`${id}-heatGlow`} cx="50%" cy="80%">
+                    <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
+                    <stop offset="60%" stopColor="#ef4444" stopOpacity="0.1" />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                </radialGradient>
+                <linearGradient id={`${id}-fireGrad`} x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#dc2626" />
+                    <stop offset="40%" stopColor="#f97316" />
+                    <stop offset="70%" stopColor="#fbbf24" />
+                    <stop offset="100%" stopColor="#fef3c7" />
+                </linearGradient>
+                <filter id={`${id}-glow`}>
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Heat distortion glow */}
+            <ellipse cx="150" cy="220" rx="130" ry="100" fill={`url(#${id}-heatGlow)`} />
+            {/* Main flames */}
+            {[...Array(7)].map((_, i) => {
+                const baseX = 90 + i * 25;
+                const flameH = 60 + Math.sin(frame * 0.3 + i * 1.2) * 25 + (i % 2 === 0 ? 20 : 0);
+                const sway = Math.sin(frame * 0.15 + i * 0.8) * 12;
+                const flameW = 18 + Math.sin(frame * 0.25 + i) * 5;
+                return (
+                    <g key={`flame-${i}`} filter={`url(#${id}-glow)`}>
+                        {/* Outer flame */}
+                        <ellipse
+                            cx={baseX + sway}
+                            cy={280 - flameH / 2}
+                            rx={flameW}
+                            ry={flameH}
+                            fill="#dc2626"
+                            opacity={flicker * 0.6}
+                        />
+                        {/* Mid flame */}
+                        <ellipse
+                            cx={baseX + sway * 0.7}
+                            cy={280 - flameH * 0.35}
+                            rx={flameW * 0.65}
+                            ry={flameH * 0.7}
+                            fill="#f97316"
+                            opacity={flicker * 0.8}
+                        />
+                        {/* Inner flame */}
+                        <ellipse
+                            cx={baseX + sway * 0.4}
+                            cy={280 - flameH * 0.2}
+                            rx={flameW * 0.35}
+                            ry={flameH * 0.45}
+                            fill="#fbbf24"
+                            opacity={flicker}
+                        />
+                        {/* Core */}
+                        <ellipse
+                            cx={baseX + sway * 0.2}
+                            cy={280 - flameH * 0.1}
+                            rx={flameW * 0.15}
+                            ry={flameH * 0.2}
+                            fill="#fef3c7"
+                            opacity={flicker * 0.9}
+                        />
+                    </g>
+                );
+            })}
+            {/* Ember particles */}
+            {[...Array(12)].map((_, i) => {
+                const progress = ((frame * 1.5 + i * 25) % 200) / 200;
+                const startX = 100 + (i * 31) % 120;
+                const x = startX + Math.sin(frame * 0.1 + i * 2) * 25 + heatWave;
+                const y = 280 - progress * 260;
+                const emberSize = 1.5 + (i % 3) * 0.8;
+                return (
+                    <circle
+                        key={`ember-${i}`}
+                        cx={x}
+                        cy={y}
+                        r={emberSize * (1 - progress * 0.5)}
+                        fill={i % 3 === 0 ? '#fbbf24' : i % 3 === 1 ? '#f97316' : '#ef4444'}
+                        opacity={Math.max(0, (1 - progress) * 0.9)}
+                    />
+                );
+            })}
+            {/* Base embers / coals */}
+            <ellipse cx="150" cy="285" rx="80" ry="12" fill="#dc2626" opacity="0.4" />
+            <ellipse cx="150" cy="285" rx="50" ry="8" fill="#f97316" opacity="0.3" />
+        </svg>
+    );
+};
+
+const WaterWaveScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const waveOffset = frame * 2;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-oceanGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0c4a6e" />
+                    <stop offset="50%" stopColor="#1e3a5f" />
+                    <stop offset="100%" stopColor="#0f172a" />
+                </linearGradient>
+                <linearGradient id={`${id}-waveGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.6" />
+                    <stop offset="100%" stopColor="#0284c7" stopOpacity="0.3" />
+                </linearGradient>
+                <radialGradient id={`${id}-moonGlow`} cx="50%" cy="50%">
+                    <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0" />
+                </radialGradient>
+            </defs>
+            {/* Sky / ocean background */}
+            <rect x="0" y="0" width="300" height="300" fill={`url(#${id}-oceanGrad)`} />
+            {/* Moon */}
+            <circle cx="240" cy="40" r="25" fill="#e2e8f0" opacity="0.85" />
+            <circle cx="248" cy="35" r="22" fill="#0c4a6e" />
+            <circle cx="240" cy="40" r="50" fill={`url(#${id}-moonGlow)`} />
+            {/* Moonlight reflection on water */}
+            {[...Array(6)].map((_, i) => {
+                const refY = 150 + i * 15;
+                const refW = 30 - i * 3;
+                return (
+                    <ellipse
+                        key={`ref-${i}`}
+                        cx={240 + Math.sin(frame * 0.08 + i) * 8}
+                        cy={refY}
+                        rx={refW + Math.sin(frame * 0.12 + i) * 5}
+                        ry={2}
+                        fill="#e2e8f0"
+                        opacity={0.15 - i * 0.02}
+                    />
+                );
+            })}
+            {/* Wave layers */}
+            {[0, 1, 2, 3].map((waveIdx) => {
+                const waveY = 130 + waveIdx * 30;
+                const amplitude = 8 + waveIdx * 3;
+                const speed = 0.03 - waveIdx * 0.005;
+                const phase = waveIdx * 1.2;
+                const points: string[] = [];
+                for (let x = -10; x <= 310; x += 5) {
+                    const y = waveY + Math.sin((x + waveOffset * (1 - waveIdx * 0.15)) * speed + phase) * amplitude
+                        + Math.sin((x + waveOffset * 0.7) * speed * 2 + phase) * (amplitude * 0.3);
+                    points.push(`${x},${y}`);
+                }
+                points.push('310,310', '-10,310');
+                return (
+                    <polygon
+                        key={`wave-${waveIdx}`}
+                        points={points.join(' ')}
+                        fill={`url(#${id}-waveGrad)`}
+                        opacity={0.35 + waveIdx * 0.1}
+                    />
+                );
+            })}
+            {/* Foam particles on top wave */}
+            {[...Array(10)].map((_, i) => {
+                const foamX = (i * 35 + frame * 0.8) % 320 - 10;
+                const foamY = 125 + Math.sin((foamX + waveOffset) * 0.03) * 8 + Math.sin(frame * 0.1 + i) * 3;
+                return (
+                    <circle
+                        key={`foam-${i}`}
+                        cx={foamX}
+                        cy={foamY}
+                        r={1.5 + Math.sin(frame * 0.2 + i) * 0.5}
+                        fill="#fff"
+                        opacity={0.3 + Math.sin(frame * 0.15 + i * 1.5) * 0.2}
+                    />
+                );
+            })}
+            {/* Deep water particles */}
+            {[...Array(5)].map((_, i) => (
+                <circle
+                    key={`deep-${i}`}
+                    cx={40 + i * 60 + Math.sin(frame * 0.04 + i) * 10}
+                    cy={220 + i * 12 + Math.sin(frame * 0.06 + i * 2) * 5}
+                    r={2 + Math.sin(frame * 0.08 + i) * 1}
+                    fill="#38bdf8"
+                    opacity={0.1 + Math.sin(frame * 0.1 + i) * 0.05}
+                />
+            ))}
+        </svg>
+    );
+};
+
+const ShieldProtectScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const materializeProgress = Math.min(1, frame / 25);
+    const pulseRing1 = (frame * 2.5) % 80;
+    const pulseRing2 = ((frame - 15) * 2.5) % 80;
+    const auraGlow = 0.3 + Math.sin(frame * 0.08) * 0.15;
+    const shieldScale = materializeProgress * (1 + Math.sin(frame * 0.06) * 0.03);
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-shieldGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.9" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.5" />
+                </linearGradient>
+                <radialGradient id={`${id}-aura`}>
+                    <stop offset="0%" stopColor={color} stopOpacity={auraGlow} />
+                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </radialGradient>
+                <filter id={`${id}-shieldGlow`}>
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Protective aura */}
+            <circle cx="150" cy="145" r={90 + Math.sin(frame * 0.07) * 8} fill={`url(#${id}-aura)`} />
+            {/* Energy pulse rings */}
+            {pulseRing1 < 80 && (
+                <circle cx="150" cy="145" r={40 + pulseRing1 * 1.2} fill="none" stroke={color} strokeWidth={2 - pulseRing1 / 60} opacity={Math.max(0, 0.6 - pulseRing1 / 80)} />
+            )}
+            {pulseRing2 > 0 && pulseRing2 < 80 && (
+                <circle cx="150" cy="145" r={40 + pulseRing2 * 1.2} fill="none" stroke={color} strokeWidth={2 - pulseRing2 / 60} opacity={Math.max(0, 0.5 - pulseRing2 / 80)} />
+            )}
+            {/* Shield shape */}
+            <g transform={`translate(150, 145) scale(${shieldScale})`} filter={`url(#${id}-shieldGlow)`} opacity={materializeProgress}>
+                <path
+                    d="M0,-70 L55,-50 L55,10 C55,50 0,80 0,80 C0,80 -55,50 -55,10 L-55,-50 Z"
+                    fill={`url(#${id}-shieldGrad)`}
+                    stroke={color}
+                    strokeWidth="2"
+                />
+                {/* Shield inner border */}
+                <path
+                    d="M0,-58 L44,-42 L44,8 C44,42 0,66 0,66 C0,66 -44,42 -44,8 L-44,-42 Z"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.2)"
+                    strokeWidth="1.5"
+                />
+                {/* Checkmark on shield */}
+                <path
+                    d="M-18,0 L-6,14 L20,-14"
+                    fill="none"
+                    stroke="#fff"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={Math.min(1, Math.max(0, (frame - 20) / 10))}
+                />
+                {/* Shield highlight */}
+                <path
+                    d="M-10,-55 L-40,-40 L-40,0 C-40,10 -20,20 -10,25"
+                    fill="rgba(255,255,255,0.08)"
+                />
+            </g>
+            {/* Floating energy particles */}
+            {[...Array(8)].map((_, i) => {
+                const angle = (i * 45 + frame * 1.5) * Math.PI / 180;
+                const r = 75 + Math.sin(frame * 0.1 + i) * 10;
+                return (
+                    <circle
+                        key={`particle-${i}`}
+                        cx={150 + Math.cos(angle) * r}
+                        cy={145 + Math.sin(angle) * r}
+                        r={2 + Math.sin(frame * 0.2 + i) * 0.8}
+                        fill={color}
+                        opacity={0.4 + Math.sin(frame * 0.15 + i * 2) * 0.3}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const TargetBullseyeScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const arrowArrival = Math.min(1, frame / 20);
+    const arrowX = 300 - arrowArrival * 150;
+    const arrowY = 50 + arrowArrival * 100;
+    const hitFrame = frame - 20;
+    const impactRipple = hitFrame > 0 ? hitFrame * 3 : 0;
+    const springBounce = hitFrame > 0 ? Math.sin(hitFrame * 0.5) * Math.max(0, 15 - hitFrame) * 0.5 : 0;
+    const targetPulse = hitFrame > 0 ? 1 + Math.sin(hitFrame * 0.4) * Math.max(0, 0.08 - hitFrame * 0.002) : 1;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <radialGradient id={`${id}-targetGlow`}>
+                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                </radialGradient>
+            </defs>
+            {/* Target glow */}
+            <circle cx="150" cy="150" r="120" fill={`url(#${id}-targetGlow)`} />
+            {/* Target rings */}
+            <g transform={`scale(${targetPulse})`} style={{ transformOrigin: '150px 150px' }}>
+                <circle cx="150" cy="150" r="85" fill="#fff" opacity="0.9" stroke="#e5e7eb" strokeWidth="1" />
+                <circle cx="150" cy="150" r="85" fill="#ef4444" opacity="0.85" />
+                <circle cx="150" cy="150" r="68" fill="#fff" opacity="0.9" />
+                <circle cx="150" cy="150" r="50" fill="#ef4444" opacity="0.85" />
+                <circle cx="150" cy="150" r="33" fill="#fff" opacity="0.9" />
+                <circle cx="150" cy="150" r="18" fill="#ef4444" opacity="0.9" />
+                <circle cx="150" cy="150" r="5" fill="#fbbf24" />
+            </g>
+            {/* Impact ripples */}
+            {hitFrame > 0 && impactRipple < 60 && (
+                <>
+                    <circle cx="150" cy="150" r={10 + impactRipple} fill="none" stroke={color} strokeWidth={2 - impactRipple / 40} opacity={Math.max(0, 0.7 - impactRipple / 60)} />
+                    <circle cx="150" cy="150" r={5 + impactRipple * 0.7} fill="none" stroke={color} strokeWidth={1.5 - impactRipple / 60} opacity={Math.max(0, 0.5 - impactRipple / 60)} />
+                </>
+            )}
+            {/* Arrow */}
+            {arrowArrival < 1 ? (
+                <g transform={`translate(${arrowX}, ${arrowY}) rotate(135)`}>
+                    {/* Arrow shaft */}
+                    <line x1="0" y1="0" x2="50" y2="0" stroke="#78716c" strokeWidth="3" strokeLinecap="round" />
+                    {/* Arrow head */}
+                    <polygon points="0,0 12,6 12,-6" fill="#4b5563" />
+                    {/* Fletching */}
+                    <polygon points="45,-6 55,-10 55,0" fill="#ef4444" opacity="0.7" />
+                    <polygon points="45,6 55,10 55,0" fill="#dc2626" opacity="0.7" />
+                    {/* Motion blur trail */}
+                    <line x1="55" y1="0" x2={55 + (1 - arrowArrival) * 40} y2="0" stroke="#78716c" strokeWidth="2" opacity={0.3 * (1 - arrowArrival)} />
+                </g>
+            ) : (
+                <g transform={`translate(150, ${150 + springBounce}) rotate(135)`}>
+                    {/* Embedded arrow */}
+                    <line x1="0" y1="0" x2="35" y2="0" stroke="#78716c" strokeWidth="3" strokeLinecap="round" />
+                    <polygon points="0,0 10,5 10,-5" fill="#4b5563" />
+                    <polygon points="30,-5 40,-8 40,0" fill="#ef4444" opacity="0.7" />
+                    <polygon points="30,5 40,8 40,0" fill="#dc2626" opacity="0.7" />
+                </g>
+            )}
+            {/* Score burst particles on hit */}
+            {hitFrame > 0 && hitFrame < 30 && [...Array(8)].map((_, i) => {
+                const burstAngle = (i * 45) * Math.PI / 180;
+                const burstR = hitFrame * 2.5;
+                return (
+                    <circle
+                        key={`burst-${i}`}
+                        cx={150 + Math.cos(burstAngle) * burstR}
+                        cy={150 + Math.sin(burstAngle) * burstR}
+                        r={2 - hitFrame * 0.05}
+                        fill="#fbbf24"
+                        opacity={Math.max(0, 0.9 - hitFrame / 30)}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const ExplosionBurstScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const burstProgress = Math.min(1, frame / 30);
+    const flashOpacity = frame < 5 ? Math.max(0, 1 - frame / 5) * 0.6 : 0;
+    const coreScale = frame < 8 ? 1 + frame * 0.3 : Math.max(0, 3.4 - (frame - 8) * 0.15);
+    const shockwave1 = frame * 4;
+    const shockwave2 = Math.max(0, (frame - 5) * 4);
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <radialGradient id={`${id}-coreGrad`}>
+                    <stop offset="0%" stopColor="#fef3c7" />
+                    <stop offset="30%" stopColor="#fbbf24" />
+                    <stop offset="60%" stopColor="#f97316" />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                </radialGradient>
+                <filter id={`${id}-bloom`}>
+                    <feGaussianBlur stdDeviation="8" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Flash */}
+            <rect x="0" y="0" width="300" height="300" fill="#fef3c7" opacity={flashOpacity} />
+            {/* Shockwave rings */}
+            {shockwave1 < 150 && (
+                <circle cx="150" cy="150" r={shockwave1} fill="none" stroke="#f97316" strokeWidth={3 - shockwave1 / 60} opacity={Math.max(0, 0.7 - shockwave1 / 150)} />
+            )}
+            {shockwave2 > 0 && shockwave2 < 150 && (
+                <circle cx="150" cy="150" r={shockwave2} fill="none" stroke="#fbbf24" strokeWidth={2 - shockwave2 / 100} opacity={Math.max(0, 0.5 - shockwave2 / 150)} />
+            )}
+            {/* Explosion core */}
+            {coreScale > 0 && (
+                <g filter={`url(#${id}-bloom)`}>
+                    <circle cx="150" cy="150" r={20 * Math.max(0, coreScale)} fill={`url(#${id}-coreGrad)`} opacity={Math.min(1, Math.max(0, coreScale / 2))} />
+                </g>
+            )}
+            {/* Debris particles flying outward */}
+            {[...Array(16)].map((_, i) => {
+                const angle = (i * 22.5) * Math.PI / 180;
+                const speed = 2 + (i % 4) * 0.8;
+                const distance = burstProgress * speed * 50;
+                const particleSize = 3 + (i % 3) * 1.5;
+                const fadeOut = Math.max(0, 1 - burstProgress * 1.2);
+                return (
+                    <circle
+                        key={`debris-${i}`}
+                        cx={150 + Math.cos(angle) * distance}
+                        cy={150 + Math.sin(angle) * distance}
+                        r={particleSize * (1 - burstProgress * 0.5)}
+                        fill={i % 3 === 0 ? '#fbbf24' : i % 3 === 1 ? '#f97316' : '#ef4444'}
+                        opacity={fadeOut}
+                    />
+                );
+            })}
+            {/* Secondary debris (smaller, faster) */}
+            {[...Array(12)].map((_, i) => {
+                const angle = (i * 30 + 15) * Math.PI / 180;
+                const speed = 3.5 + (i % 3) * 1.2;
+                const distance = burstProgress * speed * 50;
+                return (
+                    <circle
+                        key={`debris2-${i}`}
+                        cx={150 + Math.cos(angle) * distance}
+                        cy={150 + Math.sin(angle) * distance}
+                        r={1.5 * (1 - burstProgress * 0.7)}
+                        fill={i % 2 === 0 ? '#fef3c7' : '#fbbf24'}
+                        opacity={Math.max(0, 0.8 - burstProgress * 1.3)}
+                    />
+                );
+            })}
+            {/* Smoke clouds after explosion */}
+            {frame > 15 && [...Array(5)].map((_, i) => {
+                const smokeAngle = (i * 72) * Math.PI / 180;
+                const smokeR = 20 + (frame - 15) * 1.5;
+                const smokeDist = 20 + (frame - 15) * 1.2;
+                return (
+                    <circle
+                        key={`smoke-${i}`}
+                        cx={150 + Math.cos(smokeAngle) * smokeDist}
+                        cy={150 + Math.sin(smokeAngle) * smokeDist}
+                        r={smokeR}
+                        fill="#78716c"
+                        opacity={Math.max(0, 0.15 - (frame - 15) * 0.003)}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const MagnetAttractScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const magnetPulse = 1 + Math.sin(frame * 0.08) * 0.03;
+    const fieldStrength = 0.3 + Math.sin(frame * 0.06) * 0.15;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-magnetRedGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ef4444" />
+                    <stop offset="100%" stopColor="#b91c1c" />
+                </linearGradient>
+                <linearGradient id={`${id}-magnetBlueGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#1d4ed8" />
+                </linearGradient>
+            </defs>
+            {/* Magnetic field lines (curved) */}
+            {[...Array(5)].map((_, i) => {
+                const spread = 30 + i * 20;
+                const fieldPulse = Math.sin(frame * 0.1 + i * 0.5) * 0.2 + 0.8;
+                return (
+                    <g key={`field-${i}`} opacity={fieldStrength * fieldPulse}>
+                        {/* Left side field lines */}
+                        <path
+                            d={`M105,${130 - spread * 0.3} C${80 - i * 10},${130 - spread} ${80 - i * 10},${170 + spread} 105,${170 + spread * 0.3}`}
+                            fill="none"
+                            stroke="#ef4444"
+                            strokeWidth="1"
+                            strokeDasharray="4,4"
+                            strokeDashoffset={frame * 1.5}
+                        />
+                        {/* Right side field lines */}
+                        <path
+                            d={`M195,${130 - spread * 0.3} C${220 + i * 10},${130 - spread} ${220 + i * 10},${170 + spread} 195,${170 + spread * 0.3}`}
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="1"
+                            strokeDasharray="4,4"
+                            strokeDashoffset={frame * 1.5}
+                        />
+                    </g>
+                );
+            })}
+            {/* U-shaped magnet */}
+            <g transform={`translate(150, 150) scale(${magnetPulse})`}>
+                {/* Left arm - North (red) */}
+                <rect x="-55" y="-40" width="25" height="70" rx="3" fill={`url(#${id}-magnetRedGrad)`} />
+                <text x="-42" y="-45" textAnchor="middle" fontSize="14" fill="#ef4444" fontWeight="bold" opacity="0.8">N</text>
+                {/* Right arm - South (blue) */}
+                <rect x="30" y="-40" width="25" height="70" rx="3" fill={`url(#${id}-magnetBlueGrad)`} />
+                <text x="42" y="-45" textAnchor="middle" fontSize="14" fill="#3b82f6" fontWeight="bold" opacity="0.8">S</text>
+                {/* Bottom connection */}
+                <path d="M-55,25 C-55,65 55,65 55,25" fill="none" stroke="#9ca3af" strokeWidth="25" strokeLinecap="round" />
+                <path d="M-55,25 C-55,55 -10,60 0,60" fill="none" stroke="#ef4444" strokeWidth="22" strokeLinecap="round" opacity="0.6" />
+                <path d="M55,25 C55,55 10,60 0,60" fill="none" stroke="#3b82f6" strokeWidth="22" strokeLinecap="round" opacity="0.6" />
+                {/* Metallic highlight */}
+                <rect x="-52" y="-35" width="6" height="60" rx="2" fill="rgba(255,255,255,0.15)" />
+                <rect x="46" y="-35" width="6" height="60" rx="2" fill="rgba(255,255,255,0.15)" />
+            </g>
+            {/* Attracted particles */}
+            {[...Array(10)].map((_, i) => {
+                const startAngle = (i * 36 + frame * 2) * Math.PI / 180;
+                const maxR = 120;
+                const particleProgress = ((frame * 0.02 + i * 0.1) % 1);
+                const r = maxR * (1 - particleProgress);
+                const attractX = 150 + Math.cos(startAngle) * r;
+                const attractY = 150 + Math.sin(startAngle) * r * 0.6;
+                return (
+                    <circle
+                        key={`attract-${i}`}
+                        cx={attractX}
+                        cy={attractY}
+                        r={2 + particleProgress * 2}
+                        fill={i % 2 === 0 ? '#94a3b8' : '#cbd5e1'}
+                        opacity={0.4 + particleProgress * 0.5}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const GearSystemScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const mainRotation = (frame * 2) % 360;
+
+    const drawGear = (cx: number, cy: number, r: number, teeth: number, rotation: number, gradId: string) => {
+        const innerR = r * 0.65;
+        const toothH = r * 0.2;
+        const points: string[] = [];
+        for (let i = 0; i < teeth; i++) {
+            const a1 = (i / teeth) * 360 + rotation;
+            const a2 = a1 + (180 / teeth) * 0.4;
+            const a3 = a1 + (180 / teeth) * 0.6;
+            const a4 = a1 + 180 / teeth;
+            points.push(`${cx + Math.cos(a1 * Math.PI / 180) * r},${cy + Math.sin(a1 * Math.PI / 180) * r}`);
+            points.push(`${cx + Math.cos(a2 * Math.PI / 180) * (r + toothH)},${cy + Math.sin(a2 * Math.PI / 180) * (r + toothH)}`);
+            points.push(`${cx + Math.cos(a3 * Math.PI / 180) * (r + toothH)},${cy + Math.sin(a3 * Math.PI / 180) * (r + toothH)}`);
+            points.push(`${cx + Math.cos(a4 * Math.PI / 180) * r},${cy + Math.sin(a4 * Math.PI / 180) * r}`);
+        }
+        return (
+            <g>
+                <polygon points={points.join(' ')} fill={`url(#${gradId})`} stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                <circle cx={cx} cy={cy} r={innerR} fill="rgba(15,23,42,0.5)" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                <circle cx={cx} cy={cy} r={innerR * 0.4} fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+                {/* Spokes */}
+                {[0, 120, 240].map((a, si) => {
+                    const spokeAngle = (a + rotation) * Math.PI / 180;
+                    return (
+                        <line
+                            key={`spoke-${si}`}
+                            x1={cx + Math.cos(spokeAngle) * (innerR * 0.45)}
+                            y1={cy + Math.sin(spokeAngle) * (innerR * 0.45)}
+                            x2={cx + Math.cos(spokeAngle) * (innerR * 0.95)}
+                            y2={cy + Math.sin(spokeAngle) * (innerR * 0.95)}
+                            stroke="rgba(255,255,255,0.1)"
+                            strokeWidth="2"
+                        />
+                    );
+                })}
+            </g>
+        );
+    };
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-gear1`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#64748b" />
+                    <stop offset="100%" stopColor="#475569" />
+                </linearGradient>
+                <linearGradient id={`${id}-gear2`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#6b7280" />
+                    <stop offset="100%" stopColor="#4b5563" />
+                </linearGradient>
+                <linearGradient id={`${id}-gear3`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#78716c" />
+                    <stop offset="100%" stopColor="#57534e" />
+                </linearGradient>
+            </defs>
+            {/* Background mechanical glow */}
+            <circle cx="150" cy="150" r="130" fill={color} opacity="0.04" />
+            {/* Gear 1 - Large center-left, clockwise */}
+            {drawGear(115, 140, 55, 12, mainRotation, `${id}-gear1`)}
+            {/* Gear 2 - Medium right, counter-clockwise */}
+            {drawGear(210, 115, 40, 9, -mainRotation * (55 / 40) + 9, `${id}-gear2`)}
+            {/* Gear 3 - Small bottom right, clockwise */}
+            {drawGear(230, 195, 30, 8, mainRotation * (55 / 30) + 5, `${id}-gear3`)}
+            {/* Mechanical sparks at contact points */}
+            {[...Array(3)].map((_, i) => {
+                const sparkVisible = Math.sin(frame * 0.5 + i * 2.1) > 0.7;
+                const sparkPoints = [
+                    { x: 163, y: 120 },
+                    { x: 225, y: 155 },
+                    { x: 145, y: 185 },
+                ];
+                return sparkVisible ? (
+                    <circle
+                        key={`spark-${i}`}
+                        cx={sparkPoints[i].x + Math.sin(frame * 0.3 + i) * 3}
+                        cy={sparkPoints[i].y + Math.cos(frame * 0.4 + i) * 3}
+                        r="2"
+                        fill="#fbbf24"
+                        opacity={0.6}
+                    />
+                ) : null;
+            })}
+        </svg>
+    );
+};
+
+const EnergyPulseScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const corePulse = 1 + Math.sin(frame * 0.15) * 0.15;
+    const ringPhase = frame * 2;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <radialGradient id={`${id}-plasmaCore`}>
+                    <stop offset="0%" stopColor="#fef3c7" />
+                    <stop offset="20%" stopColor={color} />
+                    <stop offset="60%" stopColor={color} stopOpacity="0.4" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </radialGradient>
+                <filter id={`${id}-plasma`}>
+                    <feGaussianBlur stdDeviation="5" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Concentric energy rings pulsing outward */}
+            {[0, 1, 2, 3, 4].map((ringIdx) => {
+                const ringOffset = (ringPhase + ringIdx * 30) % 150;
+                const ringR = 15 + ringOffset;
+                const ringOpacity = Math.max(0, 0.6 - ringOffset / 150);
+                return (
+                    <circle
+                        key={`ring-${ringIdx}`}
+                        cx="150"
+                        cy="150"
+                        r={ringR}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={2.5 - ringOffset / 80}
+                        opacity={ringOpacity}
+                    />
+                );
+            })}
+            {/* Plasma-like core */}
+            <g filter={`url(#${id}-plasma)`}>
+                <circle cx="150" cy="150" r={25 * corePulse} fill={`url(#${id}-plasmaCore)`} />
+                {/* Inner hot core */}
+                <circle cx="150" cy="150" r={10 * corePulse} fill="#fff" opacity={0.5 + Math.sin(frame * 0.2) * 0.2} />
+            </g>
+            {/* Electric arcs */}
+            {[...Array(6)].map((_, i) => {
+                const arcAngle = (i * 60 + frame * 3) * Math.PI / 180;
+                const arcR1 = 30 + Math.sin(frame * 0.2 + i) * 8;
+                const arcR2 = 55 + Math.sin(frame * 0.15 + i * 2) * 12;
+                const midAngle = arcAngle + Math.sin(frame * 0.3 + i) * 0.3;
+                const x1 = 150 + Math.cos(arcAngle) * arcR1;
+                const y1 = 150 + Math.sin(arcAngle) * arcR1;
+                const mx = 150 + Math.cos(midAngle) * ((arcR1 + arcR2) / 2);
+                const my = 150 + Math.sin(midAngle) * ((arcR1 + arcR2) / 2);
+                const x2 = 150 + Math.cos(arcAngle) * arcR2;
+                const y2 = 150 + Math.sin(arcAngle) * arcR2;
+                return (
+                    <path
+                        key={`arc-${i}`}
+                        d={`M${x1},${y1} Q${mx + Math.sin(frame * 0.5 + i) * 10},${my + Math.cos(frame * 0.4 + i) * 10} ${x2},${y2}`}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="1.5"
+                        opacity={0.4 + Math.sin(frame * 0.3 + i * 1.5) * 0.3}
+                        strokeLinecap="round"
+                    />
+                );
+            })}
+            {/* Orbiting energy particles */}
+            {[...Array(8)].map((_, i) => {
+                const pAngle = (i * 45 + frame * 4) * Math.PI / 180;
+                const pR = 70 + Math.sin(frame * 0.1 + i) * 15;
+                return (
+                    <circle
+                        key={`ep-${i}`}
+                        cx={150 + Math.cos(pAngle) * pR}
+                        cy={150 + Math.sin(pAngle) * pR}
+                        r={2 + Math.sin(frame * 0.2 + i) * 1}
+                        fill={color}
+                        opacity={0.5 + Math.sin(frame * 0.15 + i * 2) * 0.3}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const EyeVisionScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const openProgress = Math.min(1, frame / 15);
+    const pupilDilate = 0.7 + Math.sin(frame * 0.08) * 0.2;
+    const scanLine = (frame * 4) % 200;
+    const irisRotation = (frame * 1.5) % 360;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <radialGradient id={`${id}-irisGrad`}>
+                    <stop offset="0%" stopColor="#0f172a" />
+                    <stop offset="30%" stopColor={color} stopOpacity="0.9" />
+                    <stop offset="70%" stopColor={color} />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.6" />
+                </radialGradient>
+                <clipPath id={`${id}-eyeClip`}>
+                    <ellipse cx="150" cy="150" rx="100" ry={55 * openProgress} />
+                </clipPath>
+                <linearGradient id={`${id}-scanGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0" />
+                    <stop offset="50%" stopColor={color} stopOpacity="0.4" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </linearGradient>
+            </defs>
+            {/* Eye glow */}
+            <ellipse cx="150" cy="150" rx="120" ry="70" fill={color} opacity={0.05 * openProgress} />
+            {/* Eye shape - outer */}
+            <ellipse cx="150" cy="150" rx="100" ry={55 * openProgress} fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+            {/* Eye interior clipped */}
+            <g clipPath={`url(#${id}-eyeClip)`}>
+                {/* Sclera (white) */}
+                <ellipse cx="150" cy="150" rx="100" ry="55" fill="#e5e7eb" opacity="0.9" />
+                {/* Iris */}
+                <circle cx="150" cy="150" r="35" fill={`url(#${id}-irisGrad)`} />
+                {/* Iris detail patterns */}
+                {[...Array(12)].map((_, i) => {
+                    const a = (i * 30 + irisRotation) * Math.PI / 180;
+                    return (
+                        <line
+                            key={`iris-${i}`}
+                            x1={150 + Math.cos(a) * 12}
+                            y1={150 + Math.sin(a) * 12}
+                            x2={150 + Math.cos(a) * 32}
+                            y2={150 + Math.sin(a) * 32}
+                            stroke="rgba(255,255,255,0.1)"
+                            strokeWidth="1"
+                        />
+                    );
+                })}
+                {/* Pupil */}
+                <circle cx="150" cy="150" r={18 * pupilDilate} fill="#0f172a" />
+                {/* Pupil reflection */}
+                <circle cx="142" cy="142" r="5" fill="rgba(255,255,255,0.5)" />
+                <circle cx="155" cy="145" r="2.5" fill="rgba(255,255,255,0.3)" />
+                {/* Scan line */}
+                {openProgress > 0.8 && (
+                    <rect
+                        x="50"
+                        y={100 + scanLine * 0.5 - 15}
+                        width="200"
+                        height="30"
+                        fill={`url(#${id}-scanGrad)`}
+                        opacity="0.4"
+                    />
+                )}
+            </g>
+            {/* Eyelid lines */}
+            <path
+                d={`M50,150 Q150,${150 - 55 * openProgress} 250,150`}
+                fill="none"
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+            />
+            <path
+                d={`M50,150 Q150,${150 + 55 * openProgress} 250,150`}
+                fill="none"
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+            />
+            {/* Corner details */}
+            <line x1="48" y1="150" x2="35" y2="148" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="252" y1="150" x2="265" y2="148" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round" />
+            {/* Scanning indicator dots */}
+            {openProgress > 0.8 && [...Array(4)].map((_, i) => {
+                const dotAngle = (i * 90 + frame * 5) * Math.PI / 180;
+                return (
+                    <circle
+                        key={`scan-dot-${i}`}
+                        cx={150 + Math.cos(dotAngle) * 45}
+                        cy={150 + Math.sin(dotAngle) * 25 * openProgress}
+                        r="2"
+                        fill={color}
+                        opacity={0.5 + Math.sin(frame * 0.3 + i) * 0.3}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const ArrowGrowthScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-arrowGrad1`} x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.9" />
+                </linearGradient>
+                <linearGradient id={`${id}-arrowGrad2`} x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#22c55e" stopOpacity="0.9" />
+                </linearGradient>
+                <linearGradient id={`${id}-arrowGrad3`} x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.9" />
+                </linearGradient>
+            </defs>
+            {/* Background grid lines */}
+            {[...Array(6)].map((_, i) => (
+                <line key={`hgrid-${i}`} x1="30" y1={50 + i * 45} x2="270" y2={50 + i * 45} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+            ))}
+            {/* Arrow 1 - left, accelerating upward */}
+            {(() => {
+                const delay1 = 0;
+                const progress1 = Math.min(1, Math.max(0, (frame - delay1) / 35));
+                const eased1 = progress1 * progress1; // accelerating
+                const height1 = eased1 * 200;
+                const trailLen = Math.min(height1, 60);
+                return (
+                    <g>
+                        {/* Trail */}
+                        <rect x="75" y={270 - height1} width="12" height={trailLen} rx="6" fill={`url(#${id}-arrowGrad1)`} opacity="0.4" />
+                        {/* Arrow shaft */}
+                        <line x1="81" y1={270} x2="81" y2={270 - height1} stroke={color} strokeWidth="4" strokeLinecap="round" />
+                        {/* Arrow head */}
+                        {height1 > 10 && (
+                            <polygon points={`81,${270 - height1 - 12} 71,${270 - height1 + 4} 91,${270 - height1 + 4}`} fill={color} />
+                        )}
+                    </g>
+                );
+            })()}
+            {/* Arrow 2 - center, accelerating upward with delay */}
+            {(() => {
+                const delay2 = 8;
+                const progress2 = Math.min(1, Math.max(0, (frame - delay2) / 35));
+                const eased2 = progress2 * progress2;
+                const height2 = eased2 * 220;
+                const trailLen = Math.min(height2, 60);
+                return (
+                    <g>
+                        <rect x="144" y={270 - height2} width="12" height={trailLen} rx="6" fill={`url(#${id}-arrowGrad2)`} opacity="0.4" />
+                        <line x1="150" y1={270} x2="150" y2={270 - height2} stroke="#22c55e" strokeWidth="4" strokeLinecap="round" />
+                        {height2 > 10 && (
+                            <polygon points={`150,${270 - height2 - 12} 140,${270 - height2 + 4} 160,${270 - height2 + 4}`} fill="#22c55e" />
+                        )}
+                    </g>
+                );
+            })()}
+            {/* Arrow 3 - right, accelerating upward with more delay */}
+            {(() => {
+                const delay3 = 16;
+                const progress3 = Math.min(1, Math.max(0, (frame - delay3) / 35));
+                const eased3 = progress3 * progress3;
+                const height3 = eased3 * 190;
+                const trailLen = Math.min(height3, 60);
+                return (
+                    <g>
+                        <rect x="213" y={270 - height3} width="12" height={trailLen} rx="6" fill={`url(#${id}-arrowGrad3)`} opacity="0.4" />
+                        <line x1="219" y1={270} x2="219" y2={270 - height3} stroke="#f59e0b" strokeWidth="4" strokeLinecap="round" />
+                        {height3 > 10 && (
+                            <polygon points={`219,${270 - height3 - 12} 209,${270 - height3 + 4} 229,${270 - height3 + 4}`} fill="#f59e0b" />
+                        )}
+                    </g>
+                );
+            })()}
+            {/* Speed particles trailing behind arrows */}
+            {[...Array(9)].map((_, i) => {
+                const col = Math.floor(i / 3);
+                const baseX = [81, 150, 219][col];
+                const delay = [0, 8, 16][col];
+                const progress = Math.min(1, Math.max(0, (frame - delay) / 35));
+                const height = progress * progress * [200, 220, 190][col];
+                const particleY = 270 - height + 20 + (i % 3) * 25;
+                return height > 30 ? (
+                    <circle
+                        key={`speed-${i}`}
+                        cx={baseX + Math.sin(frame * 0.3 + i) * 8}
+                        cy={particleY}
+                        r={1.5}
+                        fill={[color, '#22c55e', '#f59e0b'][col]}
+                        opacity={Math.max(0, 0.5 - (i % 3) * 0.15)}
+                    />
+                ) : null;
+            })}
+        </svg>
+    );
+};
+
+const CheckmarkSuccessScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const circleProgress = Math.min(1, frame / 18);
+    const checkDelay = 18;
+    const checkProgress = Math.min(1, Math.max(0, (frame - checkDelay) / 12));
+    const burstDelay = 30;
+    const burstProgress = Math.max(0, (frame - burstDelay));
+    const bounceScale = frame > checkDelay
+        ? 1 + Math.sin((frame - checkDelay) * 0.4) * Math.max(0, 0.15 - (frame - checkDelay) * 0.005)
+        : 1;
+
+    // Checkmark path length simulation
+    const checkPath1 = checkProgress < 0.4 ? checkProgress / 0.4 : 1;
+    const checkPath2 = checkProgress > 0.4 ? (checkProgress - 0.4) / 0.6 : 0;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-circleGrad`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" />
+                    <stop offset="100%" stopColor="#16a34a" />
+                </linearGradient>
+                <filter id={`${id}-successGlow`}>
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Background glow */}
+            <circle cx="150" cy="150" r={80 + Math.sin(frame * 0.07) * 5} fill="#22c55e" opacity={0.06 * circleProgress} />
+            {/* Circle drawing animation */}
+            <g transform={`scale(${bounceScale})`} style={{ transformOrigin: '150px 150px' }}>
+                <circle
+                    cx="150" cy="150" r="65"
+                    fill="none"
+                    stroke={`url(#${id}-circleGrad)`}
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeDasharray={`${circleProgress * 408} 408`}
+                    transform="rotate(-90, 150, 150)"
+                    filter={`url(#${id}-successGlow)`}
+                />
+                {/* Filled circle background */}
+                <circle cx="150" cy="150" r="62" fill="#22c55e" opacity={circleProgress * 0.15} />
+            </g>
+            {/* Checkmark */}
+            <g transform={`scale(${bounceScale})`} style={{ transformOrigin: '150px 150px' }} filter={`url(#${id}-successGlow)`}>
+                {/* First stroke of check (down-right) */}
+                {checkPath1 > 0 && (
+                    <line
+                        x1="120" y1="150"
+                        x2={120 + 22 * checkPath1} y2={150 + 22 * checkPath1}
+                        stroke="#fff"
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                    />
+                )}
+                {/* Second stroke of check (up-right) */}
+                {checkPath2 > 0 && (
+                    <line
+                        x1="142" y1="172"
+                        x2={142 + 38 * checkPath2} y2={172 - 44 * checkPath2}
+                        stroke="#fff"
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                    />
+                )}
+            </g>
+            {/* Burst particles on completion */}
+            {burstProgress > 0 && burstProgress < 25 && [...Array(12)].map((_, i) => {
+                const burstAngle = (i * 30) * Math.PI / 180;
+                const burstR = burstProgress * 4;
+                const particleSize = 3 - burstProgress * 0.1;
+                return (
+                    <circle
+                        key={`burst-${i}`}
+                        cx={150 + Math.cos(burstAngle) * burstR}
+                        cy={150 + Math.sin(burstAngle) * burstR}
+                        r={Math.max(0.5, particleSize)}
+                        fill={i % 3 === 0 ? '#22c55e' : i % 3 === 1 ? '#4ade80' : '#fbbf24'}
+                        opacity={Math.max(0, 1 - burstProgress / 25)}
+                    />
+                );
+            })}
+            {/* Sparkle stars */}
+            {burstProgress > 5 && burstProgress < 35 && [...Array(6)].map((_, i) => {
+                const sAngle = (i * 60 + 30) * Math.PI / 180;
+                const sR = 85 + Math.sin(frame * 0.15 + i) * 8;
+                return (
+                    <g key={`sparkle-${i}`} opacity={Math.max(0, 0.6 - (burstProgress - 5) / 35)}>
+                        <line
+                            x1={150 + Math.cos(sAngle) * sR - 4} y1={150 + Math.sin(sAngle) * sR}
+                            x2={150 + Math.cos(sAngle) * sR + 4} y2={150 + Math.sin(sAngle) * sR}
+                            stroke="#fbbf24" strokeWidth="2" strokeLinecap="round"
+                        />
+                        <line
+                            x1={150 + Math.cos(sAngle) * sR} y1={150 + Math.sin(sAngle) * sR - 4}
+                            x2={150 + Math.cos(sAngle) * sR} y2={150 + Math.sin(sAngle) * sR + 4}
+                            stroke="#fbbf24" strokeWidth="2" strokeLinecap="round"
+                        />
+                    </g>
+                );
+            })}
+        </svg>
+    );
+};
+
+const DiamondGemScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const rotation = Math.sin(frame * 0.04) * 15;
+    const sparklePhase = frame * 0.15;
+    const shimmer = 0.5 + Math.sin(frame * 0.1) * 0.3;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-diamondTop`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#e0f2fe" />
+                    <stop offset="50%" stopColor="#7dd3fc" />
+                    <stop offset="100%" stopColor="#38bdf8" />
+                </linearGradient>
+                <linearGradient id={`${id}-diamondLeft`} x1="1" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#0284c7" />
+                </linearGradient>
+                <linearGradient id={`${id}-diamondRight`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#7dd3fc" />
+                    <stop offset="100%" stopColor="#0369a1" />
+                </linearGradient>
+                <filter id={`${id}-diamondGlow`}>
+                    <feGaussianBlur stdDeviation="8" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Ambient glow */}
+            <circle cx="150" cy="150" r="100" fill="#38bdf8" opacity={0.06 + Math.sin(frame * 0.08) * 0.03} />
+            {/* Diamond shape */}
+            <g transform={`translate(150, 150) rotate(${rotation})`} filter={`url(#${id}-diamondGlow)`}>
+                {/* Crown (top facets) */}
+                <polygon points="0,-65 -45,-20 45,-20" fill={`url(#${id}-diamondTop)`} opacity="0.9" />
+                <polygon points="0,-65 -45,-20 -15,-20" fill="rgba(255,255,255,0.15)" />
+                {/* Table (top flat) */}
+                <polygon points="-30,-25 30,-25 20,-18 -20,-18" fill="#bae6fd" opacity="0.7" />
+                {/* Pavilion (bottom facets) */}
+                <polygon points="-45,-20 0,75 0,-20" fill={`url(#${id}-diamondLeft)`} opacity="0.85" />
+                <polygon points="45,-20 0,75 0,-20" fill={`url(#${id}-diamondRight)`} opacity="0.85" />
+                {/* Facet lines */}
+                <line x1="-45" y1="-20" x2="0" y2="75" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                <line x1="45" y1="-20" x2="0" y2="75" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                <line x1="-25" y1="-20" x2="0" y2="75" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+                <line x1="25" y1="-20" x2="0" y2="75" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+                <line x1="0" y1="-65" x2="0" y2="-20" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                {/* Shimmer highlight */}
+                <polygon
+                    points={`${-15 + Math.sin(sparklePhase) * 10},-50 ${5 + Math.sin(sparklePhase) * 10},-25 ${-5 + Math.sin(sparklePhase) * 10},-25`}
+                    fill="rgba(255,255,255,0.25)"
+                    opacity={shimmer}
+                />
+            </g>
+            {/* Light refraction rays */}
+            {[...Array(8)].map((_, i) => {
+                const rayAngle = (i * 45 + frame * 2) * Math.PI / 180;
+                const rayLen = 30 + Math.sin(frame * 0.12 + i * 1.5) * 15;
+                const rayStart = 70 + Math.sin(frame * 0.1 + i) * 5;
+                const colors = ['#ef4444', '#f97316', '#fbbf24', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4'];
+                return (
+                    <line
+                        key={`ray-${i}`}
+                        x1={150 + Math.cos(rayAngle) * rayStart}
+                        y1={150 + Math.sin(rayAngle) * rayStart}
+                        x2={150 + Math.cos(rayAngle) * (rayStart + rayLen)}
+                        y2={150 + Math.sin(rayAngle) * (rayStart + rayLen)}
+                        stroke={colors[i]}
+                        strokeWidth="1.5"
+                        opacity={0.3 + Math.sin(frame * 0.15 + i * 2) * 0.2}
+                        strokeLinecap="round"
+                    />
+                );
+            })}
+            {/* Sparkle points */}
+            {[...Array(6)].map((_, i) => {
+                const visible = Math.sin(sparklePhase + i * 1.2) > 0.5;
+                const sx = 150 + Math.cos(i * 60 * Math.PI / 180) * (80 + Math.sin(frame * 0.1 + i) * 15);
+                const sy = 150 + Math.sin(i * 60 * Math.PI / 180) * (80 + Math.cos(frame * 0.1 + i) * 15);
+                return visible ? (
+                    <g key={`sp-${i}`}>
+                        <line x1={sx - 5} y1={sy} x2={sx + 5} y2={sy} stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+                        <line x1={sx} y1={sy - 5} x2={sx} y2={sy + 5} stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+                    </g>
+                ) : null;
+            })}
+        </svg>
+    );
+};
+
+const CrownRoyalScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const floatY = Math.sin(frame * 0.06) * 5;
+    const royalGlow = 0.3 + Math.sin(frame * 0.08) * 0.15;
+    const jewelSparkle = [
+        Math.sin(frame * 0.2) > 0.6,
+        Math.sin(frame * 0.2 + 1.5) > 0.6,
+        Math.sin(frame * 0.2 + 3) > 0.6,
+        Math.sin(frame * 0.2 + 4.5) > 0.6,
+        Math.sin(frame * 0.2 + 6) > 0.6,
+    ];
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-crownGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fbbf24" />
+                    <stop offset="50%" stopColor="#f59e0b" />
+                    <stop offset="100%" stopColor="#d97706" />
+                </linearGradient>
+                <radialGradient id={`${id}-rubyGrad`}>
+                    <stop offset="0%" stopColor="#fca5a5" />
+                    <stop offset="50%" stopColor="#ef4444" />
+                    <stop offset="100%" stopColor="#b91c1c" />
+                </radialGradient>
+                <radialGradient id={`${id}-sapphireGrad`}>
+                    <stop offset="0%" stopColor="#93c5fd" />
+                    <stop offset="50%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#1d4ed8" />
+                </radialGradient>
+                <radialGradient id={`${id}-emeraldGrad`}>
+                    <stop offset="0%" stopColor="#86efac" />
+                    <stop offset="50%" stopColor="#22c55e" />
+                    <stop offset="100%" stopColor="#15803d" />
+                </radialGradient>
+                <filter id={`${id}-glow`}>
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Royal glow backdrop */}
+            <circle cx="150" cy="145" r="100" fill="#fbbf24" opacity={royalGlow * 0.08} />
+            {/* Crown body */}
+            <g transform={`translate(150, ${140 + floatY})`} filter={`url(#${id}-glow)`}>
+                {/* Crown base band */}
+                <rect x="-65" y="15" width="130" height="20" rx="4" fill={`url(#${id}-crownGrad)`} />
+                {/* Crown base band decoration */}
+                <rect x="-60" y="20" width="120" height="3" fill="rgba(255,255,255,0.2)" rx="1" />
+                <rect x="-60" y="28" width="120" height="2" fill="rgba(255,255,255,0.1)" rx="1" />
+                {/* Crown points */}
+                <polygon points="-65,18 -60,-40 -40,0" fill={`url(#${id}-crownGrad)`} />
+                <polygon points="-30,18 -20,-55 -10,0" fill={`url(#${id}-crownGrad)`} />
+                <polygon points="0,18 10,-65 20,0" fill={`url(#${id}-crownGrad)`} />
+                <polygon points="30,18 40,-55 50,0" fill={`url(#${id}-crownGrad)`} />
+                <polygon points="65,18 60,-40 40,0" fill={`url(#${id}-crownGrad)`} />
+                {/* Highlight edges */}
+                <polygon points="-65,18 -60,-40 -52,-10" fill="rgba(255,255,255,0.12)" />
+                <polygon points="-30,18 -20,-55 -14,-15" fill="rgba(255,255,255,0.12)" />
+                <polygon points="0,18 10,-65 14,-20" fill="rgba(255,255,255,0.12)" />
+                <polygon points="30,18 40,-55 44,-15" fill="rgba(255,255,255,0.12)" />
+                <polygon points="65,18 60,-40 52,-10" fill="rgba(255,255,255,0.12)" />
+                {/* Jewels on crown points */}
+                {/* Left ruby */}
+                <circle cx="-60" cy="-30" r="6" fill={`url(#${id}-rubyGrad)`} />
+                {jewelSparkle[0] && <circle cx="-62" cy="-33" r="2" fill="rgba(255,255,255,0.8)" />}
+                {/* Mid-left sapphire */}
+                <circle cx="-20" cy="-45" r="6" fill={`url(#${id}-sapphireGrad)`} />
+                {jewelSparkle[1] && <circle cx="-22" cy="-48" r="2" fill="rgba(255,255,255,0.8)" />}
+                {/* Center emerald (largest) */}
+                <circle cx="10" cy="-55" r="8" fill={`url(#${id}-emeraldGrad)`} />
+                {jewelSparkle[2] && <circle cx="7" cy="-58" r="2.5" fill="rgba(255,255,255,0.8)" />}
+                {/* Mid-right sapphire */}
+                <circle cx="40" cy="-45" r="6" fill={`url(#${id}-sapphireGrad)`} />
+                {jewelSparkle[3] && <circle cx="38" cy="-48" r="2" fill="rgba(255,255,255,0.8)" />}
+                {/* Right ruby */}
+                <circle cx="60" cy="-30" r="6" fill={`url(#${id}-rubyGrad)`} />
+                {jewelSparkle[4] && <circle cx="58" cy="-33" r="2" fill="rgba(255,255,255,0.8)" />}
+                {/* Band jewels */}
+                {[...Array(5)].map((_, i) => (
+                    <circle key={`bjewel-${i}`} cx={-45 + i * 23} cy="25" r="4" fill={i % 2 === 0 ? `url(#${id}-rubyGrad)` : `url(#${id}-sapphireGrad)`} />
+                ))}
+            </g>
+            {/* Floating golden particles */}
+            {[...Array(10)].map((_, i) => {
+                const px = 80 + (i * 31) % 150;
+                const py = 80 + Math.sin(frame * 0.05 + i * 1.5) * 30 + (i * 19) % 120;
+                return (
+                    <circle
+                        key={`gp-${i}`}
+                        cx={px}
+                        cy={py + floatY * 0.5}
+                        r={1 + Math.sin(frame * 0.15 + i) * 0.5}
+                        fill="#fbbf24"
+                        opacity={0.2 + Math.sin(frame * 0.1 + i * 2) * 0.15}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const AtomScienceScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const nucleusPulse = 1 + Math.sin(frame * 0.12) * 0.1;
+    const orbit1Angle = (frame * 3) % 360;
+    const orbit2Angle = (frame * 2.5 + 120) % 360;
+    const orbit3Angle = (frame * 3.5 + 240) % 360;
+
+    return (
+        <svg viewBox="0 0 300 300" width="100%" height="100%">
+            <defs>
+                <radialGradient id={`${id}-nucleusGrad`}>
+                    <stop offset="0%" stopColor="#fef3c7" />
+                    <stop offset="40%" stopColor={color} />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.5" />
+                </radialGradient>
+                <filter id={`${id}-atomGlow`}>
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            {/* Background energy field */}
+            <circle cx="150" cy="150" r="120" fill={color} opacity="0.03" />
+            {/* Orbit paths (3 planes, tilted for 3D effect) */}
+            <ellipse cx="150" cy="150" rx="110" ry="40" fill="none" stroke={color} strokeWidth="1" opacity="0.15" transform="rotate(0, 150, 150)" />
+            <ellipse cx="150" cy="150" rx="110" ry="40" fill="none" stroke={color} strokeWidth="1" opacity="0.15" transform="rotate(60, 150, 150)" />
+            <ellipse cx="150" cy="150" rx="110" ry="40" fill="none" stroke={color} strokeWidth="1" opacity="0.15" transform="rotate(-60, 150, 150)" />
+            {/* Electron 1 - horizontal orbit */}
+            {(() => {
+                const a = orbit1Angle * Math.PI / 180;
+                const ex = 150 + Math.cos(a) * 110;
+                const ey = 150 + Math.sin(a) * 40;
+                return (
+                    <g filter={`url(#${id}-atomGlow)`}>
+                        {/* Electron trail */}
+                        {[...Array(5)].map((_, t) => {
+                            const ta = (orbit1Angle - t * 8) * Math.PI / 180;
+                            return (
+                                <circle
+                                    key={`trail1-${t}`}
+                                    cx={150 + Math.cos(ta) * 110}
+                                    cy={150 + Math.sin(ta) * 40}
+                                    r={4 - t * 0.6}
+                                    fill="#22d3ee"
+                                    opacity={0.3 - t * 0.06}
+                                />
+                            );
+                        })}
+                        <circle cx={ex} cy={ey} r="5" fill="#22d3ee" opacity="0.9" />
+                        <circle cx={ex} cy={ey} r="3" fill="#fff" opacity="0.6" />
+                    </g>
+                );
+            })()}
+            {/* Electron 2 - tilted orbit (60deg) */}
+            {(() => {
+                const a = orbit2Angle * Math.PI / 180;
+                const rawX = Math.cos(a) * 110;
+                const rawY = Math.sin(a) * 40;
+                const rot60 = 60 * Math.PI / 180;
+                const ex = 150 + rawX * Math.cos(rot60) - rawY * Math.sin(rot60);
+                const ey = 150 + rawX * Math.sin(rot60) + rawY * Math.cos(rot60);
+                return (
+                    <g filter={`url(#${id}-atomGlow)`}>
+                        {[...Array(5)].map((_, t) => {
+                            const ta = (orbit2Angle - t * 8) * Math.PI / 180;
+                            const trX = Math.cos(ta) * 110;
+                            const trY = Math.sin(ta) * 40;
+                            return (
+                                <circle
+                                    key={`trail2-${t}`}
+                                    cx={150 + trX * Math.cos(rot60) - trY * Math.sin(rot60)}
+                                    cy={150 + trX * Math.sin(rot60) + trY * Math.cos(rot60)}
+                                    r={4 - t * 0.6}
+                                    fill="#a78bfa"
+                                    opacity={0.3 - t * 0.06}
+                                />
+                            );
+                        })}
+                        <circle cx={ex} cy={ey} r="5" fill="#a78bfa" opacity="0.9" />
+                        <circle cx={ex} cy={ey} r="3" fill="#fff" opacity="0.6" />
+                    </g>
+                );
+            })()}
+            {/* Electron 3 - tilted orbit (-60deg) */}
+            {(() => {
+                const a = orbit3Angle * Math.PI / 180;
+                const rawX = Math.cos(a) * 110;
+                const rawY = Math.sin(a) * 40;
+                const rotNeg60 = -60 * Math.PI / 180;
+                const ex = 150 + rawX * Math.cos(rotNeg60) - rawY * Math.sin(rotNeg60);
+                const ey = 150 + rawX * Math.sin(rotNeg60) + rawY * Math.cos(rotNeg60);
+                return (
+                    <g filter={`url(#${id}-atomGlow)`}>
+                        {[...Array(5)].map((_, t) => {
+                            const ta = (orbit3Angle - t * 8) * Math.PI / 180;
+                            const trX = Math.cos(ta) * 110;
+                            const trY = Math.sin(ta) * 40;
+                            return (
+                                <circle
+                                    key={`trail3-${t}`}
+                                    cx={150 + trX * Math.cos(rotNeg60) - trY * Math.sin(rotNeg60)}
+                                    cy={150 + trX * Math.sin(rotNeg60) + trY * Math.cos(rotNeg60)}
+                                    r={4 - t * 0.6}
+                                    fill="#f472b6"
+                                    opacity={0.3 - t * 0.06}
+                                />
+                            );
+                        })}
+                        <circle cx={ex} cy={ey} r="5" fill="#f472b6" opacity="0.9" />
+                        <circle cx={ex} cy={ey} r="3" fill="#fff" opacity="0.6" />
+                    </g>
+                );
+            })()}
+            {/* Nucleus */}
+            <g filter={`url(#${id}-atomGlow)`}>
+                <circle cx="150" cy="150" r={18 * nucleusPulse} fill={`url(#${id}-nucleusGrad)`} />
+                {/* Protons/neutrons inside nucleus */}
+                <circle cx="145" cy="146" r="6" fill={color} opacity="0.7" />
+                <circle cx="155" cy="146" r="6" fill="#f472b6" opacity="0.5" />
+                <circle cx="150" cy="155" r="6" fill={color} opacity="0.6" />
+                <circle cx="150" cy="150" r="8" fill="rgba(255,255,255,0.15)" />
+            </g>
+            {/* Quantum particles */}
+            {[...Array(6)].map((_, i) => {
+                const qAngle = (i * 60 + frame * 5) * Math.PI / 180;
+                const qR = 25 + Math.sin(frame * 0.2 + i * 1.5) * 10;
+                return (
+                    <circle
+                        key={`quantum-${i}`}
+                        cx={150 + Math.cos(qAngle) * qR}
+                        cy={150 + Math.sin(qAngle) * qR}
+                        r="1.5"
+                        fill="#fbbf24"
+                        opacity={0.4 + Math.sin(frame * 0.3 + i) * 0.3}
+                    />
+                );
+            })}
+        </svg>
+    );
+};
+
+const MountainPeakScene: React.FC<{ frame: number; fps: number; color: string }> = ({ frame, fps, color }) => {
+    const id = useId();
+    const sunRise = Math.min(1, frame / 40);
+    const sunY = 180 - sunRise * 110;
+    const sunGlow = 0.3 + sunRise * 0.4 + Math.sin(frame * 0.06) * 0.1;
+    const cloudDrift = (frame * 0.5) % 400;
+    const flagWave = Math.sin(frame * 0.2) * 8;
+
+    return (
+        <svg viewBox="0 0 400 400" width="100%" height="100%">
+            <defs>
+                <linearGradient id={`${id}-skyGrad`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1e1b4b" stopOpacity={1 - sunRise * 0.4} />
+                    <stop offset="40%" stopColor="#312e81" stopOpacity={1 - sunRise * 0.3} />
+                    <stop offset="70%" stopColor="#f97316" stopOpacity={sunRise * 0.5} />
+                    <stop offset="100%" stopColor="#fbbf24" stopOpacity={sunRise * 0.3} />
+                </linearGradient>
+                <linearGradient id={`${id}-mtGrad1`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#64748b" />
+                    <stop offset="100%" stopColor="#334155" />
+                </linearGradient>
+                <linearGradient id={`${id}-mtGrad2`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#475569" />
+                    <stop offset="100%" stopColor="#1e293b" />
+                </linearGradient>
+                <radialGradient id={`${id}-sunGrad`} cx="50%" cy="50%">
+                    <stop offset="0%" stopColor="#fef3c7" />
+                    <stop offset="40%" stopColor="#fbbf24" />
+                    <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                </radialGradient>
+            </defs>
+            {/* Sky */}
+            <rect x="0" y="0" width="400" height="400" fill={`url(#${id}-skyGrad)`} />
+            {/* Stars (fade as sun rises) */}
+            {[...Array(12)].map((_, i) => (
+                <circle
+                    key={`star-${i}`}
+                    cx={25 + (i * 67) % 380}
+                    cy={15 + (i * 41) % 150}
+                    r={0.8 + (i % 2) * 0.5}
+                    fill="#fff"
+                    opacity={Math.max(0, (0.4 - sunRise * 0.4) + Math.sin(frame * 0.1 + i) * 0.1)}
+                />
+            ))}
+            {/* Sun rising behind mountain */}
+            <circle cx="200" cy={sunY} r={45 + Math.sin(frame * 0.05) * 3} fill={`url(#${id}-sunGrad)`} opacity={sunGlow} />
+            <circle cx="200" cy={sunY} r="25" fill="#fbbf24" opacity={sunRise * 0.8} />
+            {/* Sun rays */}
+            {[...Array(8)].map((_, i) => {
+                const rayAngle = (i * 45 + frame * 0.5) * Math.PI / 180;
+                return (
+                    <line
+                        key={`ray-${i}`}
+                        x1={200 + Math.cos(rayAngle) * 30}
+                        y1={sunY + Math.sin(rayAngle) * 30}
+                        x2={200 + Math.cos(rayAngle) * (50 + Math.sin(frame * 0.1 + i) * 8)}
+                        y2={sunY + Math.sin(rayAngle) * (50 + Math.sin(frame * 0.1 + i) * 8)}
+                        stroke="#fbbf24"
+                        strokeWidth="1.5"
+                        opacity={sunRise * 0.3}
+                        strokeLinecap="round"
+                    />
+                );
+            })}
+            {/* Back mountain (darker, further) */}
+            <polygon points="50,380 180,120 310,380" fill={`url(#${id}-mtGrad2)`} opacity="0.6" />
+            {/* Snow cap on back mountain */}
+            <polygon points="180,120 160,165 200,165" fill="#e2e8f0" opacity="0.4" />
+            {/* Main mountain (foreground) */}
+            <polygon points="80,380 230,80 380,380" fill={`url(#${id}-mtGrad1)`} />
+            {/* Mountain shadow side */}
+            <polygon points="230,80 380,380 230,380" fill="rgba(0,0,0,0.2)" />
+            {/* Snow cap */}
+            <polygon points="230,80 210,130 250,130" fill="#e2e8f0" opacity="0.9" />
+            <polygon points="230,80 215,120 245,120" fill="#f8fafc" opacity="0.7" />
+            {/* Mountain texture lines */}
+            <line x1="230" y1="130" x2="170" y2="280" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+            <line x1="230" y1="130" x2="300" y2="300" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
+            {/* Flag at summit */}
+            <g transform={`translate(230, 75)`}>
+                {/* Flag pole */}
+                <line x1="0" y1="0" x2="0" y2="-35" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round" />
+                {/* Flag fabric waving */}
+                <path
+                    d={`M0,-35 Q${10 + flagWave},-30 ${18 + flagWave * 0.5},-25 Q${10 + flagWave * 0.7},-20 0,-18`}
+                    fill="#ef4444"
+                    opacity="0.9"
+                />
+                <path
+                    d={`M0,-35 Q${8 + flagWave * 0.8},-31 ${14 + flagWave * 0.4},-28`}
+                    fill="rgba(255,255,255,0.2)"
+                />
+            </g>
+            {/* Clouds drifting */}
+            {[0, 1, 2].map((ci) => {
+                const cx = ((cloudDrift + ci * 160) % 500) - 50;
+                const cy = 60 + ci * 40;
+                return (
+                    <g key={`cloud-${ci}`} opacity={0.25 + ci * 0.05}>
+                        <ellipse cx={cx} cy={cy} rx={40 + ci * 5} ry={12 + ci * 2} fill="#e2e8f0" />
+                        <ellipse cx={cx - 15} cy={cy - 5} rx={20 + ci * 3} ry={10 + ci} fill="#f1f5f9" />
+                        <ellipse cx={cx + 18} cy={cy - 3} rx={22 + ci * 2} ry={9 + ci} fill="#f1f5f9" />
+                    </g>
+                );
+            })}
+            {/* Ground / foreground */}
+            <rect x="0" y="370" width="400" height="30" fill="#1e293b" />
+        </svg>
+    );
+};
+
 // ==================== SCENE REGISTRY ====================
 
 const SCENES: Record<string, React.FC<{ frame: number; fps: number; color: string }>> = {
@@ -1214,6 +2697,21 @@ const SCENES: Record<string, React.FC<{ frame: number; fps: number; color: strin
     'book-reading': BookReadingScene,
     'camera': CameraScene,
     'code-terminal': CodeTerminalScene,
+    'fire-blaze': FireBlazeScene,
+    'water-wave': WaterWaveScene,
+    'shield-protect': ShieldProtectScene,
+    'target-bullseye': TargetBullseyeScene,
+    'explosion-burst': ExplosionBurstScene,
+    'magnet-attract': MagnetAttractScene,
+    'gear-system': GearSystemScene,
+    'energy-pulse': EnergyPulseScene,
+    'eye-vision': EyeVisionScene,
+    'arrow-growth': ArrowGrowthScene,
+    'checkmark-success': CheckmarkSuccessScene,
+    'diamond-gem': DiamondGemScene,
+    'crown-royal': CrownRoyalScene,
+    'atom-science': AtomScienceScene,
+    'mountain-peak': MountainPeakScene,
 };
 
 // ==================== MAIN COMPONENT ====================
@@ -1281,150 +2779,78 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
 
     const SceneComponent = SCENES[scene] || SCENES['solar-system'];
 
-    // === Display mode positioning ===
-    const getContainerStyle = (): React.CSSProperties => {
-        const base: React.CSSProperties = {
-            position: 'absolute',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '6px',
-            opacity,
-            filter: `drop-shadow(0 0 20px ${color}40) drop-shadow(0 4px 12px rgba(0,0,0,0.5))`,
-        };
-
-        switch (displayMode) {
-            case 'full':
-                return {
-                    ...base,
-                    inset: 0,
-                    width: '100%',
-                    height: '100%',
-                    justifyContent: 'center',
-                    transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
-                    transformOrigin: 'center center',
-                };
-            case 'fit':
-                return {
-                    ...base,
-                    inset: '40px',
-                    justifyContent: 'center',
-                    transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
-                    transformOrigin: 'center center',
-                };
-            case 'card':
-                return {
-                    ...base,
-                    right: '60px',
-                    top: '60px',
-                    transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
-                    transformOrigin: 'top right',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '24px',
-                    boxShadow: `0 8px 32px rgba(0, 0, 0, 0.4), 0 0 40px ${color}15`,
-                };
-            case 'fade-up':
-                return {
-                    ...base,
-                    left: '50%',
-                    bottom: '120px',
-                    transform: `translateX(-50%) scale(${scale}) translateY(${enterTranslateY}px)`,
-                    transformOrigin: 'center bottom',
-                };
-            case 'fade-down':
-                return {
-                    ...base,
-                    left: '50%',
-                    top: '60px',
-                    transform: `translateX(-50%) scale(${scale}) translateY(${-enterTranslateY}px)`,
-                    transformOrigin: 'center top',
-                };
-            case 'split-top':
-                return {
-                    ...base,
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    height: '50%',
-                    justifyContent: 'center',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    transform: `scale(${scale}) translateY(${-enterTranslateY}px)`,
-                    transformOrigin: 'center top',
-                };
-            case 'split-bottom':
-                return {
-                    ...base,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: '50%',
-                    justifyContent: 'center',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
-                    transformOrigin: 'center bottom',
-                };
-            case 'overlay':
-            default:
-                return {
-                    ...base,
-                    right: '60px',
-                    bottom: '100px',
-                    transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
-                    transformOrigin: 'bottom right',
-                };
-        }
-    };
-
-    // Background dim varies by mode
-    const dimOpacity = (displayMode === 'full' || displayMode === 'fit') ? 0.3 : 0.15;
+    // Ambient glow pulse for cinematic background
+    const glowPulse = 0.15 + Math.sin(localFrame * 0.04) * 0.05;
+    const glowSize = 40 + Math.sin(localFrame * 0.03) * 10;
 
     return (
         <AbsoluteFill style={{ pointerEvents: 'none' }}>
-            {/* Background dim */}
+            {/* Full cinematic dark background — replaces video like B-roll */}
             <div
                 style={{
                     position: 'absolute',
                     inset: 0,
-                    background: `rgba(0, 0, 0, ${dimOpacity})`,
+                    background: `radial-gradient(ellipse at 50% 50%, ${color}18 0%, #0a0a12 60%, #000 100%)`,
                     opacity,
                 }}
             />
-            {/* Illustration container */}
-            <div style={getContainerStyle()}>
-                {(displayMode === 'full' || displayMode === 'fit' || displayMode === 'split-top' || displayMode === 'split-bottom') ? (
-                    <div style={{ flex: 1, width: '100%', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <SceneComponent frame={localFrame} fps={fps} color={color} />
-                    </div>
-                ) : (
-                    <div style={{ width: 260, height: 260 }}>
-                        <SceneComponent frame={localFrame} fps={fps} color={color} />
-                    </div>
-                )}
-
-                {label && (
-                    <div
-                        style={{
-                            fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                            fontSize: displayMode === 'full' ? 18 : 13,
-                            fontWeight: 600,
-                            color: 'rgba(255, 255, 255, 0.75)',
-                            letterSpacing: '0.03em',
-                            textAlign: 'center',
-                            maxWidth: '280px',
-                            lineHeight: 1.3,
-                            textShadow: '0 2px 8px rgba(0,0,0,0.7)',
-                            background: 'rgba(0,0,0,0.35)',
-                            padding: '4px 12px',
-                            borderRadius: '6px',
-                        }}
-                    >
-                        {label}
-                    </div>
-                )}
+            {/* Ambient color glow behind the scene */}
+            <div
+                style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '45%',
+                    width: `${glowSize}%`,
+                    height: `${glowSize}%`,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: `radial-gradient(circle, ${color}${Math.round(glowPulse * 255).toString(16).padStart(2, '0')} 0%, transparent 70%)`,
+                    filter: 'blur(40px)',
+                    opacity,
+                    pointerEvents: 'none',
+                }}
+            />
+            {/* Full-screen motion graphic scene */}
+            <div style={{
+                position: 'absolute',
+                inset: '5%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity,
+                transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
+                transformOrigin: 'center center',
+                filter: `drop-shadow(0 0 30px ${color}50)`,
+            }}>
+                <SceneComponent frame={localFrame} fps={fps} color={color} />
             </div>
+
+            {label && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        bottom: '12%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        letterSpacing: '0.04em',
+                        textAlign: 'center',
+                        maxWidth: '60%',
+                        lineHeight: 1.4,
+                        textShadow: '0 2px 12px rgba(0,0,0,0.8)',
+                        background: 'rgba(0,0,0,0.4)',
+                        padding: '8px 20px',
+                        borderRadius: '8px',
+                        backdropFilter: 'blur(8px)',
+                        opacity,
+                    }}
+                >
+                    {label}
+                </div>
+            )}
         </AbsoluteFill>
     );
 };
