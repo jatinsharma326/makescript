@@ -425,7 +425,8 @@ function generateAIImageUrl(prompt: string, seed: number): string {
  * Now generates custom AI images based on script content.
  */
 export async function suggestOverlaysWithAI(
-    subtitles: SubtitleSegment[]
+    subtitles: SubtitleSegment[],
+    model?: string
 ): Promise<SubtitleSegment[]> {
     try {
         const response = await fetch('/api/suggest-overlays', {
@@ -438,6 +439,7 @@ export async function suggestOverlaysWithAI(
                     endTime: s.endTime,
                     text: s.text,
                 })),
+                model,
             }),
         });
 
@@ -479,10 +481,14 @@ export async function suggestOverlaysWithAI(
  * Creates custom prompts and image URLs based on content analysis
  */
 export function generateDynamicOverlays(subtitles: SubtitleSegment[]): SubtitleSegment[] {
+    // Reset module-level tracking so each video gets fresh scene selection
+    lastUsedScene = '';
+
     return subtitles.map((seg, index) => {
-        // Only add motion graphic if the text has a strong visual keyword
-        if (!hasVisualKeyword(seg.text)) {
-            return seg; // No overlay for filler/generic text
+        // Always try to add a motion graphic - be more aggressive with overlays
+        // Skip only truly generic/filler text
+        if (isGenericFiller(seg.text)) {
+            return seg; // No overlay for filler text
         }
 
         const overlayType = selectProOverlay(seg.text, index);
@@ -494,10 +500,40 @@ export function generateDynamicOverlays(subtitles: SubtitleSegment[]): SubtitleS
     });
 }
 
+function isGenericFiller(text: string): boolean {
+    const lower = text.toLowerCase();
+    const fillerPatterns = [
+        'thank you for watching',
+        'like and subscribe',
+        'please subscribe',
+        'see you in the next',
+        'don\'t forget',
+        'comment below',
+        'let me know',
+        'that\'s it for',
+    ];
+    return fillerPatterns.some(p => lower.includes(p));
+}
+
 function hasVisualKeyword(text: string): boolean {
     const lower = text.toLowerCase();
+    // Check for any meaningful words - be more lenient
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-    return words.some(w => CONTENT_SCENE_MAP[w] !== undefined);
+
+    // If no words of length > 2, check for shorter meaningful words
+    if (words.length === 0) {
+        const shortWords = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1);
+        return shortWords.some(w => CONTENT_SCENE_MAP[w] !== undefined);
+    }
+
+    // Check if any word matches
+    const hasMatch = words.some(w => CONTENT_SCENE_MAP[w] !== undefined);
+
+    // Also check for important business/tech terms that might be compound
+    const importantTerms = ['welcome', 'new', 'show', 'talk', 'going', 'really', 'video', 'here', 'today', 'going', 'going to'];
+    const hasImportant = words.some(w => importantTerms.includes(w));
+
+    return hasMatch || hasImportant;
 }
 
 /**
@@ -612,43 +648,129 @@ const ALL_SCENES = [
 let lastUsedScene = '';
 
 /**
- * Select the best animated motion graphic scene based on content analysis
- * Always returns visual-illustration - no text overlays
+ * Select the best overlay type based on content analysis.
+ * Generates contextual on-screen overlays (emoji, kinetic text, highlight boxes)
+ * that appear ON TOP of the video — NOT full-screen replacements.
  */
 function selectProOverlay(text: string, count: number): OverlayConfig {
-    const scene = pickBestScene(text, count);
-    lastUsedScene = scene;
+    const lower = text.toLowerCase();
+    const color = getProColor(count);
 
+    // --- Emoji reactions for emotional / reaction content ---
+    const emojiMatch = pickEmoji(lower);
+    if (emojiMatch && count % 3 !== 0) {
+        return {
+            type: 'emoji-reaction',
+            props: {
+                emoji: emojiMatch,
+                size: 70,
+            },
+        };
+    }
+
+    // --- Kinetic text for key statements, stats, and impactful phrases ---
+    const label = extractLabelFromText(text);
+    if (label && label.length > 2 && count % 4 !== 0) {
+        const kineticStyles = ['pop', 'slide', 'bounce'] as const;
+        const positions = ['center', 'top', 'bottom'] as const;
+        return {
+            type: 'kinetic-text',
+            props: {
+                text: label,
+                color,
+                style: kineticStyles[count % kineticStyles.length],
+                position: positions[count % positions.length],
+                fontSize: 42,
+            },
+        };
+    }
+
+    // --- Highlight box for emphasis ---
+    if (count % 3 === 0) {
+        const highlightStyles = ['glow', 'underline', 'box'] as const;
+        return {
+            type: 'highlight-box',
+            props: {
+                text: label || text.substring(0, 30),
+                color,
+                style: highlightStyles[count % highlightStyles.length],
+            },
+        };
+    }
+
+    // --- Default: emoji reaction fallback ---
+    const fallbackEmojis = ['✨', '💡', '🎯', '🔥', '⚡', '💎', '🚀', '🌟'];
     return {
-        type: 'visual-illustration',
+        type: 'emoji-reaction',
         props: {
-            scene,
-            label: extractLabelFromText(text),
-            color: getProColor(count),
-            displayMode: 'full',
-            transition: ['fade-in', 'slide-in', 'appear'][count % 3],
+            emoji: fallbackEmojis[count % fallbackEmojis.length],
+            size: 70,
         },
     };
 }
 
-function pickBestScene(text: string, count: number): string {
-    const lower = text.toLowerCase();
-    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+/**
+ * Pick a contextual emoji based on text content
+ */
+function pickEmoji(text: string): string | null {
+    const emojiMap: Record<string, string> = {
+        // Positive emotions
+        love: '❤️', heart: '❤️', care: '❤️',
+        happy: '😊', joy: '😊', glad: '😊', smile: '😊',
+        laugh: '😂', funny: '😂', hilarious: '😂', lol: '😂',
+        excited: '🤩', amazing: '🤩', incredible: '🤩', awesome: '🤩',
+        wow: '😮', shocking: '😮', surprise: '😮', unbelievable: '😮',
+        cool: '😎', dope: '😎', sick: '😎', nice: '😎',
+        // Energy & power
+        fire: '🔥', hot: '🔥', lit: '🔥', burn: '🔥', flame: '🔥',
+        explode: '💥', boom: '💥', blast: '💥', massive: '💥',
+        power: '⚡', energy: '⚡', electric: '⚡', fast: '⚡', speed: '⚡', quick: '⚡',
+        strong: '💪', force: '💪', workout: '💪', gym: '💪',
+        // Success & achievement
+        win: '🏆', champion: '🏆', winner: '🏆', trophy: '🏆',
+        success: '✅', done: '✅', complete: '✅', finish: '✅', achieve: '✅',
+        goal: '🎯', target: '🎯', aim: '🎯', focus: '🎯',
+        best: '👑', king: '👑', queen: '👑', top: '👑', leader: '👑',
+        celebrate: '🎉', congratulations: '🎉', party: '🎉', victory: '🎉',
+        star: '⭐', excellent: '⭐', outstanding: '⭐',
+        // Money & business
+        money: '💰', revenue: '💰', profit: '💰', income: '💰', dollar: '💰', cash: '💰',
+        growth: '📈', grow: '📈', increase: '📈', rise: '📈', scale: '📈',
+        invest: '💎', valuable: '💎', premium: '💎', luxury: '💎', rich: '💎',
+        // Tech & ideas
+        brain: '🧠', think: '🧠', idea: '🧠', smart: '🧠', mind: '🧠', learn: '🧠',
+        code: '💻', software: '💻', app: '💻', tech: '💻', developer: '💻',
+        rocket: '🚀', launch: '🚀', fly: '🚀', moon: '🚀', sky: '🚀',
+        light: '💡', bulb: '💡', insight: '💡', discover: '💡', reveal: '💡',
+        // Nature & world
+        earth: '🌍', world: '🌍', global: '🌍', planet: '🌍',
+        sun: '☀️', bright: '☀️', shine: '☀️',
+        ocean: '🌊', water: '🌊', wave: '🌊', sea: '🌊',
+        // Communication
+        subscribe: '🔔', notification: '🔔', bell: '🔔',
+        share: '📢', announce: '📢',
+        music: '🎵', song: '🎵', sound: '🎵',
+        camera: '📸', photo: '📸', video: '📸',
+        book: '📚', read: '📚', study: '📚',
+        time: '⏰', clock: '⏰', hour: '⏰', deadline: '⏰',
+        food: '🍕', eat: '🍕', recipe: '🍕', cook: '🍕',
+        // Warnings / negativity
+        danger: '⚠️', warning: '⚠️', careful: '⚠️', risk: '⚠️',
+        stop: '🛑', wrong: '🛑', mistake: '🛑', bad: '🛑',
+        question: '❓', wonder: '❓', how: '❓', why: '❓',
+        point: '👆', important: '👆', key: '👆', remember: '👆',
+        secret: '🤫', exclusive: '🤫', private: '🤫',
+    };
 
-    // Try keyword matching
+    const words = text.replace(/[^a-z\s]/g, '').split(/\s+/);
     for (const word of words) {
-        if (CONTENT_SCENE_MAP[word] && CONTENT_SCENE_MAP[word] !== lastUsedScene) {
-            return CONTENT_SCENE_MAP[word];
-        }
+        if (emojiMap[word]) return emojiMap[word];
     }
-
-    // Fallback: cycle through scenes avoiding repeats
-    const available = ALL_SCENES.filter(s => s !== lastUsedScene);
-    return available[count % available.length];
+    return null;
 }
 
 /**
- * Get professional color palette for After Effects look
+ * Get professional color palette
  */
 function getProColor(count: number): string {
     const proColors = [
@@ -668,19 +790,16 @@ function getProColor(count: number): string {
  * Generate a generic but contextual prompt when no keywords match
  */
 function generateGenericPrompt(text: string): string {
-    // Extract meaningful words from the text
     const words = text.toLowerCase()
         .replace(/[^a-z\s]/g, '')
         .split(/\s+/)
         .filter(w => w.length > 3 && !isStopWord(w));
 
     if (words.length > 0) {
-        // Use the key concepts from the text
         const keyConcept = words.slice(0, 2).join(' ');
         return `Professional ${keyConcept} visualization, modern corporate design, clean minimalist style, soft lighting, business presentation background, high quality professional ${keyConcept} concept`;
     }
 
-    // Ultimate fallback for very short or meaningless text
     return 'Professional abstract business concept, modern corporate design, clean minimalist style, soft lighting, motivational startup visualization';
 }
 
@@ -729,7 +848,6 @@ export async function suggestSingleOverlayWithAI(
             return data.overlay as OverlayConfig;
         }
 
-        // Fallback: generate dynamic image based on combined text
         console.warn('AI single overlay failed, using local dynamic generation');
         return generateSingleDynamicOverlay(segmentText, userPrompt);
     } catch (error) {
@@ -740,7 +858,7 @@ export async function suggestSingleOverlayWithAI(
 
 /**
  * Generate a single dynamic overlay based on text + user prompt
- * Always picks an animated motion graphic scene
+ * Picks a contextual on-screen overlay (emoji or kinetic text)
  */
 function generateSingleDynamicOverlay(
     segmentText: string,
@@ -748,17 +866,6 @@ function generateSingleDynamicOverlay(
 ): OverlayConfig | null {
     const combined = `${segmentText} ${userPrompt}`;
     const count = Math.floor(Math.random() * 100);
-    const scene = pickBestScene(combined, count);
-    const color = getProColor(count);
-
-    return {
-        type: 'visual-illustration',
-        props: {
-            scene,
-            label: extractLabelFromText(combined),
-            color,
-            displayMode: 'full',
-            transition: 'fade-in',
-        },
-    };
+    return selectProOverlay(combined, count);
 }
+

@@ -5,7 +5,10 @@ const LIGHTNING_API_URL = process.env.LIGHTNING_API_URL || 'https://lightning.ai
 const LIGHTNING_API_KEY = process.env.LIGHTNING_API_KEY || '';
 
 const VALID_OVERLAY_TYPES = [
-    'visual-illustration',
+    'emoji-reaction',
+    'kinetic-text',
+    'highlight-box',
+    'lower-third',
     'glowing-particles',
     'scene-transition',
 ];
@@ -37,13 +40,13 @@ interface OverlaySuggestion {
 
 export async function POST(request: NextRequest) {
     try {
-        const { subtitles } = (await request.json()) as { subtitles: SubtitleInput[] };
+        const { subtitles, model } = (await request.json()) as { subtitles: SubtitleInput[]; model?: string };
 
         if (!subtitles || subtitles.length === 0) {
             return NextResponse.json({ suggestions: [] });
         }
 
-        const suggestions = await suggestWithAI(subtitles);
+        const suggestions = await suggestWithAI(subtitles, model);
         return NextResponse.json({ suggestions });
     } catch (error) {
         console.error('Overlay suggestion error:', error);
@@ -51,71 +54,36 @@ export async function POST(request: NextRequest) {
     }
 }
 
-async function suggestWithAI(subtitles: SubtitleInput[]): Promise<OverlaySuggestion[]> {
+async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string): Promise<OverlaySuggestion[]> {
     const subtitleList = subtitles
         .map((s) => `[${s.id}] "${s.text}" (${s.startTime}s - ${s.endTime}s)`)
         .join('\n');
 
-    const prompt = `You are a Senior Motion Graphics Director at a top-tier After Effects studio.
+    const prompt = `You are a Senior Motion Graphics Director. Your job: add contextual on-screen overlays that appear ON TOP of the playing video. These are NOT full-screen replacements — the video is ALWAYS visible.
 
-Your job: analyze the transcript and pick the BEST animated motion graphic scene for each segment. These are NOT text overlays - they are animated SVG illustrations (like After Effects motion graphics).
+AVAILABLE OVERLAY TYPES:
 
-AVAILABLE ANIMATED SCENES (pick the one that best visualizes what's being said):
+1. "emoji-reaction" — A pop-up emoji that matches the mood/content
+   Props: { "emoji": "🔥", "size": 70 }
+   Use for: emotional moments, reactions, emphasis
+   Popular emojis: 🔥 ⚡ 💰 📈 🚀 🎯 💡 🧠 ❤️ 😊 🤩 😮 💪 🏆 ✅ 👑 🎉 💎 💻 🌍 📚 ⏰ 📸 🎵 ⚠️
 
-NATURE & SPACE:
-- "solar-system" → planets orbiting sun, stars
-- "globe" → spinning 3D earth with continents
-- "nature-tree" → tree with swaying leaves, birds, sun
-- "water-wave" → ocean waves, foam, moonlight reflection
-- "mountain-peak" → mountain with flag at summit, sunrise, clouds
-- "fire-blaze" → animated flames rising, ember particles, heat glow
+2. "kinetic-text" — Animated text overlay showing key phrases
+   Props: { "text": "Key Phrase", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
+   Use for: stats, important statements, key takeaways
 
-BUSINESS & GROWTH:
-- "growth-chart" → animated bar chart growing upward with trend line
-- "money-flow" → golden coins flowing, dollar signs floating
-- "arrow-growth" → arrows shooting upward with trails
-- "target-bullseye" → target with arrow hitting center, impact ripple
-- "shopping-cart" → animated cart with items dropping in
-- "diamond-gem" → rotating sparkling diamond, light refraction
-
-TECHNOLOGY & SCIENCE:
-- "brain-idea" → brain with lightbulb, neural connections, sparks
-- "connections" → network nodes connecting with data pulses
-- "gear-system" → interlocking gears rotating, mechanical precision
-- "atom-science" → atom with orbiting electrons, nucleus pulsing
-- "code-terminal" → terminal with typing code, syntax highlighting
-- "eye-vision" → eye opening with iris scan, pupil dilating
-
-ENERGY & POWER:
-- "lightning" → lightning bolt striking with flash, electric sparks
-- "energy-pulse" → concentric energy rings pulsing, plasma core
-- "explosion-burst" → central explosion, shockwave rings, debris
-- "rocket-launch" → rocket launching into space with flames, smoke trail
-
-EMOTIONS & STATUS:
-- "celebration" → trophy with confetti, fireworks
-- "heartbeat" → heart with EKG line, pulsing
-- "checkmark-success" → animated checkmark drawing itself, burst particles
-- "crown-royal" → golden crown with sparkling jewels
-- "shield-protect" → shield materializing with energy pulse rings
-- "magnet-attract" → magnet pulling particles, magnetic field lines
-
-ACTIVITIES:
-- "clock-time" → clock with moving hands, hour markers
-- "person-walking" → stick figure walking with animation cycle
-- "music-notes" → equalizer bars bouncing, floating musical notes
-- "book-reading" → open book with glowing pages, knowledge particles
-- "camera" → camera with flash, lens zoom, floating photos
-- "cooking" → pan on stove with flames, steam, spatula stirring
-- "city-skyline" → night cityscape with lit windows, moon, moving car
+3. "highlight-box" — Highlighted text box for emphasis
+   Props: { "text": "Key Point", "color": "#hex", "style": "glow"|"underline"|"box" }
+   Use for: definitions, callouts, emphasis
 
 RULES:
-1. Use ONLY "visual-illustration" type - NO text overlays
-2. Pick the scene that BEST MATCHES the content being spoken
-3. Be SELECTIVE - only add motion graphics to segments with strong visual keywords or key moments (roughly 30-40% of segments). Skip generic filler text like "so", "and then", "you know", "let me tell you", greetings, transitions. Only add when the text describes something visually interesting or has a clear concept.
-4. Pick VARIED scenes - don't repeat the same scene consecutively
-5. Match the MOOD: exciting content → explosion/lightning/energy, calm → nature/water/globe, business → growth-chart/money/arrow, science → atom/brain/connections
-6. Quality over quantity - it's better to have fewer, well-matched motion graphics than one on every segment
+1. Overlays appear ON TOP of the video — the video is ALWAYS visible
+2. Pick the overlay type that BEST MATCHES the content
+3. Be SELECTIVE — only add overlays to 30-40% of segments with strong keywords or key moments
+4. Skip filler text ("so", "and then", "you know", "let me tell you", greetings)
+5. Use VARIED overlay types — mix emojis, kinetic text, and highlight boxes
+6. For kinetic-text: extract SHORT punchy labels (2-5 words) from the transcript
+7. Quality over quantity
 
 Transcript Segments:
 ${subtitleList}
@@ -123,33 +91,23 @@ ${subtitleList}
 Return strictly a JSON array:
 [{
   "segmentId": string,
-  "type": "visual-illustration",
-  "props": {
-    "scene": string,
-    "label": string,
-    "color": "#hex",
-    "displayMode": "full",
-    "transition": "fade-in"
-  }
-}]
-
-LABEL RULES:
-- Generate a SHORT (3-8 word) label capturing specific details from the transcript segment
-- Use concrete numbers/stats when available: "Revenue: $1M → $5M", "200+ Countries", "Team Growth: 50%"
-- No numbers? Use punchy key phrases: "Global Market Launch", "Next-Gen Innovation"
-- Labels make each motion graphic feel UNIQUE and LIVE — never leave label empty
-
-Motion graphics REPLACE the video entirely (like B-roll) — always use displayMode "full".
-For transition use: "fade-in", "slide-in", or "appear".`;
+  "type": "emoji-reaction" | "kinetic-text" | "highlight-box",
+  "props": { ... }
+}]`;
 
     const MAX_RETRIES = 1;
     const RETRY_DELAY_MS = 500;
 
-    const models = [
+    const fallbackModels = [
         { name: 'DeepSeek V3.1', model: 'lightning-ai/DeepSeek-V3.1' },
         { name: 'OpenAI o3', model: 'openai/o3' },
         { name: 'OpenAI o4-mini', model: 'openai/o4-mini' },
     ];
+
+    // If a specific model was requested, try it first
+    const models = requestedModel
+        ? [{ name: requestedModel.split('/').pop() || requestedModel, model: requestedModel }, ...fallbackModels.filter(m => m.model !== requestedModel)]
+        : fallbackModels;
 
     for (const modelInfo of models) {
         for (let retry = 0; retry < MAX_RETRIES; retry++) {
@@ -208,25 +166,18 @@ For transition use: "fade-in", "slide-in", or "appear".`;
 
                 const suggestions: OverlaySuggestion[] = JSON.parse(jsonStr);
 
-                // Validate: ensure all are visual-illustration with valid scenes
+                // Validate: ensure all have valid overlay types
                 const validatedSuggestions = suggestions
-                    .filter((s) => s.segmentId && s.type === 'visual-illustration')
+                    .filter((s) => s.segmentId && VALID_OVERLAY_TYPES.includes(s.type))
                     .map((s) => {
                         const count = hashString(s.segmentId);
-                        // Validate scene exists
-                        const scene = String(s.props?.scene || '');
-                        if (!ALL_SCENES.includes(scene)) {
-                            s.props.scene = pickSceneFromText('', count);
-                        }
-                        // Find original segment text for label fallback
                         const origSeg = subtitles.find(sub => sub.id === s.segmentId);
-                        s.props = {
-                            ...s.props,
-                            label: s.props.label || (origSeg ? extractLabelFromText(origSeg.text) : ''),
-                            color: s.props.color || getProColor(count),
-                            displayMode: 'full',
-                            transition: s.props.transition || 'fade-in',
-                        };
+                        // Ensure color is set
+                        if (!s.props.color) s.props.color = getProColor(count);
+                        // For kinetic-text, ensure text prop exists
+                        if (s.type === 'kinetic-text' && !s.props.text && origSeg) {
+                            s.props.text = extractLabelFromText(origSeg.text);
+                        }
                         return s;
                     });
 
@@ -386,29 +337,53 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
 };
 
 function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggestion[] {
-    let lastScene = '';
     const results: OverlaySuggestion[] = [];
 
     for (let index = 0; index < subtitles.length; index++) {
         const seg = subtitles[index];
-        // Only add motion graphic if the text has a matching keyword
+        // Only add overlay if the text has meaningful keywords
         if (!hasVisualKeyword(seg.text)) continue;
 
-        const scene = pickSceneFromText(seg.text, index, lastScene);
-        lastScene = scene;
         const color = getProColor(index);
+        const label = extractLabelFromText(seg.text);
+        const emoji = pickEmojiFromText(seg.text);
 
-        results.push({
-            segmentId: seg.id,
-            type: 'visual-illustration',
-            props: {
-                scene,
-                label: extractLabelFromText(seg.text),
-                color,
-                displayMode: 'full',
-                transition: ['fade-in', 'slide-in', 'appear'][index % 3],
-            },
-        });
+        // Alternate between overlay types for variety
+        let overlay: OverlaySuggestion;
+        if (emoji && index % 3 !== 0) {
+            overlay = {
+                segmentId: seg.id,
+                type: 'emoji-reaction',
+                props: { emoji, size: 70 },
+            };
+        } else if (label && label.length > 2 && index % 4 !== 0) {
+            const kineticStyles = ['pop', 'slide', 'bounce'];
+            const positions = ['center', 'top', 'bottom'];
+            overlay = {
+                segmentId: seg.id,
+                type: 'kinetic-text',
+                props: {
+                    text: label,
+                    color,
+                    style: kineticStyles[index % kineticStyles.length],
+                    position: positions[index % positions.length],
+                    fontSize: 42,
+                },
+            };
+        } else {
+            const highlightStyles = ['glow', 'underline', 'box'];
+            overlay = {
+                segmentId: seg.id,
+                type: 'highlight-box',
+                props: {
+                    text: label || seg.text.substring(0, 30),
+                    color,
+                    style: highlightStyles[index % highlightStyles.length],
+                },
+            };
+        }
+
+        results.push(overlay);
     }
 
     return results;
@@ -416,25 +391,68 @@ function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggest
 
 function hasVisualKeyword(text: string): boolean {
     const lower = text.toLowerCase();
-    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    // Be more lenient - check for any words that could match
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1);
     return words.some(w => CONTENT_SCENE_MAP[w] !== undefined);
 }
 
 function pickSceneFromText(text: string, index: number, lastScene?: string): string {
     const lower = text.toLowerCase();
-    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    const allWords = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
 
-    // Try to match keywords to scenes
-    for (const word of words) {
+    // Score all matching scenes by counting how many keywords point to each
+    const sceneScores: Record<string, number> = {};
+    for (const word of allWords) {
         const scene = CONTENT_SCENE_MAP[word];
-        if (scene && scene !== lastScene) {
-            return scene;
+        if (scene) {
+            sceneScores[scene] = (sceneScores[scene] || 0) + 1;
         }
     }
 
-    // Fallback: cycle through diverse scenes, avoiding repeat
+    // Sort scenes by score (highest first), filter out lastScene
+    const scoredScenes = Object.entries(sceneScores)
+        .filter(([scene]) => scene !== lastScene)
+        .sort((a, b) => b[1] - a[1]);
+
+    if (scoredScenes.length > 0) {
+        // If there are ties at the top, use text hash to break them deterministically
+        const topScore = scoredScenes[0][1];
+        const topScenes = scoredScenes.filter(([, score]) => score === topScore).map(([scene]) => scene);
+        if (topScenes.length === 1) {
+            return topScenes[0];
+        }
+        // Same text always picks the same scene
+        const textHash = hashString(text);
+        return topScenes[textHash % topScenes.length];
+    }
+
+    // Fallback: use text hash for unique-per-content selection instead of index cycling
     const fallbackScenes = ALL_SCENES.filter(s => s !== lastScene);
-    return fallbackScenes[index % fallbackScenes.length];
+    const textHash = hashString(text);
+    return fallbackScenes[textHash % fallbackScenes.length];
+}
+
+function pickEmojiFromText(text: string): string | null {
+    const lower = text.toLowerCase();
+    const emojiMap: Record<string, string> = {
+        love: '❤️', heart: '❤️', happy: '😊', joy: '😊', laugh: '😂', funny: '😂',
+        excited: '🤩', amazing: '🤩', awesome: '🤩', wow: '😮', cool: '😎',
+        fire: '🔥', hot: '🔥', lit: '🔥', explode: '💥', boom: '💥',
+        power: '⚡', energy: '⚡', fast: '⚡', speed: '⚡', strong: '💪',
+        win: '🏆', champion: '🏆', success: '✅', done: '✅', goal: '🎯', target: '🎯',
+        best: '👑', king: '👑', celebrate: '🎉', party: '🎉', star: '⭐',
+        money: '💰', revenue: '💰', profit: '💰', growth: '📈', grow: '📈',
+        invest: '💎', valuable: '💎', brain: '🧠', think: '🧠', idea: '🧠',
+        code: '💻', tech: '💻', rocket: '🚀', launch: '🚀', light: '💡',
+        earth: '🌍', world: '🌍', ocean: '🌊', water: '🌊', subscribe: '🔔',
+        music: '🎵', book: '📚', time: '⏰', food: '🍕', danger: '⚠️',
+        question: '❓', important: '👆', secret: '🤫',
+    };
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/);
+    for (const word of words) {
+        if (emojiMap[word]) return emojiMap[word];
+    }
+    return null;
 }
 
 function getProColor(count: number): string {

@@ -62,25 +62,25 @@ export async function transcribeVideo(
 /**
  * Generate mock transcript from video duration.
  * Used as fallback when real transcription is unavailable.
+ * Includes keywords that will trigger overlay generation.
  */
 export function generateMockTranscript(duration: number): SubtitleSegment[] {
     const sentences = [
-        "Hey everyone, welcome back to another video",
-        "Today we're going to talk about something really exciting that could launch your career like a rocket",
-        "I've been working on this project for a while and the growth has been incredible",
-        "Think of it like the earth orbiting around the sun, everything is connected",
-        "The idea behind this is actually quite simple but very powerful",
-        "Let me show you how it works step by step, it's lightning fast",
-        "This network of connections is what makes it all come together",
-        "The global impact of this technology is changing the world",
-        "Your brain will love this because it makes everything click",
-        "The money flow from this investment has been absolutely worth it",
-        "Time is ticking so let's not waste another moment",
-        "The energy and pulse of this community keeps growing stronger",
-        "Watch how the progress chart just keeps going up and up",
-        "Let me know in the comments what you think about this",
-        "Don't forget to like and subscribe for more content",
-        "Thanks for watching, see you in the next one",
+        "Welcome to our new growth platform where technology meets innovation",
+        "Our business has grown to over one million users worldwide",
+        "The AI system processes data with incredible speed and accuracy",
+        "Revenue increased from one million to five million dollars",
+        "Our team is building the future of digital technology",
+        "The brain processes information like a powerful computer",
+        "We connect people through our global network platform",
+        "Time is money and every second counts in business",
+        "Energy flows through the system like electricity",
+        "Our stock price is skyrocketing to new heights",
+        "The rocket launched successfully into outer space",
+        "Science and research drive innovation forward",
+        "Our community is growing stronger every single day",
+        "Success comes from hard work and dedication",
+        "The future of technology is absolutely incredible",
     ];
 
     const segmentDuration = Math.max(2, duration / Math.min(sentences.length, Math.ceil(duration / 3)));

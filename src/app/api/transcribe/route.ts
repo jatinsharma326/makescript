@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import { writeFile, unlink, mkdir, appendFile, stat } from 'fs/promises';
 import { join } from 'path';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 // Use absolute paths since conda might not be in Node.js PATH
 const PYTHON_PATH = 'C:\\Users\\jatin\\miniconda3\\python.exe';
@@ -35,6 +32,54 @@ async function logToFile(message: string) {
     } catch {
         // Ignore logging errors
     }
+}
+
+/**
+ * Run the Python transcription script using spawn instead of exec.
+ * spawn handles stdout/stderr as streams and doesn't throw on stderr output,
+ * which is critical because Whisper always writes progress/warnings to stderr.
+ */
+function runTranscription(scriptPath: string, filePath: string, env: NodeJS.ProcessEnv): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+    return new Promise((resolve, reject) => {
+        const proc = spawn(PYTHON_PATH, [scriptPath, filePath, 'base'], {
+            env,
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        let stdout = '';
+        let stderr = '';
+        let killed = false;
+
+        // 10 minute timeout for long videos on CPU
+        const timer = setTimeout(() => {
+            killed = true;
+            proc.kill('SIGTERM');
+        }, 600000);
+
+        proc.stdout!.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString('utf-8');
+        });
+
+        proc.stderr!.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString('utf-8');
+        });
+
+        proc.on('close', (code: number | null) => {
+            clearTimeout(timer);
+            if (killed) {
+                reject(new Error('Transcription timed out after 10 minutes'));
+                return;
+            }
+            // Always resolve — we'll handle errors ourselves by inspecting stdout
+            resolve({ stdout, stderr, exitCode: code });
+        });
+
+        proc.on('error', (err: Error) => {
+            clearTimeout(timer);
+            reject(err);
+        });
+    });
 }
 
 export async function POST(request: NextRequest) {
@@ -75,31 +120,29 @@ export async function POST(request: NextRequest) {
             PATH: `C:\\Users\\jatin\\miniconda3;C:\\Users\\jatin\\miniconda3\\Library\\bin;C:\\Users\\jatin\\miniconda3\\Scripts;${process.env.PATH || ''}`,
         };
 
-        const command = `"${PYTHON_PATH}" "${scriptPath}" "${tempFilePath}" small`;
-        await logToFile(`Running command: ${command}`);
+        await logToFile(`Running transcription with spawn: python "${scriptPath}" "${tempFilePath}" base`);
 
-        const { stdout, stderr } = await execAsync(
-            command,
-            {
-                timeout: 300000, // 5 minute timeout
-                maxBuffer: 10 * 1024 * 1024, // 10MB output buffer
-                env,
-            }
-        );
+        const { stdout, stderr, exitCode } = await runTranscription(scriptPath, tempFilePath, env);
 
         if (stderr) {
             await logToFile(`stderr (partial): ${stderr.substring(0, 500)}`);
         }
 
-        await logToFile(`stdout length: ${stdout.length}`);
+        await logToFile(`stdout length: ${stdout.length}, exit code: ${exitCode}`);
 
-        // Try to parse JSON, but log raw output if it fails
+        // Try to parse JSON from stdout regardless of exit code
+        // Whisper always writes to stderr (FP16 warnings, progress bars), and
+        // sometimes exits non-zero even when it produces valid JSON output
         let result: WhisperResult;
         try {
             const trimmedOutput = stdout.trim();
             if (!trimmedOutput) {
-                const msg = 'Empty stdout from Python script';
+                const msg = `Empty stdout from Python script (exit code: ${exitCode})`;
                 await logToFile(msg);
+                // If stderr has useful info, include it
+                if (stderr) {
+                    await logToFile(`stderr with empty stdout: ${stderr.substring(0, 1000)}`);
+                }
                 throw new Error(msg);
             }
             // Find the last valid JSON object if there's noise
@@ -117,7 +160,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 subtitles: [],
                 fallback: true,
-                error: 'Failed to parse script output. Check server logs.',
+                error: `Failed to parse script output (exit code: ${exitCode}). Check server logs.`,
             });
         }
 
@@ -165,6 +208,14 @@ export async function POST(request: NextRequest) {
         // Log stack trace if available
         if (error instanceof Error && error.stack) {
             await logToFile(`Stack: ${error.stack}`);
+        }
+
+        // Log more details about common issues
+        if (message.includes('ENOENT') || message.includes('not found')) {
+            await logToFile('LIKELY ISSUE: Python or script not found. Check PYTHON_PATH and scriptPath.');
+        }
+        if (message.includes('timeout')) {
+            await logToFile('LIKELY ISSUE: Transcription timed out. Video may be too long or Whisper is slow.');
         }
 
         return NextResponse.json(

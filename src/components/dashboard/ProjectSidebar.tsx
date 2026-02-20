@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { cn } from '../../lib/utils';
 import { ProjectMeta } from '../../lib/types';
 import { Input } from '../ui/Input';
-import { Search, Plus, Filter, SortAsc, LayoutGrid, List, ChevronDown, Settings, Library, Home, HardDrive, Users, CreditCard } from 'lucide-react';
+import { Search, Plus, Filter, SortAsc, LayoutGrid, List, ChevronDown, Settings, Library, Home, HardDrive, Users, CreditCard, Trash2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface ProjectSidebarProps {
@@ -141,6 +141,13 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                                 activeProjectId === p.id ? "bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" : "bg-muted-foreground/30 group-hover:bg-muted-foreground/50"
                             )} />
                             <span className="text-[13px] font-medium truncate flex-1">{p.name}</span>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onDeleteProject(p.id); }}
+                                className="w-5 h-5 rounded flex items-center justify-center text-zinc-700 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                                title="Delete project"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
                             <span className="text-[10px] opacity-40 font-mono">{fmtTime(p.createdAt)}</span>
                         </div>
                     ))

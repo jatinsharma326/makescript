@@ -13,7 +13,14 @@ import io
 import re
 import contextlib
 import subprocess
+import warnings
 from collections import Counter
+
+# Suppress tqdm progress bars (they pollute stderr and cause Node.js to treat exit as failure)
+os.environ["TQDM_DISABLE"] = "1"
+
+# Suppress FP16 warning from whisper (not supported on CPU, falls back to FP32 automatically)
+warnings.filterwarnings("ignore", message="FP16 is not supported on CPU")
 
 # Set stdout to use utf-8 to avoid encoding errors
 sys.stdout.reconfigure(encoding='utf-8')

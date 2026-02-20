@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import type { PlayerPreviewHandle } from '../../components/editor/PlayerPreview';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
@@ -11,13 +12,16 @@ import {
     DEFAULT_FILTERS,
     EditorTab,
     TranscriptStatus,
+    SubtitleSegment,
 } from '../../lib/types';
 import { transcribeVideo, generateMockTranscript } from '../../lib/transcribe';
 import { suggestOverlaysWithAI, generateDynamicOverlays as autoSuggestOverlays } from '../../lib/ai';
+import { AI_MODELS, DEFAULT_MODEL, TIERS, getModelsForTier, isModelAccessible, type ModelTier, type AIModel } from '../../lib/models';
 import {
     saveProject,
     loadProject,
     deleteProject,
+    deleteAllProjects,
     getProjectList,
     reconstructFile,
 } from '../../lib/projectStorage';
@@ -37,7 +41,11 @@ import {
     ChevronLeft,
     Clock,
     Layers,
-    Sliders
+    Sliders,
+    Trash2,
+    Check,
+    Loader2,
+    RefreshCw
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/dashboard/ProjectSidebar';
 import { Dashboard } from '../../components/dashboard/Dashboard';
@@ -50,17 +58,9 @@ const EditorPanel = dynamic(() => import('../../components/editor/EditorPanel'),
 const Timeline = dynamic(() => import('../../components/editor/Timeline'), { ssr: false });
 import { OverlayContextMenu } from '../../components/editor/OverlayContextMenu';
 
-const PlayerPreview = dynamic(() => import('../../components/editor/PlayerPreview'), {
-    ssr: false,
-    loading: () => (
-        <div className="w-full aspect-video rounded-xl flex items-center justify-center border border-border/40 bg-muted animate-pulse">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto mb-3" />
-                <span className="text-xs text-muted-foreground font-medium">Loading preview...</span>
-            </div>
-        </div>
-    ),
-});
+const TranscriptPanel = dynamic(() => import('../../components/editor/TranscriptPanel'), { ssr: false });
+
+import PlayerPreview from '../../components/editor/PlayerPreview';
 
 export default function EditorPage() {
     const [mounted, setMounted] = useState(false);
@@ -90,7 +90,12 @@ export default function EditorPage() {
     const [showExportModal, setShowExportModal] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [activePopup, setActivePopup] = useState<{ segmentId: string; top: number; left: number } | null>(null);
+    const [processingStep, setProcessingStep] = useState<'idle' | 'uploading' | 'transcribing' | 'generating' | 'done'>('idle');
+    const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+    const [userTier, setUserTier] = useState<ModelTier>('free');
+    const [showModelPicker, setShowModelPicker] = useState(false);
     const { toast } = useToast();
     const { pushSnapshot, undo, redo, pushToFuture, resetHistory } = useUndoRedo();
 
@@ -100,6 +105,60 @@ export default function EditorPage() {
     stateRef.current = state;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const newUploadInputRef = useRef<HTMLInputElement>(null);
+    const playerPreviewRef = useRef<PlayerPreviewHandle>(null);
+
+    // Current playback time (updated from PlayerPreview)
+    const [currentTime, setCurrentTime] = useState(0);
+
+    const handleSeek = useCallback((time: number) => {
+        if (playerPreviewRef.current) {
+            playerPreviewRef.current.seekTo(time);
+            setCurrentTime(time);
+        }
+    }, []);
+
+    // Playback state for timeline controls
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const handlePlayPause = useCallback(() => {
+        if (playerPreviewRef.current) {
+            playerPreviewRef.current.toggle();
+            setIsPlaying(playerPreviewRef.current.isPlaying());
+        }
+    }, []);
+
+    const handleSkip = useCallback((delta: number) => {
+        if (playerPreviewRef.current) {
+            const newTime = Math.max(0, Math.min(state.videoDuration, currentTime + delta));
+            playerPreviewRef.current.seekTo(newTime);
+            setCurrentTime(newTime);
+        }
+    }, [currentTime, state.videoDuration]);
+
+    const handleSplitSegment = useCallback((segId: string, splitTime: number) => {
+        setState(prev => {
+            const seg = prev.subtitles.find(s => s.id === segId);
+            if (!seg) return prev;
+            const firstHalf: SubtitleSegment = {
+                ...seg,
+                id: `${seg.id}_a`,
+                endTime: splitTime,
+                text: seg.text, // keep full text on first half
+            };
+            const secondHalf: SubtitleSegment = {
+                id: `${seg.id}_b`,
+                startTime: splitTime,
+                endTime: seg.endTime,
+                text: '', // empty second half
+            };
+            const newSubs = prev.subtitles.flatMap(s =>
+                s.id === segId ? [firstHalf, secondHalf] : [s]
+            );
+            pushSnapshot({ subtitles: prev.subtitles });
+            return { ...prev, subtitles: newSubs };
+        });
+        toast('Segment split at playhead', 'success');
+    }, [pushSnapshot, toast]);
 
     useEffect(() => {
         setMounted(true);
@@ -227,6 +286,8 @@ export default function EditorPage() {
 
         const url = URL.createObjectURL(file);
         const video = document.createElement('video');
+        video.muted = true;
+        video.preload = 'metadata';
         video.src = url;
 
         await new Promise((resolve) => {
@@ -239,6 +300,11 @@ export default function EditorPage() {
         const width = video.videoWidth || 1920;
         const height = video.videoHeight || 1080;
 
+        // Clean up the probe video to prevent double audio playback
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+
         const projectId = `proj_${Date.now()}`;
 
         setState((prev) => ({
@@ -250,71 +316,176 @@ export default function EditorPage() {
             trimPoints: { inPoint: 0, outPoint: duration },
             videoWidth: width,
             videoHeight: height,
+            subtitles: [],
+            selectedSegmentId: null,
+            textOverlays: [],
             isTranscribing: true,
+            isGenerating: false,
             transcriptStatus: 'transcribing'
         }));
 
         toast('Analyzing video and transcribing audio...', 'info');
+        setProcessingStep('transcribing');
 
         try {
             const { subtitles: transcript, isReal, noAudio } = await transcribeVideo(file, duration);
 
+            console.log('[Editor] Transcription result:', { isReal, noAudio, segmentCount: transcript.length });
+
             if (noAudio) {
-                toast('No speech detected. Using timeline only.', 'info');
+                toast('No speech detected. Using mock transcript.', 'info');
+                const mockSubs = generateMockTranscript(duration);
+                console.log('[Editor] Generated mock subtitles:', mockSubs.length);
                 updateState({
-                    subtitles: [],
+                    subtitles: mockSubs,
                     isTranscribing: false,
                     transcriptStatus: 'mock-no-audio'
                 });
                 return;
             }
 
-            const status = isReal ? 'real' : 'mock-error';
-            updateState({
-                subtitles: transcript,
-                isTranscribing: false,
-                transcriptStatus: status
-            });
-
-            toast(isReal ? 'Transcription complete!' : 'Using mock transcript (API unavailable)', isReal ? 'success' : 'warning');
-
-            // Auto-generate overlays if transcript exists
-            if (transcript.length > 0) {
-                handleGenerateOverlays(transcript);
+            if (isReal && transcript.length > 0) {
+                // Real transcription succeeded with segments
+                console.log('[Editor] Real transcription succeeded with', transcript.length, 'segments');
+                updateState({
+                    subtitles: transcript,
+                    isTranscribing: false,
+                    transcriptStatus: 'real'
+                });
+                toast('Transcription complete! Generating motion graphics...', 'success');
+            } else {
+                // API failed or returned empty — fall back to mock transcript
+                console.log('[Editor] Transcription API failed or empty, using mock fallback');
+                const mockSubs = transcript.length > 0 ? transcript : generateMockTranscript(duration);
+                const status = isReal ? 'real' : 'mock-error';
+                console.log('[Editor] Fallback mock subtitles:', mockSubs.length);
+                updateState({
+                    subtitles: mockSubs,
+                    isTranscribing: false,
+                    transcriptStatus: status
+                });
+                toast(
+                    transcript.length > 0
+                        ? 'Transcription returned results. Generating motion graphics...'
+                        : 'API unavailable — using mock transcript. Generating motion graphics...',
+                    'warning'
+                );
             }
 
         } catch (err) {
-            console.error(err);
-            toast('Detailed transcription failed. Using basic mode.', 'error');
-            updateState({ isTranscribing: false, transcriptStatus: 'mock-error' });
+            console.error('[Editor] Transcription error:', err);
+            // Fallback to mock transcript so user still gets subtitles
+            const mockSubs = generateMockTranscript(duration);
+            console.log('[Editor] Error fallback - generated mock subtitles:', mockSubs.length);
+            updateState({
+                subtitles: mockSubs,
+                isTranscribing: false,
+                transcriptStatus: 'mock-error'
+            });
+            toast('Transcription failed — using mock transcript. Generating motion graphics...', 'warning');
         }
-    }, [saveCurrentProject, toast]); // Added updateState dependency implicitly via component scope
+    }, [saveCurrentProject, toast, updateState]); // Added updateState dependency implicitly via component scope
 
     const handleGenerateOverlays = async (currentSubtitles = state.subtitles) => {
-        if (state.isGenerating || currentSubtitles.length === 0) return;
+        console.log('[handleGenerateOverlays] Called with', currentSubtitles.length, 'subtitles');
+        console.log('[handleGenerateOverlays] Current state subtitles:', state.subtitles.length);
+        console.log('[handleGenerateOverlays] isGenerating:', state.isGenerating);
+
+        if (currentSubtitles.length === 0) {
+            console.log('[handleGenerateOverlays] Skipping - no subtitles');
+            return;
+        }
+
+        // Prevent duplicate concurrent calls
+        if (state.isGenerating) {
+            console.log('[handleGenerateOverlays] Already generating, skipping');
+            return;
+        }
 
         updateState({ isGenerating: true });
+        setProcessingStep('generating');
         toast('Generating dynamic overlays...', 'info');
 
         try {
-            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles);
+            console.log('[handleGenerateOverlays] Calling suggestOverlaysWithAI with model:', selectedModel);
+            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel);
 
-            updateState({
-                subtitles: newSubtitles,
-                isGenerating: false,
+            console.log('[handleGenerateOverlays] Result:', newSubtitles.length, 'segments');
+            const overlaysCount = newSubtitles.filter(s => s.overlay).length;
+            console.log('[handleGenerateOverlays] Segments with overlays:', overlaysCount);
+
+            newSubtitles.forEach((s, i) => {
+                if (s.overlay) {
+                    console.log(`  [${i}] "${s.text.substring(0, 30)}..." -> ${s.overlay.type}:${s.overlay.props.scene}`);
+                }
             });
-            toast('AI overlays applied successfully!', 'success');
+
+            // Ensure at least some overlays are generated - force if none
+            if (overlaysCount === 0 && newSubtitles.length > 0) {
+                console.log('[handleGenerateOverlays] No overlays generated, forcing fallback...');
+                const forced = autoSuggestOverlays(newSubtitles);
+                const forcedCount = forced.filter(s => s.overlay).length;
+                console.log('[handleGenerateOverlays] Forced overlays:', forcedCount);
+                updateState({
+                    subtitles: forced,
+                    isGenerating: false,
+                });
+                toast('Added motion graphics to your video!', 'success');
+                setProcessingStep('done');
+                setTimeout(() => setProcessingStep('idle'), 2000);
+            } else {
+                updateState({
+                    subtitles: newSubtitles,
+                    isGenerating: false,
+                });
+                toast('AI overlays applied successfully!', 'success');
+                setProcessingStep('done');
+                setTimeout(() => setProcessingStep('idle'), 2000);
+            }
         } catch (e) {
-            console.error(e);
-            // Fallback
+            console.error('[handleGenerateOverlays] Error:', e);
+            // Fallback — use local rule-based overlay suggestions
             const fallback = autoSuggestOverlays(currentSubtitles);
+            const fallbackCount = fallback.filter(s => s.overlay).length;
+            console.log('[handleGenerateOverlays] Fallback overlays:', fallbackCount);
+
+            // Use whatever the local rules produced — don't force overlays on every segment
             updateState({
                 subtitles: fallback,
                 isGenerating: false,
             });
-            toast('AI unavailable, used basic rules instead.', 'warning');
+            toast(fallbackCount > 0
+                ? `AI unavailable — added ${fallbackCount} overlays using local rules.`
+                : 'AI unavailable — you can manually add overlays from the transcript panel.',
+                'warning'
+            );
+            setProcessingStep('done');
+            setTimeout(() => setProcessingStep('idle'), 2000);
         }
     };
+
+    // Auto-trigger overlay generation when transcription completes
+    // This avoids stale closure issues from calling handleGenerateOverlays inside handleUpload
+    const hasTriggeredOverlays = useRef(false);
+    useEffect(() => {
+        // When transcription finishes and we have subtitles without any overlays yet
+        if (
+            !state.isTranscribing &&
+            state.subtitles.length > 0 &&
+            !state.isGenerating &&
+            !hasTriggeredOverlays.current &&
+            !state.subtitles.some(s => s.overlay) // No overlays assigned yet
+        ) {
+            console.log('[useEffect] Transcription done, auto-generating overlays for', state.subtitles.length, 'segments');
+            hasTriggeredOverlays.current = true;
+            handleGenerateOverlays(state.subtitles);
+        }
+
+        // Reset the trigger when a new video starts transcribing
+        if (state.isTranscribing) {
+            hasTriggeredOverlays.current = false;
+        }
+    }, [state.isTranscribing, state.subtitles, state.isGenerating]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ... handlers for timeline, layout etc ...
     const handleSegmentUpdate = (id: string, updates: any) => {
@@ -344,7 +515,9 @@ export default function EditorPage() {
     };
 
     const handleAutoSuggest = () => {
-        handleGenerateOverlays();
+        // Clear existing overlays first, then regenerate
+        const cleanedSubtitles = state.subtitles.map(s => ({ ...s, overlay: undefined }));
+        handleGenerateOverlays(cleanedSubtitles);
     };
 
     const handleSwitchProject = useCallback(async (projectId: string) => {
@@ -382,13 +555,20 @@ export default function EditorPage() {
         }
     }, [toast, resetHistory]);
 
-    const handleDeleteProject = useCallback((id: string) => {
-        deleteProject(id);
+    const handleDeleteProject = useCallback(async (id: string) => {
+        await deleteProject(id);
         setProjectList(getProjectList());
         if (state.projectId === id) {
-            setState(prev => ({ ...prev, projectId: null, videoSrc: null, videoFile: null, subtitles: [], textOverlays: [] }));
+            setState(prev => ({ ...prev, projectId: null, videoSrc: null, videoFile: null, subtitles: [], textOverlays: [], transcriptStatus: 'none' }));
         }
     }, [state.projectId]);
+
+    const handleDeleteAllProjects = useCallback(async () => {
+        await deleteAllProjects();
+        setProjectList([]);
+        setState(prev => ({ ...prev, projectId: null, videoSrc: null, videoFile: null, subtitles: [], textOverlays: [], transcriptStatus: 'none' }));
+        toast('All projects deleted.', 'info');
+    }, [toast]);
 
     const overlayCount = state.subtitles.filter(seg => seg.overlay).length;
 
@@ -427,6 +607,22 @@ export default function EditorPage() {
                                 <>
                                     <span className="w-px h-4 bg-border" />
                                     <span className="text-[12px] font-medium text-foreground/70 truncate max-w-[180px]">{state.videoFile.name}</span>
+                                    <button
+                                        onClick={() => {
+                                            if (state.projectId) {
+                                                handleDeleteProject(state.projectId);
+                                                toast('Project deleted.', 'info');
+                                            } else {
+                                                setState(prev => ({ ...prev, projectId: null, videoSrc: null, videoFile: null, subtitles: [], textOverlays: [], transcriptStatus: 'none' }));
+                                                toast('Video removed.', 'info');
+                                            }
+                                        }}
+                                        className="h-7 px-2.5 rounded-md flex items-center gap-1.5 text-[11px] font-medium text-red-400 hover:bg-red-500/15 border border-red-500/20 transition-all"
+                                        title="Delete video"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Delete</span>
+                                    </button>
                                 </>
                             )}
                         </div>
@@ -447,6 +643,68 @@ export default function EditorPage() {
                                         onClick={handleAutoSuggest} disabled={state.isGenerating}>
                                         {state.isGenerating ? <><span className="spinner w-3 h-3" /> Generating…</> : <><Sparkles /> AI Suggest</>}
                                     </button>
+                                    {/* Model Selector */}
+                                    <div className="relative">
+                                        <button
+                                            className="h-7 px-2 rounded-md text-[10px] font-medium flex items-center gap-1 transition-all hover:bg-muted border border-border/50"
+                                            style={{ color: 'var(--text-secondary)' }}
+                                            onClick={() => setShowModelPicker(!showModelPicker)}
+                                            title="Select AI model"
+                                        >
+                                            <span className="max-w-[80px] truncate">{AI_MODELS.find(m => m.id === selectedModel)?.label || 'Model'}</span>
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
+                                        </button>
+                                        {showModelPicker && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setShowModelPicker(false)} />
+                                                <div className="absolute top-full mt-1 right-0 z-50 w-72 rounded-lg border border-border overflow-hidden" style={{ background: 'var(--bg-card)', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
+                                                    <div className="px-3 py-2 border-b border-border">
+                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Select AI Model</p>
+                                                    </div>
+                                                    <div className="max-h-80 overflow-y-auto py-1">
+                                                        {(['free', 'creator', 'studio'] as ModelTier[]).map(tier => {
+                                                            const tierModels = AI_MODELS.filter(m => m.tier === tier);
+                                                            const tierInfo = TIERS[tier];
+                                                            return (
+                                                                <div key={tier}>
+                                                                    <div className="px-3 py-1.5 flex items-center gap-2">
+                                                                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: tierInfo.color }}>{tierInfo.name}</span>
+                                                                        {tierInfo.price > 0 && <span className="text-[9px] text-muted-foreground">${tierInfo.price}/mo</span>}
+                                                                    </div>
+                                                                    {tierModels.map(model => {
+                                                                        const accessible = isModelAccessible(model.id, userTier);
+                                                                        const isSelected = selectedModel === model.id;
+                                                                        return (
+                                                                            <button
+                                                                                key={model.id}
+                                                                                className={`w-full px-3 py-1.5 flex items-center gap-2 text-left transition-all ${accessible ? 'hover:bg-white/[0.04] cursor-pointer' : 'opacity-40 cursor-not-allowed'} ${isSelected ? 'bg-indigo-500/10' : ''}`}
+                                                                                onClick={() => {
+                                                                                    if (accessible) {
+                                                                                        setSelectedModel(model.id);
+                                                                                        setShowModelPicker(false);
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <div className="flex items-center gap-1.5">
+                                                                                        <span className={`text-[11px] font-medium ${isSelected ? 'text-indigo-400' : 'text-foreground/80'}`}>{model.label}</span>
+                                                                                        {model.badge && <span className="text-[8px] font-bold px-1 py-px rounded" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>{model.badge}</span>}
+                                                                                    </div>
+                                                                                    <span className="text-[9px] text-muted-foreground">{model.provider}</span>
+                                                                                </div>
+                                                                                {!accessible && <span className="text-[9px] text-muted-foreground">🔒</span>}
+                                                                                {isSelected && <Check className="w-3 h-3 text-indigo-400 shrink-0" />}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -512,25 +770,111 @@ export default function EditorPage() {
                                         if (newUploadInputRef.current) newUploadInputRef.current.click();
                                     }}
                                     onSelectProject={handleSwitchProject}
+                                    onDeleteProject={handleDeleteProject}
+                                    onDeleteAll={() => setConfirmDeleteAll(true)}
                                     onImport={() => {
                                         if (newUploadInputRef.current) newUploadInputRef.current.click();
                                     }}
+                                    onFileDrop={handleUpload}
                                 />
                             ) : (
                                 <>
-                                    {/* Viewport Area */}
-                                    <div className="flex-1 relative flex items-center justify-center p-8 overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
-                                        <div className="relative shadow-2xl bg-black max-w-full max-h-full flex flex-col" style={{
-                                            width: 'auto',
-                                            height: 'auto',
-                                            aspectRatio: state.videoWidth && state.videoHeight ? `${state.videoWidth}/${state.videoHeight}` : '16/9',
-                                        }}>
-                                            <PlayerPreview videoSrc={state.videoSrc} subtitles={state.subtitles} fps={30}
-                                                durationInFrames={Math.ceil((state.videoDuration || 10) * 30)}
-                                                compositionWidth={state.videoWidth} compositionHeight={state.videoHeight}
-                                                filters={state.filters}
-                                                textOverlays={state.textOverlays}
-                                                playbackRate={state.playbackSpeed} />
+                                    {/* Split Layout: Transcript + Video */}
+                                    <div className="flex-1 flex min-h-0 overflow-hidden">
+                                        {/* Transcript Panel (left) */}
+                                        <div className="shrink-0" style={{ width: '320px', minWidth: '260px' }}>
+                                            <TranscriptPanel
+                                                subtitles={state.subtitles}
+                                                selectedSegmentId={state.selectedSegmentId}
+                                                onSelectSegment={(id) => setState(prev => ({ ...prev, selectedSegmentId: id }))}
+                                                onAddOverlay={applyOverlay}
+                                                onRemoveOverlay={handleClearOverlay}
+                                                onGenerateAI={() => handleGenerateOverlays()}
+                                                onDeleteVideo={() => {
+                                                    if (state.projectId) {
+                                                        handleDeleteProject(state.projectId);
+                                                    } else {
+                                                        setState(prev => ({ ...prev, projectId: null, videoSrc: null, videoFile: null, subtitles: [], textOverlays: [], transcriptStatus: 'none' }));
+                                                    }
+                                                    toast('Video removed.', 'info');
+                                                }}
+                                                isGenerating={state.isGenerating}
+                                                isTranscribing={state.isTranscribing}
+                                                transcriptStatus={state.transcriptStatus}
+                                            />
+                                        </div>
+
+                                        {/* Video Preview (right) */}
+                                        <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
+                                            <div className="relative shadow-2xl bg-black flex flex-col" style={{
+                                                width: '100%',
+                                                maxWidth: state.videoWidth && state.videoHeight
+                                                    ? `min(100%, calc((100vh - 300px) * ${state.videoWidth / state.videoHeight}))`
+                                                    : '100%',
+                                                aspectRatio: state.videoWidth && state.videoHeight ? `${state.videoWidth}/${state.videoHeight}` : '16/9',
+                                            }}>
+                                                <PlayerPreview ref={playerPreviewRef} videoSrc={state.videoSrc} subtitles={state.subtitles} fps={state.fps || 30}
+                                                    durationInFrames={Math.ceil((state.videoDuration || 10) * (state.fps || 30))}
+                                                    compositionWidth={state.videoWidth} compositionHeight={state.videoHeight}
+                                                    filters={state.filters}
+                                                    textOverlays={state.textOverlays}
+                                                    playbackRate={state.playbackSpeed}
+                                                    onTimeUpdate={setCurrentTime}
+                                                    onPlayStateChange={setIsPlaying} />
+
+                                                {/* Processing Overlay */}
+                                                {(processingStep === 'transcribing' || processingStep === 'generating') && (
+                                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+                                                        <div className="flex flex-col items-center gap-5">
+                                                            {/* Steps */}
+                                                            <div className="flex items-center gap-2">
+                                                                {[
+                                                                    { key: 'transcribing', label: 'Transcribe' },
+                                                                    { key: 'generating', label: 'Generate FX' },
+                                                                    { key: 'done', label: 'Done' },
+                                                                ].map((step, i) => {
+                                                                    const stepOrder = ['transcribing', 'generating', 'done'];
+                                                                    const currentIdx = stepOrder.indexOf(processingStep);
+                                                                    const stepIdx = stepOrder.indexOf(step.key);
+                                                                    const isCompleted = stepIdx < currentIdx;
+                                                                    const isActive = stepIdx === currentIdx;
+                                                                    return (
+                                                                        <React.Fragment key={step.key}>
+                                                                            {i > 0 && (
+                                                                                <div className="w-8 h-px" style={{ background: isCompleted ? '#6366f1' : 'rgba(255,255,255,0.15)' }} />
+                                                                            )}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${isCompleted ? 'bg-indigo-500 text-white' : isActive ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50 step-active' : 'bg-white/5 text-white/30 border border-white/10'
+                                                                                    }`}>
+                                                                                    {isCompleted ? <Check className="w-3 h-3" /> : isActive ? <Loader2 className="w-3 h-3 animate-spin" /> : (i + 1)}
+                                                                                </div>
+                                                                                <span className={`text-[11px] font-medium ${isActive ? 'text-white' : isCompleted ? 'text-white/60' : 'text-white/25'}`}>{step.label}</span>
+                                                                            </div>
+                                                                        </React.Fragment>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {/* Progress bar */}
+                                                            <div className="w-48 h-1 rounded-full bg-white/10 overflow-hidden">
+                                                                <div className="h-full processing-bar rounded-full" />
+                                                            </div>
+                                                            <p className="text-[11px] text-white/40 font-medium">
+                                                                {processingStep === 'transcribing' ? 'Analyzing audio with Whisper...' : 'Selecting motion graphics for each segment...'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Done flash */}
+                                                {processingStep === 'done' && (
+                                                    <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                                                        <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', backdropFilter: 'blur(8px)' }}>
+                                                            <Check className="w-4 h-4 text-emerald-400" />
+                                                            <span className="text-[13px] font-semibold text-emerald-300">Ready!</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -539,15 +883,21 @@ export default function EditorPage() {
                                         duration={state.videoDuration}
                                         subtitles={state.subtitles}
                                         trimPoints={state.trimPoints}
-                                        currentTime={0}
-                                        onSeek={() => { }}
+                                        currentTime={currentTime}
+                                        onSeek={handleSeek}
                                         selectedSegmentId={state.selectedSegmentId}
+                                        onSelectSegment={(id) => setState(prev => ({ ...prev, selectedSegmentId: id }))}
+                                        onSplitSegment={handleSplitSegment}
+                                        onDeleteOverlay={handleClearOverlay}
+                                        isPlaying={isPlaying}
+                                        onPlayPause={handlePlayPause}
+                                        onSkip={handleSkip}
                                     />
 
                                     {/* Status bar */}
                                     <div className="h-8 border-t border-border px-4 flex items-center justify-between text-[10px] text-muted-foreground/60 shrink-0" style={{ background: 'var(--bg-card)' }}>
                                         <div className="flex items-center gap-3 font-mono tabular-nums">
-                                            <span>{fmtTime(0)} / {fmtTime(state.videoDuration)}</span>
+                                            <span>{fmtTime(currentTime)} / {fmtTime(state.videoDuration)}</span>
                                             <span className="text-border">|</span>
                                             <span>{state.playbackSpeed !== 1 ? `${state.playbackSpeed}x` : '1x'}</span>
                                         </div>
@@ -636,6 +986,20 @@ export default function EditorPage() {
                             setConfirmDelete(null);
                         }}
                         onCancel={() => setConfirmDelete(null)}
+                    />
+
+                    {/* Delete All Confirmation Dialog */}
+                    <ConfirmDialog
+                        isOpen={confirmDeleteAll}
+                        title="Delete All Projects"
+                        message={`This will permanently delete all ${projectList.length} project(s) and their videos. This action cannot be undone.`}
+                        confirmLabel="Delete All"
+                        variant="danger"
+                        onConfirm={() => {
+                            handleDeleteAllProjects();
+                            setConfirmDeleteAll(false);
+                        }}
+                        onCancel={() => setConfirmDeleteAll(false)}
                     />
                 </>
             )}

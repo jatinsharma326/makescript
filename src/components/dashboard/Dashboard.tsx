@@ -12,7 +12,10 @@ interface DashboardProps {
     projects: ProjectMeta[];
     onNewProject: () => void;
     onSelectProject: (id: string) => void;
+    onDeleteProject?: (id: string) => void;
+    onDeleteAll?: () => void;
     onImport: () => void;
+    onFileDrop?: (file: File) => void;
 }
 
 const OVERLAY_TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -37,7 +40,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     projects,
     onNewProject,
     onSelectProject,
-    onImport
+    onDeleteProject,
+    onDeleteAll,
+    onImport,
+    onFileDrop
 }) => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [dragOver, setDragOver] = useState(false);
@@ -89,9 +95,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setDragOver(false);
         const file = e.dataTransfer.files?.[0];
         if (file && file.type.startsWith('video/')) {
-            onImport();
+            if (onFileDrop) {
+                onFileDrop(file);
+            } else {
+                onImport();
+            }
         }
-    }, [onImport]);
+    }, [onImport, onFileDrop]);
 
     const statusColor = (status: TranscriptStatus) => {
         switch (status) {
@@ -250,6 +260,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
+                                {projects.length > 0 && onDeleteAll && (
+                                    <button
+                                        onClick={onDeleteAll}
+                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/10 border border-red-500/15 hover:border-red-500/30 transition-all"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                        Delete All
+                                    </button>
+                                )}
                                 <div className="flex bg-zinc-900/60 border border-border/40 rounded-md p-0.5">
                                     <button onClick={() => setViewMode('grid')} className={cn("p-1 rounded transition-colors", viewMode === 'grid' ? "bg-zinc-800 text-white" : "text-zinc-600 hover:text-zinc-400")}>
                                         <LayoutGrid className="w-3.5 h-3.5" />
@@ -273,7 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         ) : viewMode === 'grid' ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {recentProjects.map(p => (
-                                    <ProjectCard key={p.id} project={p} onSelect={onSelectProject} fmtDuration={fmtDuration} statusColor={statusColor} statusLabel={statusLabel} />
+                                    <ProjectCard key={p.id} project={p} onSelect={onSelectProject} onDelete={onDeleteProject} fmtDuration={fmtDuration} statusColor={statusColor} statusLabel={statusLabel} />
                                 ))}
                                 <button onClick={onNewProject} className="rounded-xl border border-dashed border-border/60 hover:border-indigo-500/30 bg-transparent hover:bg-indigo-500/[0.02] flex flex-col items-center justify-center min-h-[180px] cursor-pointer transition-all gap-2 group">
                                     <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:border-indigo-500/30 group-hover:scale-105 transition-all">
@@ -312,8 +331,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 <td className="px-4 py-3">
                                                     <span className="text-[11px] font-mono text-indigo-400/70">{p.overlayCount} fx</span>
                                                 </td>
-                                                <td className="px-4 py-3 text-[12px] text-zinc-600 text-right font-mono">
-                                                    {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <span className="text-[12px] text-zinc-600 font-mono">
+                                                            {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                        </span>
+                                                        {onDeleteProject && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onDeleteProject(p.id); }}
+                                                                className="w-6 h-6 rounded-md flex items-center justify-center text-zinc-700 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                                title="Delete project"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -399,9 +431,10 @@ function StatCard({ label, value, icon, accent, iconBg }: {
     );
 }
 
-function ProjectCard({ project: p, onSelect, fmtDuration, statusColor, statusLabel }: {
+function ProjectCard({ project: p, onSelect, onDelete, fmtDuration, statusColor, statusLabel }: {
     project: ProjectMeta;
     onSelect: (id: string) => void;
+    onDelete?: (id: string) => void;
     fmtDuration: (s: number) => string;
     statusColor: (s: TranscriptStatus) => string;
     statusLabel: (s: TranscriptStatus) => string;
@@ -431,6 +464,16 @@ function ProjectCard({ project: p, onSelect, fmtDuration, statusColor, statusLab
                         <Play className="w-4 h-4 text-black fill-black ml-0.5" />
                     </div>
                 </div>
+                {/* Delete button (top-right on hover) */}
+                {onDelete && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-md bg-black/60 backdrop-blur-sm border border-red-500/20 flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-500/20 hover:border-red-500/40 opacity-0 group-hover:opacity-100 transition-all z-10"
+                        title="Delete project"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                )}
             </div>
 
             <div className="p-3.5">

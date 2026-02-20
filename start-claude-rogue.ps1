@@ -1,7 +1,7 @@
 Write-Host "Setting up environment for Claude Code with RogueTokens..."
 
 # Key validated via debug script
-$MyRogueKey = "61246812d8774272868269c83ea87e93"
+$MyRogueKey = "ant_61246812d8774272868269c83ea87e93"
 
 # Set the base URL for RogueTokens
 $env:ANTHROPIC_BASE_URL = "https://api.roguetokens.ai/"

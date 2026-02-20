@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Disable StrictMode to prevent Remotion Player from double-mounting
+  // video elements (which causes double audio playback)
+  reactStrictMode: false,
   // Allow larger request bodies for video file uploads (50MB)
   experimental: {
     serverActions: {

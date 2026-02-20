@@ -19,6 +19,17 @@ import { VisualIllustration } from './overlays/VisualIllustration';
 import { ImageCard } from './overlays/ImageCard';
 import { SubtitleSegment } from '../lib/types';
 
+// Overlay types that already render the segment text visually.
+// The burn-in subtitle layer should skip these to avoid showing duplicates.
+const TEXT_OVERLAYS = new Set([
+    'kinetic-text',
+    'highlight-box',
+    'lower-third',
+    'animated-subtitles',
+    'image-card',
+    'ai-generated-image',
+]);
+
 interface VideoWithOverlaysProps {
     videoSrc: string;
     subtitles: SubtitleSegment[];
@@ -36,15 +47,6 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
 }) => {
     const frame = useCurrentFrame();
 
-    // Check if current frame has an active visual-illustration (B-roll replacement)
-    const activeIllustration = subtitles.find((seg) => {
-        if (!seg.overlay || seg.overlay.type !== 'visual-illustration') return false;
-        const start = Math.round(seg.startTime * fps);
-        const end = Math.round(seg.endTime * fps);
-        return frame >= start && frame <= end;
-    });
-    const hideVideo = !!activeIllustration;
-
     // Build CSS filter string from filters
     const cssFilter = filters ? [
         filters.brightness !== 100 ? `brightness(${filters.brightness / 100})` : '',
@@ -55,12 +57,11 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
 
     return (
         <AbsoluteFill style={{ backgroundColor: '#000' }}>
-            {/* Base video — hidden when motion graphic is active (B-roll replacement) */}
+            {/* Base video — always visible, overlays appear on top */}
             <AbsoluteFill style={{
                 filter: cssFilter !== 'none' ? cssFilter : undefined,
-                opacity: hideVideo ? 0 : 1,
             }}>
-                <Video src={videoSrc} />
+                <Video src={videoSrc} volume={1} />
             </AbsoluteFill>
 
             {/* Vignette overlay */}
@@ -110,7 +111,59 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                 );
             })}
 
-            {/* Animated subtitles removed — motion graphics only */}
+            {/* Animated subtitles — hidden when the segment has an overlay that already displays text */}
+            {subtitles.map((seg) => {
+                // Skip subtitle burn-in for segments whose overlay already renders text,
+                // to avoid showing the same words twice on screen.
+                if (seg.overlay && TEXT_OVERLAYS.has(seg.overlay.type)) return null;
+
+                const startFrame = Math.round(seg.startTime * fps);
+                const endFrame = Math.round(seg.endTime * fps);
+                if (frame < startFrame || frame > endFrame) return null;
+
+                const localFrame = frame - startFrame;
+                const totalFrames = endFrame - startFrame;
+                const fadeIn = Math.min(1, localFrame / 8);
+                const fadeOut = Math.min(1, (endFrame - frame) / 8);
+                const opacity = Math.min(fadeIn, fadeOut);
+                const slideUp = Math.max(0, 10 - localFrame * 2);
+
+                return (
+                    <div
+                        key={`sub-${seg.id}`}
+                        style={{
+                            position: 'absolute',
+                            bottom: '8%',
+                            left: '50%',
+                            transform: `translateX(-50%) translateY(${slideUp}px)`,
+                            maxWidth: '85%',
+                            textAlign: 'center',
+                            opacity,
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: 'inline-block',
+                                padding: '8px 20px',
+                                borderRadius: '8px',
+                                background: 'rgba(0, 0, 0, 0.75)',
+                                backdropFilter: 'blur(8px)',
+                                color: '#ffffff',
+                                fontSize: '28px',
+                                fontWeight: 600,
+                                fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                                lineHeight: 1.4,
+                                textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                                letterSpacing: '0.01em',
+                            }}
+                        >
+                            {seg.text}
+                        </span>
+                    </div>
+                );
+            })}
 
             {/* Overlay layers from user selections */}
             {subtitles.map((seg) => {

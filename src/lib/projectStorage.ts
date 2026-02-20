@@ -63,6 +63,19 @@ export async function deleteProject(id: string): Promise<void> {
   });
 }
 
+export async function deleteAllProjects(): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = () => {
+      localStorage.removeItem(META_KEY);
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // ==================== localStorage meta list ====================
 
 function updateMetaList(meta: ProjectMeta): void {
