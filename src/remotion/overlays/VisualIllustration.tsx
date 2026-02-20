@@ -2716,6 +2716,26 @@ const SCENES: Record<string, React.FC<{ frame: number; fps: number; color: strin
 
 // ==================== MAIN COMPONENT ====================
 
+// Unique gradient palettes — hashed per scene+label for variety
+const GRADIENT_PALETTES = [
+    ['#1a0533', '#0d1b2a', '#1b2838'], // Deep purple → navy
+    ['#0a1628', '#0f2027', '#203a43'], // Ocean blue
+    ['#1a0a0a', '#2d1515', '#3d1f1f'], // Deep burgundy
+    ['#0a1a0a', '#132a13', '#1a3a1a'], // Forest green
+    ['#1a1a0a', '#2d2d15', '#3d3d1f'], // Amber gold
+    ['#0a0a1a', '#15152d', '#1f1f3d'], // Royal indigo
+    ['#1a0a1a', '#2d152d', '#3d1f3d'], // Magenta deep
+    ['#0a1a1a', '#152d2d', '#1f3d3d'], // Teal deep
+    ['#1a0f0a', '#2d1a15', '#3d251f'], // Warm brown
+    ['#0f0a1a', '#1a152d', '#251f3d'], // Cool violet
+];
+
+const ACCENT_COLORS = [
+    '#a78bfa', '#60a5fa', '#f472b6', '#34d399', '#fbbf24',
+    '#818cf8', '#38bdf8', '#fb7185', '#4ade80', '#f59e0b',
+    '#c084fc', '#22d3ee', '#e879f9', '#2dd4bf', '#facc15',
+];
+
 export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
     scene,
     label = '',
@@ -2727,85 +2747,86 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
 }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
+    const uniqueId = useId();
 
     if (frame < startFrame || frame > endFrame) return null;
 
     const localFrame = frame - startFrame;
     const duration = endFrame - startFrame;
 
-    // === Transition-specific entrance animation ===
+    // Hash scene+label to pick unique gradient and accent per segment
+    const hashStr = `${scene}${label}${startFrame}`;
+    const hash = hashStr.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0);
+    const absHash = Math.abs(hash);
+    const palette = GRADIENT_PALETTES[absHash % GRADIENT_PALETTES.length];
+    const accent = ACCENT_COLORS[absHash % ACCENT_COLORS.length];
+
+    // Transition entrance
     let enterScale = 1;
     let enterOpacity = 1;
     let enterTranslateY = 0;
 
     if (transition === 'slide-in') {
-        const slideProgress = spring({
-            frame: localFrame,
-            fps,
-            config: { damping: 14, stiffness: 80, mass: 0.8 },
-        });
+        const slideProgress = spring({ frame: localFrame, fps, config: { damping: 14, stiffness: 80, mass: 0.8 } });
         enterTranslateY = (1 - slideProgress) * 80;
         enterOpacity = interpolate(localFrame, [0, 6], [0, 1], { extrapolateRight: 'clamp' });
         enterScale = slideProgress;
     } else if (transition === 'appear') {
-        enterScale = spring({
-            frame: localFrame,
-            fps,
-            config: { damping: 8, stiffness: 150, mass: 0.5 },
-        });
+        enterScale = spring({ frame: localFrame, fps, config: { damping: 8, stiffness: 150, mass: 0.5 } });
         enterOpacity = localFrame >= 1 ? 1 : 0;
     } else {
-        // fade-in (default)
-        enterScale = spring({
-            frame: localFrame,
-            fps,
-            config: { damping: 12, stiffness: 100, mass: 0.8 },
-        });
+        enterScale = spring({ frame: localFrame, fps, config: { damping: 12, stiffness: 100, mass: 0.8 } });
         enterOpacity = interpolate(localFrame, [0, 8], [0, 1], { extrapolateRight: 'clamp' });
     }
 
     // Exit animation
-    const exitOpacity = interpolate(localFrame, [duration - 12, duration], [1, 0], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-    });
-    const exitScale = interpolate(localFrame, [duration - 12, duration], [1, 0.85], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-    });
+    const exitOpacity = interpolate(localFrame, [duration - 12, duration], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+    const exitScale = interpolate(localFrame, [duration - 12, duration], [1, 0.85], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
     const opacity = Math.min(enterOpacity, exitOpacity);
     const scale = enterScale * exitScale;
 
     const SceneComponent = SCENES[scene] || SCENES['solar-system'];
 
-    // Ambient glow pulse for cinematic background
-    const glowPulse = 0.15 + Math.sin(localFrame * 0.04) * 0.05;
-    const glowSize = 40 + Math.sin(localFrame * 0.03) * 10;
+    // Atmospheric glow pulse
+    const glowPulse = 0.2 + Math.sin(localFrame * 0.04) * 0.08;
+    const glowSize = 45 + Math.sin(localFrame * 0.03) * 15;
+
+    // Use accent color for the scene rendering
+    const sceneColor = accent;
 
     return (
         <AbsoluteFill style={{ pointerEvents: 'none' }}>
-            {/* Full cinematic dark background — replaces video like B-roll */}
+            {/* UNIQUE gradient background per segment — NOT the same for all */}
             <div
                 style={{
                     position: 'absolute',
                     inset: 0,
-                    background: `radial-gradient(ellipse at 50% 50%, ${color}18 0%, #0a0a12 60%, #000 100%)`,
+                    background: `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 50%, ${palette[2]} 100%)`,
                     opacity,
                 }}
             />
-            {/* Ambient color glow behind the scene */}
+            {/* Secondary radial glow with accent color */}
+            <div
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: `radial-gradient(ellipse at 50% 40%, ${accent}25 0%, transparent 70%)`,
+                    opacity,
+                }}
+            />
+            {/* Floating ambient glow */}
             <div
                 style={{
                     position: 'absolute',
                     left: '50%',
-                    top: '45%',
+                    top: '40%',
                     width: `${glowSize}%`,
                     height: `${glowSize}%`,
                     transform: 'translate(-50%, -50%)',
                     borderRadius: '50%',
-                    background: `radial-gradient(circle, ${color}${Math.round(glowPulse * 255).toString(16).padStart(2, '0')} 0%, transparent 70%)`,
-                    filter: 'blur(40px)',
+                    background: `radial-gradient(circle, ${accent}${Math.round(glowPulse * 255).toString(16).padStart(2, '0')} 0%, transparent 70%)`,
+                    filter: 'blur(50px)',
                     opacity,
                     pointerEvents: 'none',
                 }}
@@ -2820,32 +2841,35 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
                 opacity,
                 transform: `scale(${scale}) translateY(${enterTranslateY}px)`,
                 transformOrigin: 'center center',
-                filter: `drop-shadow(0 0 30px ${color}50)`,
+                filter: `drop-shadow(0 0 40px ${accent}60)`,
             }}>
-                <SceneComponent frame={localFrame} fps={fps} color={color} />
+                <SceneComponent frame={localFrame} fps={fps} color={sceneColor} />
             </div>
 
+            {/* PROMINENT label — big, bold, and unique per segment */}
             {label && (
                 <div
                     style={{
                         position: 'absolute',
-                        bottom: '12%',
+                        bottom: '8%',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                        fontSize: 18,
-                        fontWeight: 600,
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        letterSpacing: '0.04em',
+                        fontSize: 28,
+                        fontWeight: 800,
+                        color: '#ffffff',
+                        letterSpacing: '0.02em',
                         textAlign: 'center',
-                        maxWidth: '60%',
-                        lineHeight: 1.4,
-                        textShadow: '0 2px 12px rgba(0,0,0,0.8)',
-                        background: 'rgba(0,0,0,0.4)',
-                        padding: '8px 20px',
-                        borderRadius: '8px',
-                        backdropFilter: 'blur(8px)',
+                        maxWidth: '80%',
+                        lineHeight: 1.3,
+                        textShadow: `0 0 20px ${accent}80, 0 2px 12px rgba(0,0,0,0.9)`,
+                        background: `linear-gradient(135deg, rgba(0,0,0,0.6) 0%, ${accent}15 100%)`,
+                        padding: '12px 28px',
+                        borderRadius: '12px',
+                        border: `1px solid ${accent}30`,
+                        backdropFilter: 'blur(12px)',
                         opacity,
+                        textTransform: 'uppercase',
                     }}
                 >
                     {label}
@@ -2854,3 +2878,4 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
         </AbsoluteFill>
     );
 };
+

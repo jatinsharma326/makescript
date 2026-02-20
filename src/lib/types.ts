@@ -23,8 +23,12 @@ export type OverlayType =
   | 'glowing-particles'
   | 'kinetic-text'
   | 'visual-illustration'
+  | 'broll-video'
+  | 'gif-reaction'
   | 'image-card'
-  | 'ai-generated-image';
+  | 'ai-generated-image'
+  | 'transcript-motion'
+  | 'dynamic-broll';
 
 export interface OverlayTemplate {
   type: OverlayType;
@@ -104,6 +108,34 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
     description: 'Custom AI-generated image based on your script',
     icon: '🤖',
     defaultProps: { imagePrompt: '', imageUrl: '', displayMode: 'full', transition: 'fade-in', style: 'cinematic' },
+  },
+  {
+    type: 'broll-video',
+    name: 'B-Roll Video',
+    description: 'Contextual stock video overlay',
+    icon: '🎥',
+    defaultProps: { url: '', keyword: '', style: 'split-screen' },
+  },
+  {
+    type: 'gif-reaction',
+    name: 'GIF Reaction',
+    description: 'Animated GIF reaction',
+    icon: '🤪',
+    defaultProps: { url: '', keyword: '', size: 'medium' },
+  },
+  {
+    type: 'transcript-motion',
+    name: 'Transcript Motion',
+    description: 'Live word-by-word animated text synced to speech',
+    icon: '🎙️',
+    defaultProps: { color: '#6366f1', style: 'karaoke', position: 'bottom' },
+  },
+  {
+    type: 'dynamic-broll',
+    name: 'Dynamic B-Roll',
+    description: 'Animated motion graphics driven by transcript content',
+    icon: '🎬',
+    defaultProps: { color: '#8b5cf6', style: 'abstract' },
   },
 ];
 

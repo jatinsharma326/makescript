@@ -17,6 +17,10 @@ import { GlowingParticles } from './overlays/GlowingParticles';
 import { KineticText } from './overlays/KineticText';
 import { VisualIllustration } from './overlays/VisualIllustration';
 import { ImageCard } from './overlays/ImageCard';
+import { BrollVideo } from './overlays/BrollVideo';
+import { GifReaction } from './overlays/GifReaction';
+import { TranscriptMotion } from './overlays/TranscriptMotion';
+import { DynamicBRoll } from './overlays/DynamicBRoll';
 import { SubtitleSegment } from '../lib/types';
 
 // Overlay types that already render the segment text visually.
@@ -28,6 +32,8 @@ const TEXT_OVERLAYS = new Set([
     'animated-subtitles',
     'image-card',
     'ai-generated-image',
+    'transcript-motion',
+    'dynamic-broll',
 ]);
 
 interface VideoWithOverlaysProps {
@@ -308,22 +314,115 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 endFrame={endFrame}
                             />
                         );
-                    case 'ai-generated-image':
-                        // AI-generated images are rendered the same as image-cards but with different source
+                    case 'ai-generated-image': {
+                        // AI B-roll — uses transcript keywords to fetch content-specific photos
+                        const prompt = String(seg.overlay.props.imagePrompt || seg.text || 'abstract visual');
+                        const existingUrl = String(seg.overlay.props.imageUrl || '');
+
+                        // Extract meaningful keywords from transcript for image search
+                        const keywords = prompt
+                            .toLowerCase()
+                            .replace(/[^a-z\s]/g, '')
+                            .split(/\s+/)
+                            .filter(w => w.length > 3 && !['just', 'like', 'that', 'this', 'have', 'been', 'will', 'with', 'from', 'your', 'about', 'very', 'also', 'some', 'what', 'when', 'they', 'them', 'does', 'going', 'need', 'work', 'know'].includes(w))
+                            .slice(0, 3)
+                            .join(',');
+
+                        // LoremFlickr: returns real photos from Flickr matching keywords
+                        // e.g. "earth,sun,space" returns actual space/earth photos
+                        const seed = Math.abs(prompt.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+                        const imageUrl = existingUrl || (keywords
+                            ? `https://loremflickr.com/1280/720/${encodeURIComponent(keywords)}?lock=${seed}`
+                            : `https://picsum.photos/seed/${seed}/1280/720`);
+
                         return (
                             <ImageCard
                                 key={seg.id}
-                                imageUrl={String(seg.overlay.props.imageUrl || '')}
-                                keyword={String(seg.overlay.props.style || 'AI Generated')}
-                                label={String(seg.overlay.props.imagePrompt || '').substring(0, 50) + '...'}
-                                displayMode={(seg.overlay.props.displayMode as 'card' | 'fullscreen' | 'picture-in-picture' | 'split') || 'full'}
+                                imageUrl={imageUrl}
+                                keyword={String(seg.overlay.props.style || 'B-Roll')}
+                                label={prompt.substring(0, 60)}
+                                displayMode={'fullscreen'}
                                 position="center"
                                 transition={(seg.overlay.props.transition as 'slide-in' | 'zoom-in' | 'fade-in' | 'flip') || 'fade-in'}
-                                cardStyle="glass"
+                                cardStyle="minimal"
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />
                         );
+                    }
+                    case 'broll-video':
+                        return (
+                            <BrollVideo
+                                key={seg.id}
+                                url={String(seg.overlay.props.url || '')}
+                                keyword={String(seg.overlay.props.keyword || seg.text)}
+                                style={(seg.overlay.props.style as 'split-screen' | 'picture-in-picture' | 'fullscreen') || 'picture-in-picture'}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    case 'gif-reaction':
+                        return (
+                            <GifReaction
+                                key={seg.id}
+                                url={String(seg.overlay.props.url || '')}
+                                keyword={String(seg.overlay.props.keyword || seg.text)}
+                                size={(seg.overlay.props.size as 'small' | 'medium' | 'large') || 'medium'}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    case 'transcript-motion': {
+                        const rawStyle = String(seg.overlay.props.style || 'karaoke');
+                        const validStyles = ['karaoke', 'typewriter', 'wave'];
+                        const tmStyle = validStyles.includes(rawStyle) ? rawStyle : 'karaoke';
+                        const rawPos = String(seg.overlay.props.position || 'bottom');
+                        const validPos = ['center', 'top', 'bottom'];
+                        const tmPos = validPos.includes(rawPos) ? rawPos : 'bottom';
+                        return (
+                            <TranscriptMotion
+                                key={seg.id}
+                                text={String(seg.overlay.props.text || seg.text)}
+                                color={String(seg.overlay.props.color || '#6366f1')}
+                                style={tmStyle as 'karaoke' | 'typewriter' | 'wave'}
+                                position={tmPos as 'center' | 'top' | 'bottom'}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    }
+                    case 'dynamic-broll': {
+                        const rawBStyle = String(seg.overlay.props.style || 'abstract');
+                        const validBStyles = ['abstract', 'geometric', 'wave', 'particles', 'data'];
+                        const bStyle = validBStyles.includes(rawBStyle) ? rawBStyle : 'abstract';
+                        return (
+                            <DynamicBRoll
+                                key={seg.id}
+                                text={seg.text}
+                                keywords={String(seg.overlay.props.keywords || '')}
+                                color={String(seg.overlay.props.color || '#8b5cf6')}
+                                style={bStyle as 'abstract' | 'geometric' | 'wave' | 'particles' | 'data'}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    }
+                    case 'visual-illustration': {
+                        // Remotion animated SVG scene — fullscreen B-roll
+                        const scene = String(seg.overlay.props.scene || 'globe');
+                        return (
+                            <VisualIllustration
+                                key={seg.id}
+                                scene={scene}
+                                label={String(seg.overlay.props.label || '')}
+                                color={String(seg.overlay.props.color || '#6366f1')}
+                                displayMode="fullscreen"
+                                transition={String(seg.overlay.props.transition || 'fade-in')}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    }
                     default:
                         return null;
                 }

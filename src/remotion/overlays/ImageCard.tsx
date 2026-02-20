@@ -6,7 +6,6 @@ import {
     useVideoConfig,
     spring,
     interpolate,
-    Img,
 } from 'remotion';
 
 interface ImageCardProps {
@@ -101,10 +100,10 @@ export const ImageCard: React.FC<ImageCardProps> = ({
 
     // Card size based on display mode
     const getCardSize = () => {
-        if (displayMode === 'fullscreen') return { w: width * 0.75, h: height * 0.65 };
-        if (displayMode === 'split') return { w: width * 0.42, h: height * 0.7 };
-        if (displayMode === 'picture-in-picture') return { w: width * 0.25, h: width * 0.18 };
-        return { w: width * 0.35, h: width * 0.26 }; // card mode
+        if (displayMode === 'fullscreen') return { w: width, h: height };
+        if (displayMode === 'split') return { w: width * 0.35, h: height * 0.55 };
+        if (displayMode === 'picture-in-picture') return { w: width * 0.20, h: width * 0.15 };
+        return { w: width * 0.28, h: width * 0.20 }; // card mode
     };
 
     // Card styling
@@ -157,11 +156,11 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                 style={{
                     width: cardWidth,
                     height: cardHeight,
-                    borderRadius: cardStyle === 'minimal' ? 12 : 16,
+                    borderRadius: displayMode === 'fullscreen' ? 0 : (cardStyle === 'minimal' ? 12 : 16),
                     overflow: 'hidden',
                     opacity,
-                    transform: getEntryTransform(),
-                    ...cardBg,
+                    transform: displayMode === 'fullscreen' ? undefined : getEntryTransform(),
+                    ...(displayMode === 'fullscreen' ? { background: '#000' } : cardBg),
                     ...(glowIntensity > 0 ? {
                         boxShadow: `0 0 ${30 + glowIntensity * 100}px rgba(99, 102, 241, ${glowIntensity}), ${cardBg.boxShadow}`,
                     } : {}),
@@ -176,12 +175,23 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                     overflow: 'hidden',
                     borderRadius: cardStyle === 'minimal' ? 12 : undefined,
                 }}>
-                    <Img
+                    {/* Use standard img to avoid Remotion Img crashes on network errors */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                         src={imageUrl}
+                        alt={keyword}
                         style={{
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                            // On error, replace with gradient placeholder
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            if (target.parentElement) {
+                                target.parentElement.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
+                            }
                         }}
                     />
 
@@ -207,8 +217,8 @@ export const ImageCard: React.FC<ImageCardProps> = ({
                     )}
                 </div>
 
-                {/* Label / keyword bar */}
-                {cardStyle !== 'minimal' && (
+                {/* Label / keyword bar — hidden in fullscreen B-roll mode */}
+                {cardStyle !== 'minimal' && displayMode !== 'fullscreen' && (
                     <div style={{
                         padding: `${Math.round(cardHeight * 0.04)}px ${Math.round(cardWidth * 0.05)}px`,
                         display: 'flex',

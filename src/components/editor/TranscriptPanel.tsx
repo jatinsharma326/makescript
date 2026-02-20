@@ -29,6 +29,7 @@ const OVERLAY_ICONS: Record<string, string> = {
     'image-card': '🖼️',
     'ai-generated-image': '🤖',
     'animated-subtitles': '💬',
+    'transcript-motion': '🎙️',
 };
 
 function formatTimestamp(seconds: number): string {

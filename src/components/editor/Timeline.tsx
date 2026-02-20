@@ -29,6 +29,7 @@ const OVERLAY_COLORS: Record<string, string> = {
     'glowing-particles': '#14b8a6',
     'kinetic-text': '#ef4444',
     'zoom-effect': '#0ea5e9',
+    'transcript-motion': '#a855f7',
 };
 
 const OVERLAY_LABELS: Record<string, string> = {
@@ -41,6 +42,7 @@ const OVERLAY_LABELS: Record<string, string> = {
     'glowing-particles': 'Particles',
     'kinetic-text': 'Kinetic',
     'zoom-effect': 'Zoom',
+    'transcript-motion': 'Transcript',
 };
 
 const Timeline: React.FC<TimelineProps> = ({

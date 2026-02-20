@@ -543,8 +543,9 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     // Money & Business
     money: 'money-flow', revenue: 'money-flow', profit: 'money-flow', income: 'money-flow',
     dollar: 'money-flow', cash: 'money-flow', price: 'money-flow', cost: 'money-flow',
+    earn: 'money-flow', pay: 'money-flow', afford: 'money-flow', salary: 'money-flow',
     sales: 'shopping-cart', buy: 'shopping-cart', shop: 'shopping-cart', purchase: 'shopping-cart',
-    store: 'shopping-cart', product: 'shopping-cart',
+    store: 'shopping-cart', product: 'shopping-cart', order: 'shopping-cart', deal: 'shopping-cart',
     business: 'growth-chart', company: 'growth-chart', startup: 'growth-chart',
     stock: 'growth-chart', invest: 'growth-chart', market: 'growth-chart',
     luxury: 'diamond-gem', premium: 'diamond-gem', expensive: 'diamond-gem',
@@ -552,33 +553,39 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     // Growth & Success
     growth: 'arrow-growth', grow: 'arrow-growth', increase: 'arrow-growth',
     rise: 'arrow-growth', scale: 'arrow-growth', expand: 'arrow-growth',
-    boost: 'arrow-growth', skyrocket: 'arrow-growth',
+    boost: 'arrow-growth', skyrocket: 'arrow-growth', level: 'arrow-growth',
     success: 'checkmark-success', achieve: 'checkmark-success', accomplish: 'checkmark-success',
     done: 'checkmark-success', complete: 'checkmark-success', finish: 'checkmark-success',
+    results: 'checkmark-success', progress: 'checkmark-success', improve: 'checkmark-success',
     win: 'celebration', champion: 'celebration', winner: 'celebration',
     congratulations: 'celebration', celebrate: 'celebration', victory: 'celebration',
+    party: 'celebration', awesome: 'celebration', amazing: 'celebration', excited: 'celebration',
     goal: 'target-bullseye', target: 'target-bullseye', aim: 'target-bullseye',
-    focus: 'target-bullseye', precise: 'target-bullseye',
+    focus: 'target-bullseye', precise: 'target-bullseye', strategy: 'target-bullseye',
+    plan: 'target-bullseye',
     best: 'crown-royal', king: 'crown-royal', queen: 'crown-royal',
-    top: 'crown-royal', leader: 'crown-royal',
+    top: 'crown-royal', leader: 'crown-royal', greatest: 'crown-royal',
     // Technology & Science
     brain: 'brain-idea', think: 'brain-idea', idea: 'brain-idea',
     smart: 'brain-idea', mind: 'brain-idea', learn: 'brain-idea',
-    knowledge: 'brain-idea', understand: 'brain-idea',
+    knowledge: 'brain-idea', understand: 'brain-idea', realize: 'brain-idea',
+    secret: 'brain-idea', tip: 'brain-idea', trick: 'brain-idea', hack: 'brain-idea',
     code: 'code-terminal', programming: 'code-terminal', software: 'code-terminal',
     developer: 'code-terminal', app: 'code-terminal', website: 'code-terminal',
     tech: 'code-terminal', digital: 'code-terminal', computer: 'code-terminal',
     connect: 'connections', network: 'connections', social: 'connections',
     internet: 'connections', online: 'connections', community: 'connections',
-    together: 'connections', collaborate: 'connections',
+    together: 'connections', collaborate: 'connections', share: 'connections',
+    people: 'connections', friends: 'connections', relationship: 'connections',
     science: 'atom-science', research: 'atom-science', experiment: 'atom-science',
     physics: 'atom-science', chemistry: 'atom-science', quantum: 'atom-science',
     machine: 'gear-system', system: 'gear-system', engine: 'gear-system',
     process: 'gear-system', automate: 'gear-system', build: 'gear-system',
-    tool: 'gear-system', work: 'gear-system',
+    tool: 'gear-system', work: 'gear-system', method: 'gear-system',
     watch: 'eye-vision', see: 'eye-vision', look: 'eye-vision',
     observe: 'eye-vision', view: 'eye-vision', discover: 'eye-vision',
     reveal: 'eye-vision', vision: 'eye-vision', insight: 'eye-vision',
+    show: 'eye-vision', check: 'eye-vision', notice: 'eye-vision',
     // Energy & Power
     power: 'energy-pulse', energy: 'energy-pulse', force: 'energy-pulse',
     strong: 'energy-pulse', charge: 'energy-pulse', activate: 'energy-pulse',
@@ -587,11 +594,13 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     explode: 'explosion-burst', boom: 'explosion-burst', blast: 'explosion-burst',
     massive: 'explosion-burst', huge: 'explosion-burst', incredible: 'explosion-burst',
     impact: 'explosion-burst', disrupt: 'explosion-burst', revolutionary: 'explosion-burst',
+    crazy: 'explosion-burst', insane: 'explosion-burst', unbelievable: 'explosion-burst',
     launch: 'rocket-launch', rocket: 'rocket-launch', fly: 'rocket-launch',
     moon: 'rocket-launch', space: 'rocket-launch', sky: 'rocket-launch',
+    start: 'rocket-launch', begin: 'rocket-launch', kick: 'rocket-launch',
     fire: 'fire-blaze', hot: 'fire-blaze', burn: 'fire-blaze',
     flame: 'fire-blaze', heat: 'fire-blaze', lit: 'fire-blaze',
-    passion: 'fire-blaze', intense: 'fire-blaze',
+    passion: 'fire-blaze', intense: 'fire-blaze', trending: 'fire-blaze',
     attract: 'magnet-attract', pull: 'magnet-attract', draw: 'magnet-attract',
     magnetic: 'magnet-attract', irresistible: 'magnet-attract', grab: 'magnet-attract',
     // Nature & World
@@ -602,10 +611,11 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     green: 'nature-tree', environment: 'nature-tree', organic: 'nature-tree',
     ocean: 'water-wave', water: 'water-wave', sea: 'water-wave',
     wave: 'water-wave', flow: 'water-wave', river: 'water-wave',
-    calm: 'water-wave', beach: 'water-wave',
+    calm: 'water-wave', beach: 'water-wave', smooth: 'water-wave',
     mountain: 'mountain-peak', climb: 'mountain-peak', summit: 'mountain-peak',
     peak: 'mountain-peak', challenge: 'mountain-peak', overcome: 'mountain-peak',
     journey: 'mountain-peak', adventure: 'mountain-peak', effort: 'mountain-peak',
+    hard: 'mountain-peak', difficult: 'mountain-peak', struggle: 'mountain-peak',
     sun: 'solar-system', star: 'solar-system', universe: 'solar-system',
     galaxy: 'solar-system', cosmic: 'solar-system',
     city: 'city-skyline', urban: 'city-skyline', downtown: 'city-skyline',
@@ -613,12 +623,12 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     // Emotions & Actions
     love: 'heartbeat', heart: 'heartbeat', feel: 'heartbeat',
     care: 'heartbeat', emotion: 'heartbeat', life: 'heartbeat',
-    health: 'heartbeat', alive: 'heartbeat',
+    health: 'heartbeat', alive: 'heartbeat', want: 'heartbeat', dream: 'heartbeat',
     protect: 'shield-protect', safe: 'shield-protect', security: 'shield-protect',
     guard: 'shield-protect', defense: 'shield-protect', trust: 'shield-protect',
     guarantee: 'shield-protect', reliable: 'shield-protect',
     walk: 'person-walking', step: 'person-walking', move: 'person-walking',
-    run: 'person-walking', exercise: 'person-walking',
+    run: 'person-walking', exercise: 'person-walking', going: 'person-walking',
     // Time & Activities
     time: 'clock-time', hour: 'clock-time', minute: 'clock-time',
     schedule: 'clock-time', deadline: 'clock-time', wait: 'clock-time',
@@ -631,6 +641,22 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     record: 'camera', content: 'camera', create: 'camera',
     food: 'cooking', eat: 'cooking', recipe: 'cooking',
     cook: 'cooking', meal: 'cooking', kitchen: 'cooking',
+    // Common conversational words mapped to contextual scenes
+    guys: 'connections', everybody: 'connections', hello: 'connections',
+    welcome: 'celebration', subscribe: 'target-bullseye', follow: 'connections',
+    important: 'energy-pulse', serious: 'shield-protect', real: 'eye-vision',
+    true: 'checkmark-success', right: 'checkmark-success', exactly: 'target-bullseye',
+    wrong: 'explosion-burst', bad: 'fire-blaze', problem: 'gear-system',
+    question: 'brain-idea', answer: 'checkmark-success', explain: 'brain-idea',
+    reason: 'brain-idea', because: 'brain-idea', why: 'brain-idea',
+    different: 'connections', change: 'arrow-growth', new: 'rocket-launch',
+    old: 'clock-time', next: 'arrow-growth', first: 'crown-royal',
+    help: 'shield-protect', need: 'target-bullseye', absolutely: 'energy-pulse',
+    story: 'book-reading', tell: 'eye-vision', happen: 'explosion-burst',
+    finally: 'checkmark-success', literally: 'explosion-burst', actually: 'brain-idea',
+    basically: 'gear-system', definitely: 'checkmark-success', probably: 'brain-idea',
+    game: 'celebration', play: 'celebration', fun: 'celebration',
+    thousand: 'growth-chart', percent: 'growth-chart',
 };
 
 const ALL_SCENES = [
@@ -644,69 +670,122 @@ const ALL_SCENES = [
     'crown-royal', 'atom-science', 'mountain-peak',
 ];
 
+/** Match transcript text to the best animated Remotion scene */
+function matchTextToScene(text: string): string {
+    const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+    for (const word of words) {
+        if (CONTENT_SCENE_MAP[word]) return CONTENT_SCENE_MAP[word];
+    }
+    const hash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+    return ALL_SCENES[hash % ALL_SCENES.length];
+}
+
 // Track last used scene to avoid repeats
 let lastUsedScene = '';
 
 /**
  * Select the best overlay type based on content analysis.
- * Generates contextual on-screen overlays (emoji, kinetic text, highlight boxes)
- * that appear ON TOP of the video — NOT full-screen replacements.
+ * Uses live-rendered SVG motion graphics (VisualIllustration) matched to transcript.
+ * These render instantly with no network calls — unique per transcript content.
  */
 function selectProOverlay(text: string, count: number): OverlayConfig {
     const lower = text.toLowerCase();
     const color = getProColor(count);
-
-    // --- Emoji reactions for emotional / reaction content ---
-    const emojiMatch = pickEmoji(lower);
-    if (emojiMatch && count % 3 !== 0) {
-        return {
-            type: 'emoji-reaction',
-            props: {
-                emoji: emojiMatch,
-                size: 70,
-            },
-        };
-    }
-
-    // --- Kinetic text for key statements, stats, and impactful phrases ---
     const label = extractLabelFromText(text);
-    if (label && label.length > 2 && count % 4 !== 0) {
-        const kineticStyles = ['pop', 'slide', 'bounce'] as const;
-        const positions = ['center', 'top', 'bottom'] as const;
-        return {
-            type: 'kinetic-text',
-            props: {
-                text: label,
-                color,
-                style: kineticStyles[count % kineticStyles.length],
-                position: positions[count % positions.length],
-                fontSize: 42,
-            },
-        };
+
+    // Round-robin across 10 slots — balanced B-roll + text mix:
+    // 0,2,5,8 = ai-generated-image (unique B-roll), 1,4,7 = kinetic-text, 3,6 = transcript-motion, 9 = emoji
+    const slot = count % 10;
+
+    switch (slot) {
+        case 0:
+        case 2:
+        case 5:
+        case 8: {
+            // Procedurally generated motion graphics B-roll
+            const brollStyles = ['abstract', 'geometric', 'wave', 'particles', 'data'] as const;
+            return {
+                type: 'dynamic-broll',
+                props: {
+                    keywords: (label || text.substring(0, 20)).toUpperCase(),
+                    color,
+                    style: brollStyles[count % brollStyles.length],
+                },
+            };
+        }
+
+        case 1:
+        case 4:
+        case 7: {
+            const kineticStyles = ['pop', 'slide', 'bounce'] as const;
+            const positions = ['center', 'top', 'bottom'] as const;
+            return {
+                type: 'kinetic-text',
+                props: {
+                    text: label || text.substring(0, 30),
+                    color,
+                    style: kineticStyles[count % kineticStyles.length],
+                    position: positions[count % positions.length],
+                    fontSize: 42,
+                },
+            };
+        }
+
+        case 3:
+        case 6: {
+            const styles = ['karaoke', 'typewriter', 'wave'] as const;
+            const positions = ['bottom', 'center', 'bottom'] as const;
+            return {
+                type: 'transcript-motion',
+                props: {
+                    text,
+                    color,
+                    style: styles[count % styles.length],
+                    position: positions[count % positions.length],
+                },
+            };
+        }
+
+        case 9:
+        default: {
+            const emojiMatch = pickEmoji(lower);
+            const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎'];
+            return {
+                type: 'emoji-reaction',
+                props: {
+                    emoji: emojiMatch || fallbackEmojis[count % fallbackEmojis.length],
+                    size: 70,
+                },
+            };
+        }
+    }
+}
+
+/** Pick the best animated SVG scene based on transcript text.
+ *  Uses keyword matching first, then hashes the text for a UNIQUE fallback per segment. */
+function pickSceneForText(text: string, index: number): string {
+    const lower = text.toLowerCase();
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
+
+    // Score scenes using CONTENT_SCENE_MAP
+    const sceneScores: Record<string, number> = {};
+    for (const word of words) {
+        const scene = CONTENT_SCENE_MAP[word];
+        if (scene) {
+            sceneScores[scene] = (sceneScores[scene] || 0) + 1;
+        }
     }
 
-    // --- Highlight box for emphasis ---
-    if (count % 3 === 0) {
-        const highlightStyles = ['glow', 'underline', 'box'] as const;
-        return {
-            type: 'highlight-box',
-            props: {
-                text: label || text.substring(0, 30),
-                color,
-                style: highlightStyles[count % highlightStyles.length],
-            },
-        };
+    const scored = Object.entries(sceneScores).sort((a, b) => b[1] - a[1]);
+    if (scored.length > 0) {
+        const top = scored[0][1];
+        const topScenes = scored.filter(([, s]) => s === top).map(([s]) => s);
+        return topScenes[index % topScenes.length];
     }
 
-    // --- Default: emoji reaction fallback ---
-    const fallbackEmojis = ['✨', '💡', '🎯', '🔥', '⚡', '💎', '🚀', '🌟'];
-    return {
-        type: 'emoji-reaction',
-        props: {
-            emoji: fallbackEmojis[count % fallbackEmojis.length],
-            size: 70,
-        },
-    };
+    // Fallback: use TEXT HASH to pick a scene (different text → different scene)
+    const hash = text.split('').reduce((acc, c) => ((acc << 5) - acc) + c.charCodeAt(0), 0);
+    return ALL_SCENES[Math.abs(hash) % ALL_SCENES.length];
 }
 
 /**

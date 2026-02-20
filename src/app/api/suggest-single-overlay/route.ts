@@ -11,6 +11,12 @@ const VALID_OVERLAY_TYPES = [
     'lower-third',
     'glowing-particles',
     'scene-transition',
+    'broll-video',
+    'gif-reaction',
+    'visual-illustration',
+    'ai-generated-image',
+    'transcript-motion',
+    'dynamic-broll',
 ];
 
 export async function POST(request: NextRequest) {
@@ -36,33 +42,34 @@ async function suggestSingleOverlay(
     segmentText: string,
     userPrompt: string
 ): Promise<{ type: string; props: Record<string, unknown> } | null> {
-    const prompt = `You are a Senior Motion Graphics Director. Given a transcript segment and user instruction, pick the BEST contextual on-screen overlay. These overlays appear ON TOP of the video — the video is ALWAYS visible beneath them.
+    const prompt = `You are a Senior Motion Graphics Director. Given a transcript segment and user instruction, pick the BEST contextual on-screen overlay.
 
 TRANSCRIPT TEXT: "${segmentText}"
 USER INSTRUCTION: "${userPrompt}"
 
 AVAILABLE OVERLAY TYPES:
 
-1. "emoji-reaction" — A pop-up emoji matching the mood/content
-   { "type": "emoji-reaction", "props": { "emoji": "🔥", "size": 70 } }
-   Use for: emotional moments, reactions, emphasis
+1. "ai-generated-image" — AI-generated B-roll image unique to this segment (PREFER THIS FOR VISUAL B-ROLL)
+   { "type": "ai-generated-image", "props": { "imagePrompt": "vivid 15-25 word visual description", "displayMode": "picture-in-picture", "transition": "fade-in" } }
+   displayMode must be "picture-in-picture", "card", or "split" (NEVER "fullscreen"). Make imagePrompt VIVID and SPECIFIC.
 
-2. "kinetic-text" — Animated text overlay with key phrases
+2. "transcript-motion" — Live word-by-word animated text synced to speech
+   { "type": "transcript-motion", "props": { "text": "the transcript text", "color": "#6366f1", "style": "karaoke"|"typewriter"|"wave", "position": "center"|"top"|"bottom" } }
+
+3. "kinetic-text" — Animated text overlay with key phrases
    { "type": "kinetic-text", "props": { "text": "Key Phrase", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 } }
-   Use for: stats, important statements, key takeaways
 
-3. "highlight-box" — Highlighted text box for emphasis
-   { "type": "highlight-box", "props": { "text": "Key Point", "color": "#hex", "style": "glow"|"underline"|"box" } }
-   Use for: definitions, callouts, emphasis
+4. "highlight-box" — Text emphasis with animated highlight
+   { "type": "highlight-box", "props": { "text": "Important phrase", "color": "#hex", "style": "glow"|"underline"|"box" } }
 
-4. "glowing-particles" — Floating particle effects
-   { "type": "glowing-particles", "props": { "style": "ambient"|"burst"|"rain", "color": "#hex", "count": 20 } }
-   Use for: atmosphere, mood, ambient effects
+5. "emoji-reaction" — A pop-up emoji
+   { "type": "emoji-reaction", "props": { "emoji": "\uD83D\uDD25", "size": 70 } }
 
 RULES:
-- Pick the overlay type that BEST matches both the transcript content and user instruction
+- PREFER ai-generated-image for visual B-roll requests
+- Pick the overlay that BEST matches the user instruction
+- Do NOT use visual-illustration
 - For kinetic-text: extract SHORT punchy labels (2-5 words)
-- Overlays appear ON TOP of the video — never replace it
 
 Respond with ONLY a JSON object.`;
 

@@ -72,6 +72,7 @@ const overlayIcons: Record<string, React.ReactNode> = {
     'emoji-reaction': <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>,
     'zoom-effect': <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>,
     'scene-transition': <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" /><line x1="7" y1="2" x2="7" y2="22" /><line x1="17" y1="2" x2="17" y2="22" /><line x1="2" y1="12" x2="22" y2="12" /></svg>,
+    'transcript-motion': <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>,
 };
 
 export const OverlayContextMenu: React.FC<OverlayContextMenuProps> = ({
@@ -116,7 +117,8 @@ export const OverlayContextMenu: React.FC<OverlayContextMenuProps> = ({
     };
 
     const overlayOptions: { type: OverlayType; label: string; color: string; description: string }[] = [
-        // Professional After Effects style overlays
+        // Transcription-based overlays (prioritized)
+        { type: 'transcript-motion', label: 'Transcript Motion', color: 'text-purple-500', description: 'Live word-by-word animated text' },
         { type: 'kinetic-text', label: 'Kinetic Text', color: 'text-indigo-500', description: 'Animated text reveals like AE' },
         { type: 'highlight-box', label: 'Text Highlight', color: 'text-amber-500', description: 'Professional text emphasis' },
         { type: 'scene-transition', label: 'Cinematic Cut', color: 'text-purple-500', description: 'Smooth scene transitions' },
@@ -185,8 +187,8 @@ export const OverlayContextMenu: React.FC<OverlayContextMenuProps> = ({
                 }
             } else {
                 const fallbackConfig = {
-                    type: 'visual-illustration' as const,
-                    props: { scene: 'brain-idea', label: segmentText.substring(0, 50), color: '#a78bfa', displayMode: 'full', transition: 'fade-in', soundEffect: 'none' },
+                    type: 'transcript-motion' as const,
+                    props: { text: segmentText.substring(0, 100), color: '#a78bfa', style: 'karaoke', position: 'bottom' },
                 };
                 if (onApplyConfig) {
                     onApplyConfig(fallbackConfig);

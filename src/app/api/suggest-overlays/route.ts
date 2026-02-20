@@ -11,6 +11,12 @@ const VALID_OVERLAY_TYPES = [
     'lower-third',
     'glowing-particles',
     'scene-transition',
+    'broll-video',
+    'gif-reaction',
+    'visual-illustration',
+    'ai-generated-image',
+    'transcript-motion',
+    'dynamic-broll',
 ];
 
 // All available animated motion graphic scenes
@@ -38,6 +44,46 @@ interface OverlaySuggestion {
     props: Record<string, unknown>;
 }
 
+// Detect overall video topic from full transcript for context-aware matching
+const TOPIC_KEYWORDS: Record<string, string[]> = {
+    'GAMING/ENTERTAINMENT': ['game', 'play', 'player', 'nintendo', 'pokemon', 'xbox', 'playstation', 'level', 'boss', 'quest', 'character', 'multiplayer', 'console', 'controller', 'gamer', 'stream', 'twitch', 'esport', 'mod', 'cheat', 'glitch', 'speedrun', 'lore', 'dex', 'generation'],
+    'TECHNOLOGY/CODING': ['code', 'programming', 'software', 'hardware', 'api', 'database', 'server', 'cloud', 'algorithm', 'debug', 'deploy', 'framework', 'react', 'python', 'javascript', 'developer', 'startup', 'saas'],
+    'FINANCE/BUSINESS': ['money', 'invest', 'stock', 'crypto', 'bitcoin', 'revenue', 'profit', 'startup', 'entrepreneur', 'business', 'income', 'passive', 'wealth', 'trading', 'market', 'portfolio'],
+    'FITNESS/HEALTH': ['workout', 'exercise', 'gym', 'muscle', 'protein', 'diet', 'weight', 'calories', 'cardio', 'training', 'fitness', 'health', 'nutrition', 'supplement'],
+    'BEAUTY/FASHION': ['makeup', 'skincare', 'fashion', 'outfit', 'style', 'beauty', 'hair', 'nails', 'cosmetic', 'foundation', 'lipstick', 'concealer', 'moisturizer'],
+    'EDUCATION/SCIENCE': ['research', 'study', 'university', 'science', 'experiment', 'theory', 'hypothesis', 'professor', 'lecture', 'course', 'exam', 'school', 'physics', 'chemistry', 'biology'],
+    'COOKING/FOOD': ['recipe', 'cook', 'ingredient', 'kitchen', 'bake', 'meal', 'restaurant', 'chef', 'food', 'dish', 'flavor', 'taste', 'seasoning'],
+    'MUSIC/ARTS': ['song', 'music', 'album', 'artist', 'concert', 'guitar', 'piano', 'drums', 'beat', 'melody', 'lyrics', 'studio', 'producer', 'remix'],
+    'TRAVEL/ADVENTURE': ['travel', 'trip', 'destination', 'flight', 'hotel', 'tourist', 'country', 'city', 'backpack', 'explore', 'vacation', 'passport'],
+    'NEWS/DRAMA/STORY': ['breaking', 'revealed', 'secret', 'hidden', 'forbidden', 'conspiracy', 'mystery', 'shocking', 'scandal', 'exposed', 'truth', 'controversy', 'leaked'],
+};
+
+function detectVideoTopic(fullText: string): string {
+    const lower = fullText.toLowerCase();
+    const topicScores: Record<string, { count: number; matches: string[] }> = {};
+
+    for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+        const matches: string[] = [];
+        for (const kw of keywords) {
+            if (lower.includes(kw)) {
+                matches.push(kw);
+            }
+        }
+        if (matches.length > 0) {
+            topicScores[topic] = { count: matches.length, matches };
+        }
+    }
+
+    const sorted = Object.entries(topicScores).sort((a, b) => b[1].count - a[1].count);
+    if (sorted.length === 0) {
+        return 'General/conversational video. Match scenes to the MEANING of each segment.';
+    }
+
+    const topTopics = sorted.slice(0, 2).map(([topic, { matches }]) =>
+        `${topic} (mentions: ${matches.slice(0, 5).join(', ')})`
+    );
+    return `This video is about ${topTopics.join(' and ')}. Choose scenes that make sense for this topic.`;
+}
 export async function POST(request: NextRequest) {
     try {
         const { subtitles, model } = (await request.json()) as { subtitles: SubtitleInput[]; model?: string };
@@ -59,41 +105,38 @@ async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string
         .map((s) => `[${s.id}] "${s.text}" (${s.startTime}s - ${s.endTime}s)`)
         .join('\n');
 
-    const prompt = `You are a Senior Motion Graphics Director. Your job: add contextual on-screen overlays that appear ON TOP of the playing video. These are NOT full-screen replacements — the video is ALWAYS visible.
+    // Detect video topic from FULL transcript for context-aware scene matching
+    const fullTranscript = subtitles.map(s => s.text).join(' ').toLowerCase();
+    const videoTopic = detectVideoTopic(fullTranscript);
+
+    const prompt = `You are a Senior Motion Graphics Director. Add animated overlays to this video based on the transcript.
+
+VIDEO TOPIC CONTEXT: ${videoTopic}
 
 AVAILABLE OVERLAY TYPES:
 
-1. "emoji-reaction" — A pop-up emoji that matches the mood/content
-   Props: { "emoji": "🔥", "size": 70 }
-   Use for: emotional moments, reactions, emphasis
-   Popular emojis: 🔥 ⚡ 💰 📈 🚀 🎯 💡 🧠 ❤️ 😊 🤩 😮 💪 🏆 ✅ 👑 🎉 💎 💻 🌍 📚 ⏰ 📸 🎵 ⚠️
+1. "dynamic-broll" — Procedurally generated motion graphics B-roll, fullscreen (USE THIS 40% of the time)
+   Props: { "keywords": "KEYWORD1,KEYWORD2", "color": "#hex", "style": "abstract"|"geometric"|"wave"|"particles"|"data" }
+   Extract 1-2 of the MOST IMPORTANT words from the segment.
+   Example: "trading in the market" → keywords: "TRADING,MARKET"
+   Example: "go to your settings" → keywords: "SETTINGS"
+   Example: "you need power to make it work" → keywords: "POWER"
 
-2. "kinetic-text" — Animated text overlay showing key phrases
-   Props: { "text": "Key Phrase", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
-   Use for: stats, important statements, key takeaways
-
-3. "highlight-box" — Highlighted text box for emphasis
-   Props: { "text": "Key Point", "color": "#hex", "style": "glow"|"underline"|"box" }
-   Use for: definitions, callouts, emphasis
+2. "kinetic-text" (25%) Props: { "text": "Phrase", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
+3. "transcript-motion" (20%) Props: { "text": "text", "color": "#hex", "style": "karaoke"|"typewriter"|"wave", "position": "center"|"top"|"bottom" }
+4. "emoji-reaction" (10%) Props: { "emoji": "🔥", "size": 70 }
+5. "highlight-box" (5%) Props: { "text": "phrase", "color": "#hex", "style": "glow"|"underline"|"box" }
 
 RULES:
-1. Overlays appear ON TOP of the video — the video is ALWAYS visible
-2. Pick the overlay type that BEST MATCHES the content
-3. Be SELECTIVE — only add overlays to 30-40% of segments with strong keywords or key moments
-4. Skip filler text ("so", "and then", "you know", "let me tell you", greetings)
-5. Use VARIED overlay types — mix emojis, kinetic text, and highlight boxes
-6. For kinetic-text: extract SHORT punchy labels (2-5 words) from the transcript
-7. Quality over quantity
+1. Keywords must be 1-2 STRONG words from the segment (nouns/verbs)
+2. Only overlay 45-55% of segments
+3. Vary types
 
 Transcript Segments:
 ${subtitleList}
 
-Return strictly a JSON array:
-[{
-  "segmentId": string,
-  "type": "emoji-reaction" | "kinetic-text" | "highlight-box",
-  "props": { ... }
-}]`;
+Return JSON array:
+[{ "segmentId": string, "type": "dynamic-broll"|"kinetic-text"|"transcript-motion"|"emoji-reaction"|"highlight-box", "props": { ... } }]`;
 
     const MAX_RETRIES = 1;
     const RETRY_DELAY_MS = 500;
@@ -237,8 +280,9 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     // Money & Business
     money: 'money-flow', revenue: 'money-flow', profit: 'money-flow', income: 'money-flow',
     dollar: 'money-flow', cash: 'money-flow', price: 'money-flow', cost: 'money-flow',
+    earn: 'money-flow', pay: 'money-flow', afford: 'money-flow', salary: 'money-flow',
     sales: 'shopping-cart', buy: 'shopping-cart', shop: 'shopping-cart', purchase: 'shopping-cart',
-    store: 'shopping-cart', product: 'shopping-cart', ecommerce: 'shopping-cart',
+    store: 'shopping-cart', product: 'shopping-cart', ecommerce: 'shopping-cart', order: 'shopping-cart', deal: 'shopping-cart',
     business: 'growth-chart', company: 'growth-chart', startup: 'growth-chart',
     stock: 'growth-chart', invest: 'growth-chart', market: 'growth-chart',
     billion: 'growth-chart', million: 'growth-chart',
@@ -248,36 +292,42 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     // Growth & Success
     growth: 'arrow-growth', grow: 'arrow-growth', increase: 'arrow-growth',
     rise: 'arrow-growth', scale: 'arrow-growth', expand: 'arrow-growth',
-    up: 'arrow-growth', skyrocket: 'arrow-growth', boost: 'arrow-growth',
+    up: 'arrow-growth', skyrocket: 'arrow-growth', boost: 'arrow-growth', level: 'arrow-growth',
     success: 'checkmark-success', achieve: 'checkmark-success', accomplish: 'checkmark-success',
     done: 'checkmark-success', complete: 'checkmark-success', finish: 'checkmark-success',
+    results: 'checkmark-success', progress: 'checkmark-success', improve: 'checkmark-success',
     win: 'celebration', champion: 'celebration', winner: 'celebration',
     congratulations: 'celebration', celebrate: 'celebration', victory: 'celebration',
+    party: 'celebration', awesome: 'celebration', amazing: 'celebration', excited: 'celebration',
     goal: 'target-bullseye', target: 'target-bullseye', aim: 'target-bullseye',
     focus: 'target-bullseye', precise: 'target-bullseye', accurate: 'target-bullseye',
+    strategy: 'target-bullseye', plan: 'target-bullseye',
     best: 'crown-royal', king: 'crown-royal', queen: 'crown-royal',
-    top: 'crown-royal', leader: 'crown-royal', number: 'crown-royal',
+    top: 'crown-royal', leader: 'crown-royal', number: 'crown-royal', greatest: 'crown-royal',
 
     // Technology & Science
     ai: 'brain-idea', artificial: 'brain-idea', intelligence: 'brain-idea',
     brain: 'brain-idea', think: 'brain-idea', idea: 'brain-idea',
     smart: 'brain-idea', mind: 'brain-idea', cognitive: 'brain-idea',
-    learn: 'brain-idea', knowledge: 'brain-idea', understand: 'brain-idea',
+    learn: 'brain-idea', knowledge: 'brain-idea', understand: 'brain-idea', realize: 'brain-idea',
+    secret: 'brain-idea', tip: 'brain-idea', trick: 'brain-idea', hack: 'brain-idea',
     code: 'code-terminal', programming: 'code-terminal', software: 'code-terminal',
     developer: 'code-terminal', app: 'code-terminal', website: 'code-terminal',
     tech: 'code-terminal', digital: 'code-terminal', computer: 'code-terminal',
     connect: 'connections', network: 'connections', social: 'connections',
     internet: 'connections', online: 'connections', link: 'connections',
-    community: 'connections', together: 'connections', collaborate: 'connections',
+    community: 'connections', together: 'connections', collaborate: 'connections', share: 'connections',
+    people: 'connections', friends: 'connections', relationship: 'connections',
     science: 'atom-science', research: 'atom-science', experiment: 'atom-science',
     physics: 'atom-science', chemistry: 'atom-science', quantum: 'atom-science',
     atom: 'atom-science', molecule: 'atom-science', lab: 'atom-science',
     machine: 'gear-system', system: 'gear-system', engine: 'gear-system',
     process: 'gear-system', automate: 'gear-system', mechanism: 'gear-system',
-    tool: 'gear-system', build: 'gear-system', work: 'gear-system',
+    tool: 'gear-system', build: 'gear-system', work: 'gear-system', method: 'gear-system',
     watch: 'eye-vision', see: 'eye-vision', look: 'eye-vision',
     observe: 'eye-vision', view: 'eye-vision', discover: 'eye-vision',
     reveal: 'eye-vision', vision: 'eye-vision', insight: 'eye-vision',
+    show: 'eye-vision', check: 'eye-vision', notice: 'eye-vision',
 
     // Energy & Power
     power: 'energy-pulse', energy: 'energy-pulse', force: 'energy-pulse',
@@ -287,11 +337,13 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     explode: 'explosion-burst', boom: 'explosion-burst', blast: 'explosion-burst',
     massive: 'explosion-burst', huge: 'explosion-burst', incredible: 'explosion-burst',
     impact: 'explosion-burst', disrupt: 'explosion-burst', revolutionary: 'explosion-burst',
+    crazy: 'explosion-burst', insane: 'explosion-burst', unbelievable: 'explosion-burst',
     launch: 'rocket-launch', rocket: 'rocket-launch', fly: 'rocket-launch',
     moon: 'rocket-launch', space: 'rocket-launch', sky: 'rocket-launch',
+    start: 'rocket-launch', begin: 'rocket-launch', kick: 'rocket-launch',
     fire: 'fire-blaze', hot: 'fire-blaze', burn: 'fire-blaze',
     flame: 'fire-blaze', heat: 'fire-blaze', lit: 'fire-blaze',
-    passion: 'fire-blaze', intense: 'fire-blaze', blazing: 'fire-blaze',
+    passion: 'fire-blaze', intense: 'fire-blaze', blazing: 'fire-blaze', trending: 'fire-blaze',
     attract: 'magnet-attract', pull: 'magnet-attract', draw: 'magnet-attract',
     magnetic: 'magnet-attract', irresistible: 'magnet-attract', grab: 'magnet-attract',
 
@@ -303,24 +355,25 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     green: 'nature-tree', environment: 'nature-tree', organic: 'nature-tree',
     ocean: 'water-wave', water: 'water-wave', sea: 'water-wave',
     wave: 'water-wave', flow: 'water-wave', river: 'water-wave',
-    swim: 'water-wave', beach: 'water-wave', calm: 'water-wave',
+    swim: 'water-wave', beach: 'water-wave', calm: 'water-wave', smooth: 'water-wave',
     mountain: 'mountain-peak', climb: 'mountain-peak', summit: 'mountain-peak',
     peak: 'mountain-peak', challenge: 'mountain-peak', overcome: 'mountain-peak',
     journey: 'mountain-peak', adventure: 'mountain-peak', effort: 'mountain-peak',
+    hard: 'mountain-peak', difficult: 'mountain-peak', struggle: 'mountain-peak',
     sun: 'solar-system', star: 'solar-system', universe: 'solar-system',
     galaxy: 'solar-system', cosmic: 'solar-system', astro: 'solar-system',
     city: 'city-skyline', urban: 'city-skyline', downtown: 'city-skyline',
-    building: 'city-skyline', skyline: 'city-skyline', new: 'city-skyline',
+    building: 'city-skyline', skyline: 'city-skyline',
 
     // Emotions & Actions
     love: 'heartbeat', heart: 'heartbeat', feel: 'heartbeat',
     care: 'heartbeat', emotion: 'heartbeat', soul: 'heartbeat',
-    health: 'heartbeat', life: 'heartbeat', alive: 'heartbeat',
+    health: 'heartbeat', life: 'heartbeat', alive: 'heartbeat', want: 'heartbeat', dream: 'heartbeat',
     protect: 'shield-protect', safe: 'shield-protect', security: 'shield-protect',
     guard: 'shield-protect', defense: 'shield-protect', trust: 'shield-protect',
     guarantee: 'shield-protect', reliable: 'shield-protect', shield: 'shield-protect',
     walk: 'person-walking', step: 'person-walking', move: 'person-walking',
-    run: 'person-walking', exercise: 'person-walking', fitness: 'person-walking',
+    run: 'person-walking', exercise: 'person-walking', fitness: 'person-walking', going: 'person-walking',
 
     // Time & Activities
     time: 'clock-time', hour: 'clock-time', minute: 'clock-time',
@@ -334,73 +387,176 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     record: 'camera', content: 'camera', create: 'camera',
     food: 'cooking', eat: 'cooking', recipe: 'cooking',
     cook: 'cooking', meal: 'cooking', kitchen: 'cooking',
+
+    // Common conversational words
+    guys: 'connections', everybody: 'connections', hello: 'connections',
+    welcome: 'celebration', subscribe: 'target-bullseye', follow: 'connections',
+    important: 'energy-pulse', serious: 'shield-protect', real: 'eye-vision',
+    true: 'checkmark-success', right: 'checkmark-success', exactly: 'target-bullseye',
+    wrong: 'explosion-burst', bad: 'fire-blaze', problem: 'gear-system',
+    question: 'brain-idea', answer: 'checkmark-success', explain: 'brain-idea',
+    reason: 'brain-idea', because: 'brain-idea', why: 'brain-idea',
+    different: 'connections', change: 'arrow-growth', new: 'rocket-launch',
+    old: 'clock-time', next: 'arrow-growth', first: 'crown-royal',
+    help: 'shield-protect', need: 'target-bullseye', absolutely: 'energy-pulse',
+    story: 'book-reading', tell: 'eye-vision', happen: 'explosion-burst',
+    finally: 'checkmark-success', literally: 'explosion-burst', actually: 'brain-idea',
+    basically: 'gear-system', definitely: 'checkmark-success', probably: 'brain-idea',
+    game: 'celebration', play: 'celebration', fun: 'celebration',
+    free: 'diamond-gem', hundred: 'growth-chart',
+    thousand: 'growth-chart', percent: 'growth-chart',
 };
+
+/** Match transcript text to the best animated scene using keyword mapping */
+function matchSceneToText(text: string): string {
+    const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+    for (const word of words) {
+        if (CONTENT_SCENE_MAP[word]) return CONTENT_SCENE_MAP[word];
+    }
+    // Fallback: pick a random scene based on text hash
+    const hash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+    return ALL_SCENES[hash % ALL_SCENES.length];
+}
 
 function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggestion[] {
     const results: OverlaySuggestion[] = [];
+    let overlayCount = 0;
 
     for (let index = 0; index < subtitles.length; index++) {
         const seg = subtitles[index];
-        // Only add overlay if the text has meaningful keywords
         if (!hasVisualKeyword(seg.text)) continue;
 
-        const color = getProColor(index);
+        const color = getProColor(overlayCount);
         const label = extractLabelFromText(seg.text);
-        const emoji = pickEmojiFromText(seg.text);
 
-        // Alternate between overlay types for variety
+        // 10-slot mix: ai-generated-image B-roll (40%) + kinetic-text (30%) + transcript-motion (20%) + emoji (10%)
+        // slots 0,2,5,8 = ai-generated-image, 1,4,7 = kinetic-text, 3,6 = transcript-motion, 9 = emoji
+        const slot = overlayCount % 10;
         let overlay: OverlaySuggestion;
-        if (emoji && index % 3 !== 0) {
-            overlay = {
-                segmentId: seg.id,
-                type: 'emoji-reaction',
-                props: { emoji, size: 70 },
-            };
-        } else if (label && label.length > 2 && index % 4 !== 0) {
-            const kineticStyles = ['pop', 'slide', 'bounce'];
-            const positions = ['center', 'top', 'bottom'];
-            overlay = {
-                segmentId: seg.id,
-                type: 'kinetic-text',
-                props: {
-                    text: label,
-                    color,
-                    style: kineticStyles[index % kineticStyles.length],
-                    position: positions[index % positions.length],
-                    fontSize: 42,
-                },
-            };
-        } else {
-            const highlightStyles = ['glow', 'underline', 'box'];
-            overlay = {
-                segmentId: seg.id,
-                type: 'highlight-box',
-                props: {
-                    text: label || seg.text.substring(0, 30),
-                    color,
-                    style: highlightStyles[index % highlightStyles.length],
-                },
-            };
+
+        switch (slot) {
+            case 0:
+            case 2:
+            case 5:
+            case 8: {
+                // Procedurally generated motion graphics B-roll
+                const kwLabel = extractLabelFromText(seg.text);
+                const brollStyles = ['abstract', 'geometric', 'wave', 'particles', 'data'];
+                overlay = {
+                    segmentId: seg.id,
+                    type: 'dynamic-broll',
+                    props: {
+                        keywords: (kwLabel || seg.text.substring(0, 20)).toUpperCase(),
+                        color,
+                        style: brollStyles[overlayCount % brollStyles.length],
+                    },
+                };
+                break;
+            }
+
+            case 1:
+            case 4:
+            case 7: {
+                // Kinetic text
+                const kineticStyles = ['pop', 'slide', 'bounce'];
+                const positions = ['center', 'top', 'bottom'];
+                overlay = {
+                    segmentId: seg.id,
+                    type: 'kinetic-text',
+                    props: {
+                        text: label || seg.text.substring(0, 30),
+                        color,
+                        style: kineticStyles[overlayCount % kineticStyles.length],
+                        position: positions[overlayCount % positions.length],
+                        fontSize: 42,
+                    },
+                };
+                break;
+            }
+
+            case 3:
+            case 6: {
+                // Transcript motion
+                const styles = ['karaoke', 'typewriter', 'wave'];
+                const positions = ['bottom', 'center', 'bottom'];
+                overlay = {
+                    segmentId: seg.id,
+                    type: 'transcript-motion',
+                    props: {
+                        text: seg.text,
+                        color,
+                        style: styles[overlayCount % styles.length],
+                        position: positions[overlayCount % positions.length],
+                    },
+                };
+                break;
+            }
+
+            case 9:
+            default: {
+                // Emoji reaction
+                const emoji = pickEmojiFromText(seg.text);
+                const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎'];
+                overlay = {
+                    segmentId: seg.id,
+                    type: 'emoji-reaction',
+                    props: {
+                        emoji: emoji || fallbackEmojis[overlayCount % fallbackEmojis.length],
+                        size: 70,
+                    },
+                };
+                break;
+            }
         }
 
         results.push(overlay);
+        overlayCount++;
     }
 
     return results;
 }
 
+/** Generate a vivid image prompt directly from transcript text for Pollinations.ai */
+function generateImagePromptFromText(text: string): string {
+    // Clean up the text and use it directly as the visual scene description
+    const cleaned = text.replace(/[^\w\s,.!?'-]/g, '').trim();
+
+    // Use the actual transcript text as the core of the prompt
+    // This ensures every B-roll is unique to what the speaker is actually saying
+    if (cleaned.length > 10) {
+        return `${cleaned}, realistic visual scene, cinematic lighting, professional quality, 4k, detailed`;
+    }
+
+    return `Abstract professional concept art, cinematic lighting, dark moody background, modern design, high quality`;
+}
+
+
+
+/**
+ * Generate Pollinations.ai image URL
+ */
+function generatePollinationsUrl(prompt: string, seed: number): string {
+    const encodedPrompt = encodeURIComponent(`${prompt}, high quality, professional`);
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true&seed=${seed}`;
+}
+
 function hasVisualKeyword(text: string): boolean {
-    const lower = text.toLowerCase();
-    // Be more lenient - check for any words that could match
+    const lower = text.toLowerCase().trim();
+    // Accept ANY text with at least 2 meaningful words (not just filler)
+    if (lower.length < 5) return false;
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1);
-    return words.some(w => CONTENT_SCENE_MAP[w] !== undefined);
+    if (words.length < 2) return false;
+    // Reject pure filler phrases
+    const fillerPhrases = ['um', 'uh', 'like', 'you know', 'so yeah', 'and then', 'okay so'];
+    if (fillerPhrases.some(f => lower === f)) return false;
+    return true;
 }
 
 function pickSceneFromText(text: string, index: number, lastScene?: string): string {
     const lower = text.toLowerCase();
     const allWords = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
 
-    // Score all matching scenes by counting how many keywords point to each
+    // Score all matching scenes
     const sceneScores: Record<string, number> = {};
     for (const word of allWords) {
         const scene = CONTENT_SCENE_MAP[word];
@@ -409,28 +565,31 @@ function pickSceneFromText(text: string, index: number, lastScene?: string): str
         }
     }
 
-    // Sort scenes by score (highest first), filter out lastScene
+    // Filter out lastScene and pick best match
     const scoredScenes = Object.entries(sceneScores)
         .filter(([scene]) => scene !== lastScene)
         .sort((a, b) => b[1] - a[1]);
 
     if (scoredScenes.length > 0) {
-        // If there are ties at the top, use text hash to break them deterministically
-        const topScore = scoredScenes[0][1];
-        const topScenes = scoredScenes.filter(([, score]) => score === topScore).map(([scene]) => scene);
-        if (topScenes.length === 1) {
-            return topScenes[0];
-        }
-        // Same text always picks the same scene
-        const textHash = hashString(text);
-        return topScenes[textHash % topScenes.length];
+        return scoredScenes[0][0];
     }
 
-    // Fallback: use text hash for unique-per-content selection instead of index cycling
-    const fallbackScenes = ALL_SCENES.filter(s => s !== lastScene);
-    const textHash = hashString(text);
-    return fallbackScenes[textHash % fallbackScenes.length];
+    // Fallback: use TEXT HASH (different text → different scene)
+    const allScenes = [
+        'solar-system', 'growth-chart', 'globe', 'rocket-launch', 'brain-idea',
+        'connections', 'clock-time', 'heartbeat', 'money-flow', 'lightning',
+        'shopping-cart', 'cooking', 'nature-tree', 'city-skyline', 'person-walking',
+        'celebration', 'music-notes', 'book-reading', 'camera', 'code-terminal',
+        'fire-blaze', 'water-wave', 'shield-protect', 'target-bullseye',
+        'explosion-burst', 'magnet-attract', 'gear-system', 'energy-pulse',
+        'eye-vision', 'arrow-growth', 'checkmark-success', 'diamond-gem',
+        'crown-royal', 'atom-science', 'mountain-peak',
+    ];
+    const hash = text.split('').reduce((acc, c) => ((acc << 5) - acc) + c.charCodeAt(0), 0);
+    return allScenes[Math.abs(hash) % allScenes.length];
 }
+
+
 
 function pickEmojiFromText(text: string): string | null {
     const lower = text.toLowerCase();
