@@ -1,0 +1,245 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -460,
+        940
+      ],
+      "id": "c2ee3be1-a5cc-4af4-a673-738fb4cfb57e",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "wF3qFVNbbv8fXDvk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ensure binary file has a proper filename with extension\nconst items = $input.all();\nfor (const item of items) {\n  if (item.binary && item.binary.data) {\n    const mime = item.binary.data.mimeType || '';\n    let fileName = item.binary.data.fileName || 'audio';\n    if (!fileName.includes('.')) {\n      if (mime.includes('wav')) fileName += '.wav';\n      else if (mime.includes('mp4')) fileName += '.mp4';\n      else if (mime.includes('ogg')) fileName += '.ogg';\n      else if (mime.includes('flac')) fileName += '.flac';\n      else if (mime.includes('webm')) fileName += '.webm';\n      else fileName += '.mp3';\n    }\n    item.binary.data.fileName = fileName;\n  }\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        940
+      ],
+      "id": "fix-filename-node-0001",
+      "name": "Fix Filename"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-modelscope-cohere-transcribe-03-2026-demo.ms.show/gradio_api/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -60,
+        940
+      ],
+      "id": "79ca090b-8cb4-4b38-a81e-afa65915506c",
+      "name": "Upload to Gradio",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconsole.log('Upload response:', JSON.stringify(response));\n\nlet filePath;\n\nif (Array.isArray(response)) {\n  filePath = response[0];\n} else if (response.data && Array.isArray(response.data)) {\n  filePath = response.data[0];\n} else if (typeof response === 'string') {\n  filePath = response;\n}\n\nif (!filePath) {\n  throw new Error('No file path returned: ' + JSON.stringify(response));\n}\n\nreturn [{ json: { gradio_path: filePath } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        940
+      ],
+      "id": "08662a5c-f0b9-486a-bf18-6efd6fc4cee5",
+      "name": "Extract Gradio Path"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-modelscope-cohere-transcribe-03-2026-demo.ms.show/gradio_api/call/transcribe",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ data: [{ path: $('Extract Gradio Path').first().json.gradio_path, meta: { _type: 'gradio.FileData' } }, 'en'] }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        340,
+        940
+      ],
+      "id": "1cc80379-e08d-48ed-a229-b0fd1247329f",
+      "name": "POST Transcribe"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst eventId = response.event_id;\nif (!eventId) throw new Error('No event_id returned: ' + JSON.stringify(response));\nreturn [{ json: { event_id: eventId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        940
+      ],
+      "id": "e798e65e-9481-4455-9181-4113dee888fe",
+      "name": "Extract Event ID"
+    },
+    {
+      "parameters": {
+        "url": "=https://ai-modelscope-cohere-transcribe-03-2026-demo.ms.show/gradio_api/call/transcribe/{{ $('Extract Event ID').first().json.event_id }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        740,
+        940
+      ],
+      "id": "082d3190-fbbb-4cff-9f55-a5d630fd1570",
+      "name": "GET Transcribe Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst text = typeof raw === 'string'\n  ? raw\n  : (raw.data || raw.body || JSON.stringify(raw));\n\nconst lines = text.split('\\n');\nlet transcript = null;\n\nfor (const line of lines) {\n  const trimmed = line.trim();\n  if (trimmed.startsWith('data:')) {\n    const dataStr = trimmed.replace(/^data:\\s*/, '');\n    if (dataStr && dataStr !== 'null') {\n      try {\n        const parsed = JSON.parse(dataStr);\n        if (Array.isArray(parsed) && parsed[0]) {\n          transcript = parsed[0];\n          break;\n        }\n      } catch(e) {\n        transcript = dataStr;\n      }\n    }\n  }\n}\n\nif (!transcript) {\n  throw new Error('No transcript found in response: ' + text);\n}\n\nreturn [{ json: { transcript } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        940
+      ],
+      "id": "c5278417-8c01-49a0-890c-0af0741745b9",
+      "name": "Parse Transcript"
+    }
+  ],
+  "connections": {
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Fix Filename",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Filename": {
+      "main": [
+        [
+          {
+            "node": "Upload to Gradio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Gradio": {
+      "main": [
+        [
+          {
+            "node": "Extract Gradio Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Gradio Path": {
+      "main": [
+        [
+          {
+            "node": "POST Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST Transcribe": {
+      "main": [
+        [
+          {
+            "node": "Extract Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Event ID": {
+      "main": [
+        [
+          {
+            "node": "GET Transcribe Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Transcribe Result": {
+      "main": [
+        [
+          {
+            "node": "Parse Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "4f0bc82e348f18ec51d2fb297b42962e291f591663478db90f91b8b2a6da8614"
+  }
+}

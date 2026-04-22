@@ -30,6 +30,7 @@ const OVERLAY_COLORS: Record<string, string> = {
     'kinetic-text': '#ef4444',
     'zoom-effect': '#0ea5e9',
     'transcript-motion': '#a855f7',
+    'ai-motion-graphic': '#ec4899',
 };
 
 const OVERLAY_LABELS: Record<string, string> = {
@@ -43,6 +44,7 @@ const OVERLAY_LABELS: Record<string, string> = {
     'kinetic-text': 'Kinetic',
     'zoom-effect': 'Zoom',
     'transcript-motion': 'Transcript',
+    'ai-motion-graphic': 'AI Graphic',
 };
 
 const Timeline: React.FC<TimelineProps> = ({

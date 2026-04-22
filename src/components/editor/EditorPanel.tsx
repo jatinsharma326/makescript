@@ -1,6 +1,16 @@
 
 import React, { useState } from 'react';
-import { VideoFilters, DEFAULT_FILTERS, TrimPoint, TextOverlay, EditorTab } from '../../lib/types';
+import {
+    VideoFilters,
+    DEFAULT_FILTERS,
+    TrimPoint,
+    TextOverlay,
+    EditorTab,
+    SubtitleSegment,
+    SmartCutFillerSegment,
+    SmartCutResponse,
+    SmartCutSuccessResponse,
+} from '../../lib/types';
 import { Slider } from '../ui/Slider';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -13,7 +23,10 @@ import {
     RotateCcw,
     X,
     Plus,
-    Trash2
+    Trash2,
+    Sparkles,
+    Loader2,
+    Wand2
 } from 'lucide-react';
 
 /* ===== Editor Slider Wrapper ===== */
@@ -62,10 +75,21 @@ const EditorSliderField: React.FC<{
 };
 
 /* ===== Filters Tab ===== */
+interface FilterPresetResult {
+    name: string;
+    emoji: string;
+    description: string;
+    filters: VideoFilters;
+}
+
 const FiltersTab: React.FC<{
     filters: VideoFilters;
     onChange: (filters: VideoFilters) => void;
-}> = ({ filters, onChange }) => {
+    transcript?: string;
+}> = ({ filters, onChange, transcript }) => {
+    const [aiPresets, setAiPresets] = useState<FilterPresetResult[]>([]);
+    const [isLoadingPresets, setIsLoadingPresets] = useState(false);
+    const [aiMood, setAiMood] = useState<string>('');
     const update = (key: keyof VideoFilters, value: number) => {
         onChange({ ...filters, [key]: value });
     };
@@ -95,6 +119,327 @@ const FiltersTab: React.FC<{
                 <EditorSliderField label="Blur" value={filters.blur} min={0} max={20} step={0.5} defaultValue={0} onChange={(v) => update('blur', v)} unit="px" accentColor="bg-violet-500" />
                 <EditorSliderField label="Vignette" value={filters.vignette} min={0} max={100} defaultValue={0} onChange={(v) => update('vignette', v)} unit="%" accentColor="bg-sky-500" />
                 <EditorSliderField label="Temperature" value={filters.temperature} min={-50} max={50} defaultValue={0} onChange={(v) => update('temperature', v)} accentColor="bg-red-500" />
+            </div>
+
+            {/* AI Presets Section */}
+            {transcript && (
+                <div className="mt-6 pt-5 border-t border-border">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-violet-400" />
+                            AI Presets
+                        </h3>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isLoadingPresets}
+                            onClick={async () => {
+                                setIsLoadingPresets(true);
+                                try {
+                                    const res = await fetch('/api/ai-suggest-filters', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ transcript }),
+                                    });
+                                    const data = await res.json();
+                                    setAiPresets(data.presets || []);
+                                    setAiMood(data.mood || '');
+                                } catch (e) {
+                                    console.error('Failed to load AI presets:', e);
+                                }
+                                setIsLoadingPresets(false);
+                            }}
+                            className="h-6 text-[10px] px-2 border-violet-500/20 text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
+                        >
+                            {isLoadingPresets ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                            {isLoadingPresets ? 'Analyzing...' : 'AI Suggest'}
+                        </Button>
+                    </div>
+
+                    {aiMood && (
+                        <p className="text-[10px] text-violet-300/70 mb-3">Detected mood: <span className="font-semibold text-violet-300">{aiMood}</span></p>
+                    )}
+
+                    {aiPresets.length > 0 && (
+                        <div className="space-y-2">
+                            {aiPresets.map((preset, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => onChange(preset.filters)}
+                                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-secondary/30 hover:bg-violet-500/10 hover:border-violet-500/20 transition-all text-left group"
+                                >
+                                    <span className="text-lg">{preset.emoji}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-medium text-foreground group-hover:text-violet-300 transition-colors">{preset.name}</div>
+                                        <div className="text-[10px] text-muted-foreground">{preset.description}</div>
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground/50 group-hover:text-violet-400/60">Apply →</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {!isLoadingPresets && aiPresets.length === 0 && (
+                        <p className="text-[10px] text-muted-foreground/60 text-center py-3">
+                            Click &quot;AI Suggest&quot; to get mood-based presets
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/* ===== Magic Tab ===== */
+const MagicTab: React.FC<{
+    subtitles?: SubtitleSegment[];
+    onSubtitlesChange?: (subtitles: SubtitleSegment[]) => void;
+    isGenerating?: boolean;
+    onGenerateAI?: () => void;
+}> = ({ subtitles, onSubtitlesChange, isGenerating, onGenerateAI }) => {
+    const [fillers, setFillers] = useState<SmartCutFillerSegment[]>([]);
+    const [selectedFillers, setSelectedFillers] = useState<Set<string>>(new Set());
+    const [isDetecting, setIsDetecting] = useState(false);
+    const [totalTimeSaved, setTotalTimeSaved] = useState(0);
+    const [smartCutError, setSmartCutError] = useState<string | null>(null);
+    const [smartCutWarning, setSmartCutWarning] = useState<string | null>(null);
+    const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
+    const selectByIds = (ids: Set<string>) => {
+        setSelectedFillers(ids);
+    };
+
+    const selectAll = () => {
+        selectByIds(new Set(fillers.map((f) => f.id)));
+    };
+
+    const selectNone = () => {
+        selectByIds(new Set());
+    };
+
+    const selectSuggested = () => {
+        selectByIds(new Set(fillers.filter((f) => f.confidence >= 0.8).map((f) => f.id)));
+    };
+
+    return (
+        <div className="p-4 space-y-6">
+            <div className="flex flex-col items-center justify-center text-center mb-4 cursor-default">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-3 ring-1 ring-indigo-500/30">
+                    <Wand2 className="w-5 h-5 text-indigo-400" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">AI Magic Tools</h3>
+                <p className="text-[10px] text-muted-foreground mt-1 max-w-[220px]">
+                    Let AI automatically edit your video to save you hours of manual work.
+                </p>
+            </div>
+
+            {/* Auto B-Roll Section */}
+            <div className="pt-4 border-t border-border">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-indigo-400" />
+                        Auto B-Roll & FX
+                    </h3>
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">
+                    AI analyzes your transcript and automatically inserts perfectly timed animations, dynamic B-roll, kinetic text, and emojis synced to your voice.
+                </p>
+                <Button
+                    onClick={onGenerateAI}
+                    disabled={isGenerating || !subtitles?.length}
+                    className="w-full h-9 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-40"
+                >
+                    {isGenerating ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Wand2 className="w-3 h-3 mr-2" />}
+                    {isGenerating ? 'Generating Magic...' : 'Generate Auto B-Roll'}
+                </Button>
+            </div>
+
+            {/* Smart Cut Section */}
+            <div className="pt-5 border-t border-border mt-5">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Scissors className="w-3 h-3 text-amber-500" />
+                        Smart Cut
+                    </h3>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isDetecting || !subtitles?.length}
+                        onClick={async () => {
+                            if (!subtitles || subtitles.length === 0) {
+                                setSmartCutError('Please transcribe your video first.');
+                                return;
+                            }
+
+                            setIsDetecting(true);
+                            setSmartCutError(null);
+                            setSmartCutWarning(null);
+                            setHasAnalyzed(true);
+
+                            try {
+                                const res = await fetch('/api/ai-smart-cut', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        subtitles: subtitles.map((s) => ({
+                                            id: s.id,
+                                            startTime: s.startTime,
+                                            endTime: s.endTime,
+                                            text: s.text,
+                                        })),
+                                    }),
+                                });
+
+                                const data = (await res.json()) as SmartCutResponse;
+
+                                if (!res.ok || !data || !('ok' in data) || data.ok !== true) {
+                                    const errorMessage =
+                                        data && 'ok' in data && data.ok === false
+                                            ? data.error.message
+                                            : `Smart Cut request failed (${res.status}).`;
+                                    setSmartCutError(errorMessage);
+                                    setFillers([]);
+                                    setSelectedFillers(new Set());
+                                    setTotalTimeSaved(0);
+                                    return;
+                                }
+
+                                const success = data as SmartCutSuccessResponse;
+                                setFillers(success.fillers);
+                                setTotalTimeSaved(success.summary.totalFillerTime);
+                                setSelectedFillers(new Set(success.fillers.map((f) => f.id)));
+
+                                if (success.warnings?.length) {
+                                    setSmartCutWarning(success.warnings.map((w) => w.message).join(' '));
+                                }
+                            } catch (e) {
+                                console.error('Smart cut detection failed:', e);
+                                setSmartCutError('Smart Cut failed to run. Please try again.');
+                                setFillers([]);
+                                setSelectedFillers(new Set());
+                                setTotalTimeSaved(0);
+                            } finally {
+                                setIsDetecting(false);
+                            }
+                        }}
+                        className="h-6 text-[10px] px-2 border-amber-500/20 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
+                    >
+                        {isDetecting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Analyze'}
+                    </Button>
+                </div>
+                
+                <p className="text-[10px] text-muted-foreground mb-2 leading-relaxed">
+                    Detect and remove filler words (um, uh) and long silent pauses.
+                </p>
+
+                {smartCutError && (
+                    <div className="mt-3 p-2.5 rounded-lg border border-red-500/20 bg-red-500/10 text-[10px] text-red-300">
+                        {smartCutError}
+                    </div>
+                )}
+
+                {smartCutWarning && !smartCutError && (
+                    <div className="mt-3 p-2.5 rounded-lg border border-amber-500/20 bg-amber-500/10 text-[10px] text-amber-200">
+                        {smartCutWarning}
+                    </div>
+                )}
+
+                {hasAnalyzed && !smartCutError && fillers.length === 0 && (
+                    <div className="mt-3 p-2.5 rounded-lg border border-border bg-secondary/30 text-[10px] text-muted-foreground">
+                        No filler segments found in the current transcript.
+                    </div>
+                )}
+
+                {fillers.length > 0 && (
+                    <div className="mt-4">
+                        <div className="mb-3 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10 flex items-center justify-between">
+                            <span className="text-[10px] text-amber-300/80">
+                                Found <span className="font-bold text-amber-300">{fillers.length}</span> bad segments
+                            </span>
+                            <span className="text-[10px] font-mono text-amber-300/60">
+                                Save {totalTimeSaved}s
+                            </span>
+                        </div>
+
+                        <div className="mb-2 flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={selectAll}
+                                className="h-6 px-2 text-[10px]"
+                            >
+                                Select All
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={selectNone}
+                                className="h-6 px-2 text-[10px]"
+                            >
+                                None
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={selectSuggested}
+                                className="h-6 px-2 text-[10px]"
+                            >
+                                Suggested
+                            </Button>
+                        </div>
+
+                        <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar mb-3 pr-1">
+                            {fillers.map(f => (
+                                <label
+                                    key={f.id}
+                                    className={cn(
+                                        "flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer transition-all",
+                                        selectedFillers.has(f.id)
+                                            ? "bg-amber-500/10 border-amber-500/20"
+                                            : "bg-secondary/30 border-border hover:bg-secondary/50"
+                                    )}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedFillers.has(f.id)}
+                                        onChange={() => {
+                                            const next = new Set(selectedFillers);
+                                            if (next.has(f.id)) next.delete(f.id);
+                                            else next.add(f.id);
+                                            setSelectedFillers(next);
+                                        }}
+                                        className="rounded border-white/20 bg-white/5 text-amber-500 focus:ring-amber-500/30 w-3 h-3"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-[11px] text-foreground/90 truncate">&ldquo;{f.text}&rdquo;</div>
+                                    </div>
+                                    <div className="text-[9px] text-muted-foreground font-mono shrink-0">
+                                        {f.type === 'filler-word' ? '🗣️' : '⏸️'}
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+
+                        <Button
+                            onClick={() => {
+                                if (onSubtitlesChange) {
+                                    const newSubs = (subtitles || []).filter(s => !selectedFillers.has(s.id));
+                                    onSubtitlesChange(newSubs);
+                                    setFillers([]);
+                                    setSelectedFillers(new Set());
+                                    setSmartCutError(null);
+                                    setSmartCutWarning(null);
+                                    setHasAnalyzed(false);
+                                }
+                            }}
+                            disabled={selectedFillers.size === 0}
+                            className="w-full h-8 text-xs bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-lg disabled:opacity-40"
+                        >
+                            <Scissors className="w-3 h-3 mr-1.5" />
+                            Cut {selectedFillers.size} Segment{selectedFillers.size !== 1 ? 's' : ''}
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -371,6 +716,11 @@ interface EditorPanelProps {
     onTextOverlaysChange: (overlays: TextOverlay[]) => void;
     duration: number;
     onClose: () => void;
+    transcript?: string;
+    subtitles?: SubtitleSegment[];
+    onSubtitlesChange?: (subtitles: SubtitleSegment[]) => void;
+    isGenerating?: boolean;
+    onGenerateAI?: () => void;
 }
 
 const EditorPanel: React.FC<EditorPanelProps> = ({
@@ -386,8 +736,14 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
     onTextOverlaysChange,
     duration,
     onClose,
+    transcript,
+    subtitles,
+    onSubtitlesChange,
+    isGenerating,
+    onGenerateAI,
 }) => {
     const tabs: { id: EditorTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+        { id: 'magic', label: 'Magic', icon: Wand2 },
         { id: 'filters', label: 'Filters', icon: SlidersHorizontal },
         { id: 'trim', label: 'Trim', icon: Scissors },
         { id: 'speed', label: 'Speed', icon: Gauge },
@@ -429,7 +785,8 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
             {/* Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar relative">
                 <div className="absolute inset-0">
-                    {activeTab === 'filters' && <FiltersTab filters={filters} onChange={onFiltersChange} />}
+                    {activeTab === 'magic' && <MagicTab subtitles={subtitles} onSubtitlesChange={onSubtitlesChange} isGenerating={isGenerating} onGenerateAI={onGenerateAI} />}
+                    {activeTab === 'filters' && <FiltersTab filters={filters} onChange={onFiltersChange} transcript={transcript} />}
                     {activeTab === 'trim' && <TrimTab trimPoints={trimPoints} duration={duration} onChange={onTrimChange} />}
                     {activeTab === 'speed' && <SpeedTab speed={speed} onChange={onSpeedChange} />}
                     {activeTab === 'text' && <TextTab textOverlays={textOverlays} duration={duration} onChange={onTextOverlaysChange} />}

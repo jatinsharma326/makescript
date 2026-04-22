@@ -14,6 +14,8 @@
     "@remotion/cli": "^4.0.420",
     "@remotion/player": "^4.0.420",
     "@remotion/renderer": "^4.0.420",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.97.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.564.0",

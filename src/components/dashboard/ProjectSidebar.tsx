@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { cn } from '../../lib/utils';
 import { ProjectMeta } from '../../lib/types';
 import { Input } from '../ui/Input';
-import { Search, Plus, Filter, SortAsc, LayoutGrid, List, ChevronDown, Settings, Library, Home, HardDrive, Users, CreditCard, Trash2 } from 'lucide-react';
+import { Search, Plus, Filter, SortAsc, LayoutGrid, List, ChevronDown, Settings, Library, Home, HardDrive, Users, CreditCard, Trash2, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../lib/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface ProjectSidebarProps {
     projects: ProjectMeta[];
@@ -26,6 +28,22 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     const [search, setSearch] = useState('');
     const [sort, setSort] = useState<SortOption>('date-desc');
     const [activeNav, setActiveNav] = useState<NavItem>('home');
+    const { user, logout } = useAuth();
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        await logout();
+        router.push('/');
+    };
+
+    const getInitials = (name: string) => {
+        if (!name) return 'WS';
+        const parts = name.split(' ');
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    };
 
     const filteredProjects = useMemo(() => {
         let result = [...projects];
@@ -69,11 +87,15 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                 <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors group">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-foreground font-bold text-xs shadow-lg shadow-indigo-500/20">
-                            JS
+                            {getInitials(user?.name || '')}
                         </div>
                         <div className="text-left">
-                            <div className="text-sm font-semibold text-foreground dark:text-foreground leading-none mb-1">Jatin's Workspace</div>
-                            <div className="text-[10px] text-muted-foreground font-medium">Free Plan</div>
+                            <div className="text-sm font-semibold text-foreground dark:text-foreground leading-none mb-1">
+                                {user?.name ? `${user.name}'s Workspace` : 'My Workspace'}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-medium capitalize">
+                                {user?.plan || 'Free'} Plan
+                            </div>
                         </div>
                     </div>
                     <ChevronDown className="w-4 h-4 text-muted-foreground/70 group-hover:text-muted-foreground transition-colors" />
@@ -161,6 +183,9 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                 </Button>
                 <Button variant="ghost" className="w-full justify-start text-xs h-8 px-3 text-muted-foreground hover:text-foreground/80">
                     <Settings className="w-3.5 h-3.5 mr-3 opacity-70" /> Settings
+                </Button>
+                <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-xs h-8 px-3 text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                    <LogOut className="w-3.5 h-3.5 mr-3 opacity-70" /> Logout
                 </Button>
 
                 {/* Usage Bar */}

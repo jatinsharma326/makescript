@@ -1123,3 +1123,215 @@ C:\Users\jatin\miniconda3\Lib\site-packages\whisper\transcribe.py:132: UserWarni
 [2026-02-20T13:06:50.203Z] stdout length: 4338, exit code: 0
 [2026-02-20T13:06:50.228Z] Success! 18 segments (raw: 19, filtered: 1), confidence: 0.506, audio covered: 127.68s, language: en
 [2026-02-20T13:06:50.289Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771592734802.mp4
+[2026-02-20T15:12:06.773Z] --- Starting new transcription request ---
+[2026-02-20T15:12:07.570Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-20T15:12:07.837Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771600327576.mp4 (uploaded: 39618799 bytes, written: 39618799 bytes)
+[2026-02-20T15:12:07.851Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771600327576.mp4" base
+[2026-02-20T15:13:03.993Z] stderr (partial):   0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:04<00:24, 453.51frames/s] 39%|###9      | 5160/13209 [00:12<00:20, 395.08frames/s] 59%|#####9    | 7824/13209 [00:16<00:11, 486.80frames/s] 78%|#######8  | 10360/13209 [00:22<00:05, 476.71frames/s] 97%|#########6| 12768/13209 [00:30<00:01, 382.44frames/s]100%|##########| 13209/13209 [00:35<00:00, 313.15frames/s]100%|##########| 13209/13209 [00:35<00:00, 374.63frames/s]
+[Whisper] Raw: 19 segments, audio covered:
+[2026-02-20T15:13:04.106Z] stdout length: 4338, exit code: 0
+[2026-02-20T15:13:04.130Z] Success! 18 segments (raw: 19, filtered: 1), confidence: 0.506, audio covered: 127.68s, language: en
+[2026-02-20T15:13:04.216Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771600327576.mp4
+[2026-02-20T15:22:07.524Z] --- Starting new transcription request ---
+[2026-02-20T15:22:09.541Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-20T15:22:09.815Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771600929576.mp4 (uploaded: 39618799 bytes, written: 39618799 bytes)
+[2026-02-20T15:22:09.832Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771600929576.mp4" base
+[2026-02-20T15:23:05.759Z] stderr (partial):   0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:08<00:43, 255.29frames/s] 39%|###9      | 5160/13209 [00:15<00:22, 359.82frames/s] 59%|#####9    | 7824/13209 [00:20<00:13, 399.26frames/s] 78%|#######8  | 10360/13209 [00:25<00:06, 437.93frames/s] 97%|#########6| 12768/13209 [00:31<00:01, 428.60frames/s]100%|##########| 13209/13209 [00:33<00:00, 409.21frames/s]100%|##########| 13209/13209 [00:33<00:00, 395.65frames/s]
+[Whisper] Raw: 19 segments, audio covered:
+[2026-02-20T15:23:05.825Z] stdout length: 4338, exit code: 0
+[2026-02-20T15:23:05.845Z] Success! 18 segments (raw: 19, filtered: 1), confidence: 0.506, audio covered: 127.68s, language: en
+[2026-02-20T15:23:05.900Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771600929576.mp4
+[2026-02-20T15:33:53.376Z] --- Starting new transcription request ---
+[2026-02-20T15:33:54.357Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-02-20T15:33:54.575Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771601634363.mp4 (uploaded: 39618799 bytes, written: 39618799 bytes)
+[2026-02-20T15:33:54.584Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771601634363.mp4" base
+[2026-02-20T15:34:21.884Z] stderr (partial):   0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:03<00:14, 735.71frames/s] 39%|###9      | 5160/13209 [00:05<00:09, 887.81frames/s] 59%|#####9    | 7824/13209 [00:08<00:05, 928.33frames/s] 78%|#######8  | 10360/13209 [00:11<00:03, 914.69frames/s] 97%|#########6| 12768/13209 [00:14<00:00, 895.96frames/s]100%|##########| 13209/13209 [00:15<00:00, 817.83frames/s]100%|##########| 13209/13209 [00:15<00:00, 858.96frames/s]
+[Whisper] Raw: 19 segments, audio covered:
+[2026-02-20T15:34:21.906Z] stdout length: 4338, exit code: 0
+[2026-02-20T15:34:21.909Z] Success! 18 segments (raw: 19, filtered: 1), confidence: 0.506, audio covered: 127.68s, language: en
+[2026-02-20T15:34:21.922Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771601634363.mp4
+[2026-02-20T16:54:35.584Z] --- Starting new transcription request ---
+[2026-02-20T16:54:36.992Z] Received file: 38594.mp4, size: 31744298 bytes
+[2026-02-20T16:54:37.346Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771606477071.mp4 (uploaded: 31744298 bytes, written: 31744298 bytes)
+[2026-02-20T16:54:37.362Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771606477071.mp4" base
+[2026-02-20T16:55:47.890Z] stderr (partial):   0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:11<00:40, 245.81frames/s] 44%|####4     | 5640/12717 [00:24<00:31, 227.66frames/s] 66%|######6   | 8456/12717 [00:32<00:16, 266.05frames/s] 89%|########9 | 11344/12717 [00:42<00:04, 283.19frames/s]100%|##########| 12717/12717 [00:47<00:00, 273.33frames/s]100%|##########| 12717/12717 [00:47<00:00, 265.82frames/s]
+[Whisper] Raw: 40 segments, audio covered: 127.2s, language: en
+
+[2026-02-20T16:55:48.010Z] stdout length: 8813, exit code: 0
+[2026-02-20T16:55:48.043Z] Success! 40 segments (raw: 40, filtered: 0), confidence: 0.91, audio covered: 127.16s, language: en
+[2026-02-20T16:55:48.099Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771606477071.mp4
+[2026-02-20T17:02:53.440Z] --- Starting new transcription request ---
+[2026-02-20T17:02:54.062Z] Received file: output.mp4, size: 30074034 bytes
+[2026-02-20T17:02:54.281Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771606974137.mp4 (uploaded: 30074034 bytes, written: 30074034 bytes)
+[2026-02-20T17:02:54.295Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771606974137.mp4" base
+[2026-02-20T17:03:54.463Z] stderr (partial):   0%|          | 0/12260 [00:00<?, ?frames/s] 19%|#9        | 2340/12260 [00:08<00:34, 289.54frames/s] 43%|####2     | 5212/12260 [00:16<00:22, 316.63frames/s] 66%|######6   | 8100/12260 [00:25<00:12, 323.32frames/s] 88%|########8 | 10836/12260 [00:32<00:04, 336.79frames/s]100%|##########| 12260/12260 [00:37<00:00, 331.33frames/s]100%|##########| 12260/12260 [00:37<00:00, 326.65frames/s]
+[Whisper] Raw: 44 segments, audio covered: 122.5s, language: en
+[Whisper] Filtered 2: {'no_speech': 
+[2026-02-20T17:03:54.499Z] stdout length: 7438, exit code: 0
+[2026-02-20T17:03:54.507Z] Success! 42 segments (raw: 44, filtered: 2), confidence: 0.828, audio covered: 119.12s, language: en
+[2026-02-20T17:03:54.525Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1771606974137.mp4
+[2026-02-25T11:41:28.072Z] --- Starting new transcription request ---
+[2026-02-25T11:41:28.684Z] Received file: output (2).mp4, size: 18309290 bytes
+[2026-02-25T11:41:28.868Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1772019688723.mp4 (uploaded: 18309290 bytes, written: 18309290 bytes)
+[2026-02-25T11:41:28.883Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1772019688723.mp4" base
+[2026-02-25T11:42:26.968Z] stderr (partial):   0%|          | 0/9415 [00:00<?, ?frames/s] 32%|###1      | 2996/9415 [00:09<00:20, 314.81frames/s] 60%|#####9    | 5620/9415 [00:17<00:11, 330.73frames/s] 91%|#########1| 8600/9415 [00:28<00:02, 289.50frames/s]100%|##########| 9415/9415 [00:33<00:00, 265.08frames/s]100%|##########| 9415/9415 [00:33<00:00, 282.54frames/s]
+[Whisper] Raw: 35 segments, audio covered: 94.1s, language: en
+
+[2026-02-25T11:42:26.974Z] stdout length: 7196, exit code: 0
+[2026-02-25T11:42:26.980Z] Success! 35 segments (raw: 35, filtered: 0), confidence: 0.823, audio covered: 94.08s, language: en
+[2026-02-25T11:42:26.997Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1772019688723.mp4
+[2026-03-12T05:33:37.059Z] --- Starting new transcription request ---
+[2026-03-12T05:33:38.562Z] Received file: freepik_a-glamorous-blonde-influencer-in-an-emerald-green-_kling_720p_9-16_24fps_93699.mp4, size: 18919858 bytes
+[2026-03-12T05:33:39.194Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773293618579.mp4 (uploaded: 18919858 bytes, written: 18919858 bytes)
+[2026-03-12T05:33:39.212Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773293618579.mp4" base
+[2026-03-12T05:34:13.812Z] stderr (partial):   0%|          | 0/1504 [00:00<?, ?frames/s]100%|##########| 1504/1504 [00:08<00:00, 179.41frames/s]100%|##########| 1504/1504 [00:08<00:00, 179.36frames/s]
+[Whisper] Raw: 5 segments, audio covered: 15.0s, language: en
+
+[2026-03-12T05:34:13.852Z] stdout length: 718, exit code: 0
+[2026-03-12T05:34:13.864Z] Success! 5 segments (raw: 5, filtered: 0), confidence: 0.836, audio covered: 15.04s, language: en
+[2026-03-12T05:34:13.910Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773293618579.mp4
+[2026-03-12T05:35:18.956Z] --- Starting new transcription request ---
+[2026-03-12T05:35:26.486Z] Received file: r49.mp4, size: 115001474 bytes
+[2026-03-12T05:35:28.286Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773293726533.mp4 (uploaded: 115001474 bytes, written: 115001474 bytes)
+[2026-03-12T05:35:28.303Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773293726533.mp4" base
+[2026-03-12T05:36:31.867Z] stderr (partial):   0%|          | 0/16008 [00:00<?, ?frames/s] 18%|#8        | 2912/16008 [00:07<00:33, 389.87frames/s] 36%|###6      | 5812/16008 [00:12<00:21, 473.35frames/s] 54%|#####4    | 8684/16008 [00:18<00:15, 474.23frames/s] 72%|#######2  | 11556/16008 [00:26<00:10, 432.89frames/s] 89%|########8 | 14196/16008 [00:33<00:04, 412.68frames/s]100%|##########| 16008/16008 [00:37<00:00, 407.04frames/s]100%|##########| 16008/16008 [00:37<00:00, 422.90frames/s]
+[Whisper] Raw: 51 segments, audio covered:
+[2026-03-12T05:36:31.908Z] stdout length: 8200, exit code: 0
+[2026-03-12T05:36:31.915Z] Success! 51 segments (raw: 51, filtered: 0), confidence: 0.968, audio covered: 160.04s, language: en
+[2026-03-12T05:36:31.951Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773293726533.mp4
+[2026-03-12T05:41:58.146Z] --- Starting new transcription request ---
+[2026-03-12T05:42:03.305Z] Received file: r43.mp4, size: 122791986 bytes
+[2026-03-12T05:42:03.948Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773294123332.mp4 (uploaded: 122791986 bytes, written: 122791986 bytes)
+[2026-03-12T05:42:03.966Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773294123332.mp4" base
+[2026-03-12T05:42:57.997Z] stderr (partial):   0%|          | 0/15445 [00:00<?, ?frames/s] 14%|#4        | 2200/15445 [00:04<00:25, 526.39frames/s] 32%|###2      | 4972/15445 [00:09<00:20, 518.29frames/s] 51%|#####1    | 7928/15445 [00:16<00:16, 461.76frames/s] 70%|######9   | 10800/15445 [00:22<00:10, 463.90frames/s] 89%|########8 | 13728/15445 [00:30<00:03, 439.58frames/s]100%|##########| 15445/15445 [00:36<00:00, 388.45frames/s]100%|##########| 15445/15445 [00:36<00:00, 427.17frames/s]
+[Whisper] Raw: 29 segments, audio covered:
+[2026-03-12T05:42:58.020Z] stdout length: 6506, exit code: 0
+[2026-03-12T05:42:58.032Z] Success! 28 segments (raw: 29, filtered: 1), confidence: 0.773, audio covered: 154.4s, language: en
+[2026-03-12T05:42:58.053Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773294123332.mp4
+[2026-03-12T05:58:56.605Z] --- Starting new transcription request ---
+[2026-03-12T05:58:57.119Z] Received file: 38523.mp4, size: 25024254 bytes
+[2026-03-12T05:58:57.546Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773295137137.mp4 (uploaded: 25024254 bytes, written: 25024254 bytes)
+[2026-03-12T05:58:57.559Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773295137137.mp4" base
+[2026-03-12T06:00:01.056Z] stderr (partial):   0%|          | 0/12717 [00:00<?, ?frames/s] 22%|##2       | 2840/12717 [00:15<00:54, 181.52frames/s] 44%|####4     | 5640/12717 [00:23<00:28, 251.38frames/s] 66%|######6   | 8456/12717 [00:32<00:15, 278.18frames/s] 89%|########9 | 11344/12717 [00:40<00:04, 307.96frames/s]100%|##########| 12717/12717 [00:44<00:00, 307.38frames/s]100%|##########| 12717/12717 [00:44<00:00, 282.89frames/s]
+[Whisper] Raw: 40 segments, audio covered: 127.2s, language: en
+
+[2026-03-12T06:00:01.108Z] stdout length: 8813, exit code: 0
+[2026-03-12T06:00:01.121Z] Success! 40 segments (raw: 40, filtered: 0), confidence: 0.91, audio covered: 127.16s, language: en
+[2026-03-12T06:00:01.157Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773295137137.mp4
+[2026-03-12T06:58:39.333Z] --- Starting new transcription request ---
+[2026-03-12T06:58:41.217Z] Received file: haven.mp4, size: 57906491 bytes
+[2026-03-12T06:58:42.076Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773298721339.mp4 (uploaded: 57906491 bytes, written: 57906491 bytes)
+[2026-03-12T06:58:42.082Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773298721339.mp4" base
+[2026-03-12T06:59:45.805Z] stderr (partial):   0%|          | 0/17271 [00:00<?, ?frames/s] 16%|#6        | 2784/17271 [00:07<00:39, 362.41frames/s] 31%|###1      | 5388/17271 [00:13<00:30, 394.83frames/s] 48%|####7     | 8260/17271 [00:20<00:21, 411.91frames/s] 62%|######1   | 10676/17271 [00:25<00:14, 447.50frames/s] 75%|#######5  | 12984/17271 [00:30<00:09, 441.47frames/s] 90%|########9 | 15512/17271 [00:36<00:03, 443.49frames/s] 97%|#########7| 16836/17271 [00:39<00:01, 429.17frames/s]100%|##########| 17271/17271 [00:42<00:00, 
+[2026-03-12T06:59:45.827Z] stdout length: 6822, exit code: 0
+[2026-03-12T06:59:45.834Z] Success! 28 segments (raw: 29, filtered: 1), confidence: 0.676, audio covered: 171.24s, language: en
+[2026-03-12T06:59:45.855Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773298721339.mp4
+[2026-03-12T07:37:59.991Z] --- Starting new transcription request ---
+[2026-03-12T07:38:00.806Z] Received file: output.mp4, size: 30074034 bytes
+[2026-03-12T07:38:01.009Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773301080810.mp4 (uploaded: 30074034 bytes, written: 30074034 bytes)
+[2026-03-12T07:38:01.020Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773301080810.mp4" base
+[2026-03-12T07:38:57.688Z] stderr (partial):   0%|          | 0/12260 [00:00<?, ?frames/s] 19%|#9        | 2340/12260 [00:07<00:32, 301.43frames/s] 43%|####2     | 5212/12260 [00:16<00:22, 318.02frames/s] 66%|######6   | 8100/12260 [00:25<00:13, 318.26frames/s] 88%|########8 | 10836/12260 [00:32<00:04, 338.27frames/s]100%|##########| 12260/12260 [00:37<00:00, 327.32frames/s]100%|##########| 12260/12260 [00:37<00:00, 325.09frames/s]
+[Whisper] Raw: 44 segments, audio covered: 122.5s, language: en
+[Whisper] Filtered 2: {'no_speech': 
+[2026-03-12T07:38:57.712Z] stdout length: 7438, exit code: 0
+[2026-03-12T07:38:57.724Z] Success! 42 segments (raw: 44, filtered: 2), confidence: 0.828, audio covered: 119.12s, language: en
+[2026-03-12T07:38:57.745Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773301080810.mp4
+[2026-03-12T11:02:37.670Z] --- Starting new transcription request ---
+[2026-03-12T11:02:38.673Z] Received file: Untitled design.mp4, size: 38626908 bytes
+[2026-03-12T11:02:38.908Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773313358680.mp4 (uploaded: 38626908 bytes, written: 38626908 bytes)
+[2026-03-12T11:02:38.922Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773313358680.mp4" base
+[2026-03-12T11:03:24.771Z] stderr (partial):   0%|          | 0/11010 [00:00<?, ?frames/s] 25%|##5       | 2774/11010 [00:06<00:18, 449.36frames/s] 51%|#####1    | 5646/11010 [00:12<00:12, 445.90frames/s] 77%|#######6  | 8438/11010 [00:20<00:06, 388.47frames/s]100%|##########| 11010/11010 [00:27<00:00, 390.42frames/s]100%|##########| 11010/11010 [00:27<00:00, 400.58frames/s]
+[Whisper] Raw: 35 segments, audio covered: 109.4s, language: en
+
+[2026-03-12T11:03:24.804Z] stdout length: 5843, exit code: 0
+[2026-03-12T11:03:24.818Z] Success! 35 segments (raw: 35, filtered: 0), confidence: 0.577, audio covered: 109.38s, language: en
+[2026-03-12T11:03:24.886Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1773313358680.mp4
+[2026-04-07T08:12:56.868Z] --- Starting new transcription request ---
+[2026-04-07T08:13:50.158Z] Received file: pok.mp4, size: 288274255 bytes
+[2026-04-07T08:13:57.489Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1775549630392.mp4 (uploaded: 288274255 bytes, written: 288274255 bytes)
+[2026-04-07T08:13:57.511Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1775549630392.mp4" base
+[2026-04-07T08:21:47.022Z] stderr (partial):   0%|          | 0/40689 [00:00<?, ?frames/s]  7%|7         | 2956/40689 [00:18<03:54, 160.63frames/s] 15%|#4        | 5908/40689 [00:27<02:34, 225.64frames/s] 15%|#4        | 5908/40689 [00:40<02:34, 225.64frames/s] 22%|##1       | 8800/40689 [00:51<03:15, 163.25frames/s] 22%|##1       | 8800/40689 [01:10<03:15, 163.25frames/s] 28%|##8       | 11400/40689 [01:28<04:28, 109.12frames/s] 28%|##8       | 11400/40689 [01:40<04:28, 109.12frames/s] 35%|###5      | 14336/40689 [02:18<05:18, 82
+[2026-04-07T08:21:47.285Z] stdout length: 19752, exit code: 0
+[2026-04-07T08:21:47.393Z] Success! 104 segments (raw: 104, filtered: 0), confidence: 0.882, audio covered: 406.72s, language: en
+[2026-04-07T08:21:48.137Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1775549630392.mp4
+[2026-04-07T09:40:35.459Z] --- Starting new transcription request ---
+[2026-04-07T09:40:36.719Z] Received file: jkk.mp4, size: 90566836 bytes
+[2026-04-07T09:40:37.006Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1775554836727.mp4 (uploaded: 90566836 bytes, written: 90566836 bytes)
+[2026-04-07T09:40:37.015Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1775554836727.mp4" base
+[2026-04-07T09:41:49.412Z] stderr (partial):   0%|          | 0/16955 [00:00<?, ?frames/s] 16%|#5        | 2668/16955 [00:17<01:31, 155.87frames/s] 31%|###1      | 5312/16955 [00:22<00:45, 258.17frames/s] 48%|####8     | 8156/16955 [00:36<00:37, 232.82frames/s] 64%|######3   | 10780/16955 [00:43<00:23, 264.28frames/s] 81%|########  | 13668/16955 [00:49<00:10, 324.39frames/s] 98%|#########8| 16628/16955 [00:56<00:00, 354.72frames/s]100%|##########| 16955/16955 [00:58<00:00, 327.53frames/s]100%|##########| 16955/16955 [00:58<00:00, 
+[2026-04-07T09:41:49.429Z] stdout length: 10430, exit code: 0
+[2026-04-07T09:41:49.438Z] Success! 48 segments (raw: 48, filtered: 0), confidence: 0.948, audio covered: 169.48s, language: en
+[2026-04-07T09:41:49.492Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1775554836727.mp4
+[2026-04-21T04:48:34.863Z] --- Starting new transcription request ---
+[2026-04-21T04:48:35.569Z] Received file: output.mp4, size: 30074034 bytes
+[2026-04-21T04:48:35.813Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776746915618.mp4 (uploaded: 30074034 bytes, written: 30074034 bytes)
+[2026-04-21T04:48:35.834Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776746915618.mp4" base
+[2026-04-21T04:49:37.711Z] stderr (partial):   0%|          | 0/12260 [00:00<?, ?frames/s] 19%|#9        | 2340/12260 [00:09<00:40, 247.24frames/s] 43%|####2     | 5212/12260 [00:19<00:25, 271.69frames/s] 66%|######6   | 8100/12260 [00:29<00:15, 275.11frames/s] 88%|########8 | 10836/12260 [00:39<00:05, 282.47frames/s]100%|##########| 12260/12260 [00:44<00:00, 283.11frames/s]100%|##########| 12260/12260 [00:44<00:00, 278.20frames/s]
+[Whisper] Raw: 44 segments, audio covered: 122.5s, language: en
+[Whisper] Filtered 2: {'no_speech': 
+[2026-04-21T04:49:37.727Z] stdout length: 7438, exit code: 0
+[2026-04-21T04:49:37.732Z] Success! 42 segments (raw: 44, filtered: 2), confidence: 0.828, audio covered: 119.12s, language: en
+[2026-04-21T04:49:37.766Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776746915618.mp4
+[2026-04-21T05:16:33.553Z] --- Starting new transcription request ---
+[2026-04-21T05:16:35.451Z] Received file: dupapps.mp4, size: 39618799 bytes
+[2026-04-21T05:16:35.729Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776748595512.mp4 (uploaded: 39618799 bytes, written: 39618799 bytes)
+[2026-04-21T05:16:35.737Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776748595512.mp4" base
+[2026-04-21T05:17:27.898Z] stderr (partial):   0%|          | 0/13209 [00:00<?, ?frames/s] 17%|#6        | 2224/13209 [00:05<00:28, 391.66frames/s] 39%|###9      | 5160/13209 [00:10<00:14, 537.58frames/s] 59%|#####9    | 7824/13209 [00:14<00:09, 570.31frames/s] 78%|#######8  | 10360/13209 [00:18<00:05, 563.25frames/s] 97%|#########6| 12768/13209 [00:22<00:00, 593.85frames/s]100%|##########| 13209/13209 [00:23<00:00, 560.80frames/s]100%|##########| 13209/13209 [00:23<00:00, 552.78frames/s]
+[Whisper] Raw: 19 segments, audio covered:
+[2026-04-21T05:17:27.906Z] stdout length: 4338, exit code: 0
+[2026-04-21T05:17:27.909Z] Success! 18 segments (raw: 19, filtered: 1), confidence: 0.506, audio covered: 127.68s, language: en
+[2026-04-21T05:17:27.932Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776748595512.mp4
+[2026-04-21T05:40:19.196Z] --- Starting new transcription request ---
+[2026-04-21T05:40:19.875Z] Received file: 8 (1).mp4, size: 19044962 bytes
+[2026-04-21T05:40:20.018Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776750019878.mp4 (uploaded: 19044962 bytes, written: 19044962 bytes)
+[2026-04-21T05:40:20.037Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776750019878.mp4" base
+[2026-04-21T05:40:57.147Z] stderr (partial):   0%|          | 0/9243 [00:00<?, ?frames/s] 31%|###       | 2834/9243 [00:06<00:14, 448.56frames/s] 59%|#####9    | 5470/9243 [00:12<00:08, 431.35frames/s] 89%|########9 | 8228/9243 [00:18<00:02, 442.14frames/s]100%|##########| 9243/9243 [00:21<00:00, 435.42frames/s]100%|##########| 9243/9243 [00:21<00:00, 437.27frames/s]
+[Whisper] Raw: 39 segments, audio covered: 92.4s, language: en
+
+[2026-04-21T05:40:57.150Z] stdout length: 6691, exit code: 0
+[2026-04-21T05:40:57.153Z] Success! 39 segments (raw: 39, filtered: 0), confidence: 0.905, audio covered: 92.4s, language: en
+[2026-04-21T05:40:57.166Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776750019878.mp4
+[2026-04-22T07:14:59.377Z] --- Starting new transcription request ---
+[2026-04-22T07:15:17.864Z] Received file: r50 - Made with Clipchamp.mp4, size: 182578081 bytes
+[2026-04-22T07:15:24.393Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776842117950.mp4 (uploaded: 182578081 bytes, written: 182578081 bytes)
+[2026-04-22T07:15:24.434Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776842117950.mp4" base
+[2026-04-22T07:17:42.727Z] stderr (partial):   0%|          | 0/15912 [00:00<?, ?frames/s] 13%|#3        | 2128/15912 [00:10<01:06, 207.47frames/s] 29%|##9       | 4640/15912 [00:20<00:49, 227.00frames/s] 46%|####6     | 7340/15912 [00:32<00:38, 223.45frames/s] 61%|######1   | 9776/15912 [00:46<00:29, 205.52frames/s] 61%|######1   | 9776/15912 [01:00<00:29, 205.52frames/s] 80%|#######9  | 12718/15912 [01:01<00:15, 201.79frames/s] 98%|#########8| 15630/15912 [01:11<00:01, 228.15frames/s]100%|##########| 15912/15912 [01:14<00:00, 20
+[2026-04-22T07:17:42.794Z] stdout length: 4780, exit code: 0
+[2026-04-22T07:17:42.843Z] Success! 24 segments (raw: 24, filtered: 0), confidence: 0.594, audio covered: 159.1s, language: en
+[2026-04-22T07:17:42.960Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776842117950.mp4
+[2026-04-22T07:54:02.764Z] --- Starting new transcription request ---
+[2026-04-22T07:54:04.288Z] Received file: r47 - Made with Clipchamp.mp4, size: 167111246 bytes
+[2026-04-22T07:54:05.426Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776844444293.mp4 (uploaded: 167111246 bytes, written: 167111246 bytes)
+[2026-04-22T07:54:05.431Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776844444293.mp4" base
+[2026-04-22T07:55:01.879Z] stderr (partial):   0%|          | 0/14606 [00:00<?, ?frames/s] 18%|#7        | 2616/14606 [00:07<00:35, 334.50frames/s] 37%|###7      | 5448/14606 [00:14<00:23, 382.92frames/s] 57%|#####6    | 8256/14606 [00:21<00:16, 391.33frames/s] 76%|#######6  | 11108/14606 [00:28<00:08, 407.75frames/s] 95%|#########5| 13904/14606 [00:33<00:01, 430.04frames/s]100%|##########| 14606/14606 [00:35<00:00, 421.62frames/s]100%|##########| 14606/14606 [00:35<00:00, 407.30frames/s]
+[Whisper] Raw: 38 segments, audio covered:
+[2026-04-22T07:55:01.885Z] stdout length: 7156, exit code: 0
+[2026-04-22T07:55:01.888Z] Success! 38 segments (raw: 38, filtered: 0), confidence: 0.849, audio covered: 146.12s, language: en
+[2026-04-22T07:55:01.934Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776844444293.mp4
+[2026-04-22T10:10:23.713Z] --- Starting new transcription request ---
+[2026-04-22T10:10:30.010Z] Received file: r44 - Made with Clipchamp.mp4, size: 178599483 bytes
+[2026-04-22T10:10:34.204Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776852630342.mp4 (uploaded: 178599483 bytes, written: 178599483 bytes)
+[2026-04-22T10:10:34.413Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776852630342.mp4" base
+[2026-04-22T10:11:38.054Z] stderr (partial):   0%|          | 0/15436 [00:00<?, ?frames/s] 19%|#8        | 2912/15436 [00:07<00:32, 382.07frames/s] 38%|###7      | 5828/15436 [00:13<00:22, 436.53frames/s] 56%|#####5    | 8580/15436 [00:19<00:15, 437.43frames/s] 73%|#######2  | 11202/15436 [00:26<00:10, 420.79frames/s] 91%|#########1| 14090/15436 [00:34<00:03, 398.20frames/s]100%|##########| 15436/15436 [00:37<00:00, 409.20frames/s]100%|##########| 15436/15436 [00:37<00:00, 413.06frames/s]
+[Whisper] Raw: 47 segments, audio covered:
+[2026-04-22T10:11:38.079Z] stdout length: 7520, exit code: 0
+[2026-04-22T10:11:38.091Z] Success! 46 segments (raw: 47, filtered: 1), confidence: 0.851, audio covered: 154.5s, language: en
+[2026-04-22T10:11:38.169Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776852630342.mp4
+[2026-04-22T10:58:19.643Z] --- Starting new transcription request ---
+[2026-04-22T10:58:25.602Z] Received file: r45.mp4, size: 103726984 bytes
+[2026-04-22T10:58:29.206Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776855505727.mp4 (uploaded: 103726984 bytes, written: 103726984 bytes)
+[2026-04-22T10:58:29.623Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776855505727.mp4" base
+[2026-04-22T10:59:36.802Z] stderr (partial):   0%|          | 0/15355 [00:00<?, ?frames/s] 19%|#8        | 2872/15355 [00:08<00:36, 343.31frames/s] 35%|###5      | 5392/15355 [00:14<00:26, 372.68frames/s] 54%|#####3    | 8288/15355 [00:20<00:17, 408.80frames/s] 72%|#######1  | 11016/15355 [00:26<00:10, 427.47frames/s] 89%|########9 | 13668/15355 [00:33<00:03, 425.68frames/s]100%|##########| 15355/15355 [00:38<00:00, 403.90frames/s]100%|##########| 15355/15355 [00:38<00:00, 403.54frames/s]
+[Whisper] Raw: 31 segments, audio covered:
+[2026-04-22T10:59:36.841Z] stdout length: 6740, exit code: 0
+[2026-04-22T10:59:36.860Z] Success! 31 segments (raw: 31, filtered: 0), confidence: 0.889, audio covered: 153.2s, language: en
+[2026-04-22T10:59:36.910Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776855505727.mp4
+[2026-04-22T11:20:12.820Z] --- Starting new transcription request ---
+[2026-04-22T11:20:15.619Z] Received file: r45.mp4, size: 103726984 bytes
+[2026-04-22T11:20:16.562Z] Saved temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776856815732.mp4 (uploaded: 103726984 bytes, written: 103726984 bytes)
+[2026-04-22T11:20:16.663Z] Running transcription with spawn: python "C:\Users\jatin\OneDrive\Documents\myctproj\scripts\transcribe.py" "C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776856815732.mp4" base
+[2026-04-22T11:21:34.661Z] stderr (partial):   0%|          | 0/15355 [00:00<?, ?frames/s] 19%|#8        | 2872/15355 [00:08<00:34, 358.99frames/s] 35%|###5      | 5392/15355 [00:16<00:31, 317.29frames/s] 54%|#####3    | 8288/15355 [00:24<00:21, 334.03frames/s] 72%|#######1  | 11016/15355 [00:31<00:12, 353.23frames/s] 89%|########9 | 13668/15355 [00:37<00:04, 380.29frames/s]100%|##########| 15355/15355 [00:42<00:00, 373.41frames/s]100%|##########| 15355/15355 [00:42<00:00, 359.79frames/s]
+[Whisper] Raw: 31 segments, audio covered:
+[2026-04-22T11:21:34.711Z] stdout length: 6740, exit code: 0
+[2026-04-22T11:21:34.730Z] Success! 31 segments (raw: 31, filtered: 0), confidence: 0.889, audio covered: 153.2s, language: en
+[2026-04-22T11:21:34.797Z] Cleaned up temp file: C:\Users\jatin\OneDrive\Documents\myctproj\tmp\upload_1776856815732.mp4

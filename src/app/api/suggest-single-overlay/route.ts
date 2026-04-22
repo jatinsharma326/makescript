@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Lightning AI API — keys from environment
 const LIGHTNING_API_URL = process.env.LIGHTNING_API_URL || 'https://lightning.ai/api/v1/chat/completions';
 const LIGHTNING_API_KEY = process.env.LIGHTNING_API_KEY || '';
+const LIGHTNING_MODEL = process.env.LIGHTNING_MODEL || 'anthropic/claude-sonnet-4-6';
 
 const VALID_OVERLAY_TYPES = [
     'emoji-reaction',
@@ -15,8 +16,9 @@ const VALID_OVERLAY_TYPES = [
     'gif-reaction',
     'visual-illustration',
     'ai-generated-image',
-    'transcript-motion',
     'dynamic-broll',
+    'visual-illustration',
+    'ai-motion-graphic',
 ];
 
 export async function POST(request: NextRequest) {
@@ -53,22 +55,20 @@ AVAILABLE OVERLAY TYPES:
    { "type": "ai-generated-image", "props": { "imagePrompt": "vivid 15-25 word visual description", "displayMode": "picture-in-picture", "transition": "fade-in" } }
    displayMode must be "picture-in-picture", "card", or "split" (NEVER "fullscreen"). Make imagePrompt VIVID and SPECIFIC.
 
-2. "transcript-motion" — Live word-by-word animated text synced to speech
-   { "type": "transcript-motion", "props": { "text": "the transcript text", "color": "#6366f1", "style": "karaoke"|"typewriter"|"wave", "position": "center"|"top"|"bottom" } }
-
-3. "kinetic-text" — Animated text overlay with key phrases
+2. "kinetic-text" — Animated text overlay with key phrases
    { "type": "kinetic-text", "props": { "text": "Key Phrase", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 } }
 
-4. "highlight-box" — Text emphasis with animated highlight
+3. "highlight-box" — Text emphasis with animated highlight
    { "type": "highlight-box", "props": { "text": "Important phrase", "color": "#hex", "style": "glow"|"underline"|"box" } }
 
-5. "emoji-reaction" — A pop-up emoji
+4. "emoji-reaction" — A pop-up emoji
    { "type": "emoji-reaction", "props": { "emoji": "\uD83D\uDD25", "size": 70 } }
 
 RULES:
-- PREFER ai-generated-image for visual B-roll requests
+- PREFER ai-generated-image or ai-motion-graphic for visual B-roll requests
 - Pick the overlay that BEST matches the user instruction
 - Do NOT use visual-illustration
+- For ai-motion-graphic: write a full dynamic <svg> string in svgContent property
 - For kinetic-text: extract SHORT punchy labels (2-5 words)
 
 Respond with ONLY a JSON object.`;
@@ -77,7 +77,7 @@ Respond with ONLY a JSON object.`;
     const RETRY_DELAY_MS = 500;
 
     const models = [
-        { name: 'DeepSeek V3.1', model: 'lightning-ai/DeepSeek-V3.1' },
+        { name: 'Claude Sonnet', model: LIGHTNING_MODEL },
         { name: 'OpenAI o3', model: 'openai/o3' },
         { name: 'OpenAI o4-mini', model: 'openai/o4-mini' },
     ];

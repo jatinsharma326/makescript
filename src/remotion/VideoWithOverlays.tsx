@@ -21,6 +21,7 @@ import { BrollVideo } from './overlays/BrollVideo';
 import { GifReaction } from './overlays/GifReaction';
 import { TranscriptMotion } from './overlays/TranscriptMotion';
 import { DynamicBRoll } from './overlays/DynamicBRoll';
+import { AiMotionGraphic } from './overlays/AiMotionGraphic';
 import { SubtitleSegment } from '../lib/types';
 
 // Overlay types that already render the segment text visually.
@@ -34,6 +35,7 @@ const TEXT_OVERLAYS = new Set([
     'ai-generated-image',
     'transcript-motion',
     'dynamic-broll',
+    'ai-motion-graphic',
 ]);
 
 interface VideoWithOverlaysProps {
@@ -53,19 +55,57 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
 }) => {
     const frame = useCurrentFrame();
 
+    // Determine if we need to blur the background dynamically for full-screen motion graphics
+    let dynamicBlur = 0;
+    for (const seg of subtitles) {
+        if (seg.overlay) {
+            const startFrame = Math.round(seg.startTime * fps);
+            const endFrame = Math.round(seg.endTime * fps);
+            if (frame >= startFrame && frame <= endFrame) {
+                const isFullScreenGraphic = 
+                    seg.overlay.type === 'ai-motion-graphic' ||
+                    seg.overlay.type === 'visual-illustration' ||
+                    seg.overlay.type === 'dynamic-broll' ||
+                    (seg.overlay.type === 'ai-generated-image' && seg.overlay.props.displayMode === 'fullscreen');
+                
+                if (isFullScreenGraphic) {
+                    // Calculate a smooth blur transition (fade in over 8 frames, out over 12)
+                    const localF = frame - startFrame;
+                    const dur = endFrame - startFrame;
+                    const fadeIn = Math.min(1, localF / 8);
+                    const fadeOut = Math.min(1, (dur - localF) / 12);
+                    const intensity = Math.min(fadeIn, fadeOut);
+                    
+                    dynamicBlur = Math.max(dynamicBlur, intensity * 15); // max 15px blur
+                }
+            }
+        }
+    }
+
     // Build CSS filter string from filters
-    const cssFilter = filters ? [
-        filters.brightness !== 100 ? `brightness(${filters.brightness / 100})` : '',
-        filters.contrast !== 100 ? `contrast(${filters.contrast / 100})` : '',
-        filters.saturation !== 100 ? `saturate(${filters.saturation / 100})` : '',
-        filters.blur > 0 ? `blur(${filters.blur}px)` : '',
-    ].filter(Boolean).join(' ') : 'none';
+    const filterParts = [];
+    if (filters) {
+        if (filters.brightness !== 100) filterParts.push(`brightness(${filters.brightness / 100})`);
+        if (filters.contrast !== 100) filterParts.push(`contrast(${filters.contrast / 100})`);
+        if (filters.saturation !== 100) filterParts.push(`saturate(${filters.saturation / 100})`);
+        if (filters.blur > 0) filterParts.push(`blur(${filters.blur}px)`);
+    }
+    
+    // Add dynamic blur if active
+    if (dynamicBlur > 0) {
+        filterParts.push(`blur(${dynamicBlur}px)`);
+        // Also darken slightly to make overlays pop more
+        filterParts.push(`brightness(${1 - (dynamicBlur / 15) * 0.4})`); 
+    }
+
+    const cssFilter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
 
     return (
-        <AbsoluteFill style={{ backgroundColor: '#000' }}>
+        <AbsoluteFill style={{ backgroundColor: 'transparent' }}>
             {/* Base video — always visible, overlays appear on top */}
             <AbsoluteFill style={{
                 filter: cssFilter !== 'none' ? cssFilter : undefined,
+                transition: 'filter 0.1s', // Smooth minor jitter
             }}>
                 <Video src={videoSrc} volume={1} />
             </AbsoluteFill>
@@ -286,19 +326,6 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 />
                             </AbsoluteFill>
                         );
-                    case 'visual-illustration':
-                        return (
-                            <VisualIllustration
-                                key={seg.id}
-                                scene={String(seg.overlay.props.scene || 'solar-system')}
-                                label={String(seg.overlay.props.label || '')}
-                                color={String(seg.overlay.props.color || '#6366f1')}
-                                displayMode={String(seg.overlay.props.displayMode || 'overlay')}
-                                transition={String(seg.overlay.props.transition || 'fade-in')}
-                                startFrame={startFrame}
-                                endFrame={endFrame}
-                            />
-                        );
                     case 'image-card':
                         return (
                             <ImageCard
@@ -315,32 +342,25 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                             />
                         );
                     case 'ai-generated-image': {
-                        // AI B-roll — uses transcript keywords to fetch content-specific photos
-                        const prompt = String(seg.overlay.props.imagePrompt || seg.text || 'abstract visual');
+                        // AI B-roll — uses imageUrl from overlay props (generated by Ernie/Pollinations API)
                         const existingUrl = String(seg.overlay.props.imageUrl || '');
+                        const imagePrompt = String(seg.overlay.props.imagePrompt || seg.text || 'abstract visual');
 
-                        // Extract meaningful keywords from transcript for image search
-                        const keywords = prompt
-                            .toLowerCase()
-                            .replace(/[^a-z\s]/g, '')
-                            .split(/\s+/)
-                            .filter(w => w.length > 3 && !['just', 'like', 'that', 'this', 'have', 'been', 'will', 'with', 'from', 'your', 'about', 'very', 'also', 'some', 'what', 'when', 'they', 'them', 'does', 'going', 'need', 'work', 'know'].includes(w))
-                            .slice(0, 3)
-                            .join(',');
-
-                        // LoremFlickr: returns real photos from Flickr matching keywords
-                        // e.g. "earth,sun,space" returns actual space/earth photos
-                        const seed = Math.abs(prompt.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
-                        const imageUrl = existingUrl || (keywords
-                            ? `https://loremflickr.com/1280/720/${encodeURIComponent(keywords)}?lock=${seed}`
-                            : `https://picsum.photos/seed/${seed}/1280/720`);
+                        // Use the imageUrl directly from the API response
+                        // If no URL provided, generate a context-specific fallback using Pollinations
+                        // The imagePrompt is crafted by the API to be context-specific to the transcript
+                        const seed = Number(seg.overlay.props.seed) || Math.abs(imagePrompt.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+                        
+                        // Generate context-specific image URL if not provided
+                        // Use Pollinations.ai with the actual prompt from transcript
+                        const imageUrl = existingUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent(`${imagePrompt}, professional photography, cinematic lighting, realistic, 4k`)}?width=1280&height=720&nologo=true&seed=${seed}`;
 
                         return (
                             <ImageCard
                                 key={seg.id}
                                 imageUrl={imageUrl}
-                                keyword={String(seg.overlay.props.style || 'B-Roll')}
-                                label={prompt.substring(0, 60)}
+                                keyword={String(seg.overlay.props.caption || 'B-Roll')}
+                                label={imagePrompt.substring(0, 60)}
                                 displayMode={'fullscreen'}
                                 position="center"
                                 transition={(seg.overlay.props.transition as 'slide-in' | 'zoom-in' | 'fade-in' | 'flip') || 'fade-in'}
@@ -367,7 +387,8 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 key={seg.id}
                                 url={String(seg.overlay.props.url || '')}
                                 keyword={String(seg.overlay.props.keyword || seg.text)}
-                                size={(seg.overlay.props.size as 'small' | 'medium' | 'large') || 'medium'}
+                                size={(seg.overlay.props.size as 'small' | 'medium' | 'large' | 'fullscreen') || 'medium'}
+                                position={(seg.overlay.props.position as 'center' | 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left') || 'center'}
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />
@@ -418,6 +439,16 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 color={String(seg.overlay.props.color || '#6366f1')}
                                 displayMode="fullscreen"
                                 transition={String(seg.overlay.props.transition || 'fade-in')}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
+                            />
+                        );
+                    }
+                    case 'ai-motion-graphic': {
+                        return (
+                            <AiMotionGraphic
+                                key={seg.id}
+                                svgContent={String(seg.overlay.props.svgContent || '')}
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />

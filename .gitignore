@@ -40,9 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+config.yaml
+
 .claude/
 tmp/
 *.log
 
 
 nul
+.aider*

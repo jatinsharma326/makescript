@@ -63,12 +63,9 @@ export const DynamicBRoll: React.FC<DynamicBRollProps> = ({
     const cy = height / 2;
 
     return (
-        <AbsoluteFill style={{ opacity: vis, pointerEvents: 'none' }}>
+        <AbsoluteFill style={{ opacity: vis, pointerEvents: 'none', transform: 'scale(1.4)' }}>
             {/* ═══ SOLID OPAQUE BACKGROUND ═══ */}
-            <div style={{
-                position: 'absolute', inset: 0,
-                background: `linear-gradient(${130 + seed % 60}deg, hsl(${hue},30%,5%) 0%, hsl(${hue2},20%,8%) 50%, hsl(${hue},25%,3%) 100%)`,
-            }} />
+            {/* Removed solid background to let video show through */}
 
             {/* Center glow */}
             <div style={{

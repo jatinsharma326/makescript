@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { PlayerPreviewHandle } from '../../components/editor/PlayerPreview';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -24,6 +25,7 @@ import {
     deleteAllProjects,
     getProjectList,
     reconstructFile,
+    setCurrentUser,
 } from '../../lib/projectStorage';
 import { useToast } from '../../components/ui/Toast';
 import { useUndoRedo } from '../../lib/useUndoRedo';
@@ -49,10 +51,15 @@ import {
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/dashboard/ProjectSidebar';
 import { Dashboard } from '../../components/dashboard/Dashboard';
+import { useAuth } from '../../lib/AuthContext';
+import { canCreateProject, incrementUsage, getUsageDisplay } from '../../lib/usage';
+import dynamic2 from 'next/dynamic';
+const OnboardingModal = dynamic2(() => import('../../components/ui/OnboardingModal'), { ssr: false });
 
 const ExportModal = dynamic(() => import('../../components/ui/ExportModal'), { ssr: false });
 const ConfirmDialog = dynamic(() => import('../../components/ui/ConfirmDialog'), { ssr: false });
 const KeyboardShortcutsModal = dynamic(() => import('../../components/ui/KeyboardShortcutsModal'), { ssr: false });
+const AiMetaModal = dynamic(() => import('../../components/ui/AiMetaModal'), { ssr: false });
 
 const EditorPanel = dynamic(() => import('../../components/editor/EditorPanel'), { ssr: false });
 const Timeline = dynamic(() => import('../../components/editor/Timeline'), { ssr: false });
@@ -66,6 +73,20 @@ export default function EditorPage() {
     const [mounted, setMounted] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [projectList, setProjectList] = useState<ProjectMeta[]>([]);
+    const { user, isAuthenticated, isLoading, logout } = useAuth();
+    const router = useRouter();
+    
+    // Set current user for storage isolation - ensures each user's projects are separate
+    useEffect(() => {
+        if (user?.id) {
+            setCurrentUser(user.id);
+            console.log('[Editor] Set storage user ID:', user.id);
+        } else {
+            setCurrentUser(null);
+            console.log('[Editor] cleared storage user ID (no user)');
+        }
+    }, [user?.id]);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const [state, setState] = useState<ProjectState>({
         projectId: null,
         videoSrc: null,
@@ -89,6 +110,7 @@ export default function EditorPage() {
 
     const [showExportModal, setShowExportModal] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
+    const [showAiMeta, setShowAiMeta] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [activePopup, setActivePopup] = useState<{ segmentId: string; top: number; left: number } | null>(null);
@@ -170,7 +192,16 @@ export default function EditorPage() {
             document.documentElement.setAttribute('data-theme', 'dark');
         }
         setProjectList(getProjectList());
+        // Check onboarding
+        try { if (!localStorage.getItem('makescript-onboarded')) setShowOnboarding(true); } catch { }
     }, []);
+
+    // Auth gate
+    useEffect(() => {
+        if (!isLoading && !isAuthenticated) {
+            router.push('/login');
+        }
+    }, [isAuthenticated, isLoading, router]);
 
     const toggleTheme = () => {
         const next = theme === 'light' ? 'dark' : 'light';
@@ -279,6 +310,12 @@ export default function EditorPage() {
     };
 
     const handleUpload = useCallback(async (file: File) => {
+        // Usage limit check — uses the user's plan from Supabase profile
+        if (!canCreateProject(user?.plan)) {
+            toast('Monthly video limit reached. Upgrade your plan for more.', 'error');
+            return;
+        }
+
         if (file.size > 2 * 1024 * 1024 * 1024) {
             toast('File size exceeds 2GB limit', 'error');
             return;
@@ -326,6 +363,7 @@ export default function EditorPage() {
 
         toast('Analyzing video and transcribing audio...', 'info');
         setProcessingStep('transcribing');
+        incrementUsage(); // Track usage
 
         try {
             const { subtitles: transcript, isReal, noAudio } = await transcribeVideo(file, duration);
@@ -467,7 +505,16 @@ export default function EditorPage() {
     // Auto-trigger overlay generation when transcription completes
     // This avoids stale closure issues from calling handleGenerateOverlays inside handleUpload
     const hasTriggeredOverlays = useRef(false);
+    const lastProjectId = useRef<string | null>(null);
+    
     useEffect(() => {
+        // Reset trigger when project changes (new video uploaded or switched)
+        if (state.projectId !== lastProjectId.current) {
+            console.log('[useEffect] Project changed, resetting trigger. Old:', lastProjectId.current, 'New:', state.projectId);
+            lastProjectId.current = state.projectId;
+            hasTriggeredOverlays.current = false;
+        }
+
         // When transcription finishes and we have subtitles without any overlays yet
         if (
             !state.isTranscribing &&
@@ -480,12 +527,7 @@ export default function EditorPage() {
             hasTriggeredOverlays.current = true;
             handleGenerateOverlays(state.subtitles);
         }
-
-        // Reset the trigger when a new video starts transcribing
-        if (state.isTranscribing) {
-            hasTriggeredOverlays.current = false;
-        }
-    }, [state.isTranscribing, state.subtitles, state.isGenerating]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [state.isTranscribing, state.subtitles, state.isGenerating, state.projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ... handlers for timeline, layout etc ...
     const handleSegmentUpdate = (id: string, updates: any) => {
@@ -514,11 +556,87 @@ export default function EditorPage() {
         if (next) setState(prev => ({ ...prev, ...next }));
     };
 
-    const handleAutoSuggest = () => {
-        // Clear existing overlays first, then regenerate
-        const cleanedSubtitles = state.subtitles.map(s => ({ ...s, overlay: undefined }));
-        handleGenerateOverlays(cleanedSubtitles);
-    };
+    const handleAutoSuggest = useCallback(async () => {
+        console.log('[handleAutoSuggest] Starting with', state.subtitles.length, 'subtitles, model:', selectedModel);
+        
+        // Prevent duplicate calls
+        if (state.isGenerating) {
+            console.log('[handleAutoSuggest] Already generating, skipping');
+            return;
+        }
+        
+        if (state.subtitles.length === 0) {
+            console.log('[handleAutoSuggest] No subtitles to process');
+            toast('No transcript available. Please wait for transcription to complete.', 'warning');
+            return;
+        }
+
+        // Set generating state immediately to prevent duplicate calls
+        setState(prev => ({ ...prev, isGenerating: true }));
+        setProcessingStep('generating');
+        toast('Generating AI overlays with ' + (AI_MODELS.find(m => m.id === selectedModel)?.label || selectedModel) + '...', 'info');
+
+        try {
+            // Clear existing overlays and generate new ones
+            const cleanedSubtitles = state.subtitles.map(s => ({ ...s, overlay: undefined }));
+            console.log('[handleAutoSuggest] Cleaned subtitles, calling AI...');
+            
+            const newSubtitles = await suggestOverlaysWithAI(cleanedSubtitles, selectedModel);
+            const overlaysCount = newSubtitles.filter(s => s.overlay).length;
+            console.log('[handleAutoSuggest] AI generated', overlaysCount, 'overlays');
+            
+            // Log what was generated
+            newSubtitles.forEach((s, i) => {
+                if (s.overlay) {
+                    console.log(`  [${i}] "${s.text.substring(0, 30)}..." -> ${s.overlay.type}`);
+                }
+            });
+
+            if (overlaysCount === 0 && newSubtitles.length > 0) {
+                // Force fallback if no overlays generated
+                console.log('[handleAutoSuggest] No AI overlays, using fallback...');
+                const forced = autoSuggestOverlays(newSubtitles);
+                const forcedCount = forced.filter(s => s.overlay).length;
+                console.log('[handleAutoSuggest] Fallback generated', forcedCount, 'overlays');
+                
+                setState(prev => ({
+                    ...prev,
+                    subtitles: forced,
+                    isGenerating: false,
+                }));
+                setProcessingStep('done');
+                setTimeout(() => setProcessingStep('idle'), 2000);
+                toast('Added motion graphics to your video!', 'success');
+            } else {
+                setState(prev => ({
+                    ...prev,
+                    subtitles: newSubtitles,
+                    isGenerating: false,
+                }));
+                setProcessingStep('done');
+                setTimeout(() => setProcessingStep('idle'), 2000);
+                toast(`AI applied ${overlaysCount} overlays successfully!`, 'success');
+            }
+        } catch (e) {
+            console.error('[handleAutoSuggest] Error:', e);
+            const fallback = autoSuggestOverlays(state.subtitles.map(s => ({ ...s, overlay: undefined })));
+            const fallbackCount = fallback.filter(s => s.overlay).length;
+            console.log('[handleAutoSuggest] Error fallback generated', fallbackCount, 'overlays');
+            
+            setState(prev => ({
+                ...prev,
+                subtitles: fallback,
+                isGenerating: false,
+            }));
+            setProcessingStep('done');
+            setTimeout(() => setProcessingStep('idle'), 2000);
+            toast(fallbackCount > 0 
+                ? `AI unavailable — added ${fallbackCount} overlays using local rules.`
+                : 'AI unavailable — try again or manually add overlays.',
+                'warning'
+            );
+        }
+    }, [state.subtitles, state.isGenerating, selectedModel, toast]);
 
     const handleSwitchProject = useCallback(async (projectId: string) => {
         try {
@@ -603,6 +721,14 @@ export default function EditorPage() {
                                 <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-black"
                                     style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>M</div>
                             </Link>
+                            {user && (
+                                <Link href="/settings" className="flex items-center gap-1.5 group" title="Settings">
+                                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: `linear-gradient(135deg, ${user.avatar || '#6366f1'}, ${user.avatar ? user.avatar + '88' : '#818cf8'})` }}>
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="text-[11px] text-foreground/50 hidden md:inline group-hover:text-foreground/70 transition-colors">{user.name.split(' ')[0]}</span>
+                                </Link>
+                            )}
                             {state.videoFile && (
                                 <>
                                     <span className="w-px h-4 bg-border" />
@@ -717,12 +843,35 @@ export default function EditorPage() {
                                 </span>
                             )}
                             {state.videoSrc && (
+                                <>
+                                    <button
+                                        className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-muted-foreground hover:text-foreground hover:bg-muted"
+                                        onClick={() => setState(prev => ({ ...prev, showEditorPanel: !prev.showEditorPanel }))}
+                                        title="Editor panel (Magic Tools)"
+                                    >
+                                        <Sliders />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="h-7 px-3 rounded-md flex items-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer"
+                                        style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: '#fff', pointerEvents: 'auto' }}
+                                        onClick={(e) => {
+                                            console.log('[Magic Button] Clicked!');
+                                            setState(prev => ({ ...prev, showEditorPanel: true }));
+                                        }}
+                                        title="Open Magic Tools"
+                                    >
+                                        <Sparkles className="w-3 h-3" /> Magic
+                                    </button>
+                                </>
+                            )}
+                            {state.videoSrc && (
                                 <button
-                                    className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${state.showEditorPanel ? 'bg-indigo-500/15 text-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                                    onClick={() => setState(prev => ({ ...prev, showEditorPanel: !prev.showEditorPanel }))}
-                                    title="Editor panel"
+                                    className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${state.subtitles?.length > 0 ? 'text-violet-400 hover:bg-violet-500/10' : 'text-muted-foreground/40 hover:bg-white/5'}`}
+                                    onClick={() => state.subtitles?.length > 0 ? setShowAiMeta(true) : alert('Please click "Transcribe" first to use AI features!')}
+                                    title="✨ AI Tools (Requires Transcription)"
                                 >
-                                    <Sliders />
+                                    <Sparkles />
                                 </button>
                             )}
                             <button className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" onClick={toggleTheme} title="Toggle theme" suppressHydrationWarning>
@@ -930,6 +1079,11 @@ export default function EditorPage() {
                                 onTextOverlaysChange={(textOverlays) => setState(prev => ({ ...prev, textOverlays }))}
                                 duration={state.videoDuration}
                                 onClose={() => setState(prev => ({ ...prev, showEditorPanel: false }))}
+                                transcript={state.subtitles.map(s => s.text).join(' ')}
+                                subtitles={state.subtitles}
+                                onSubtitlesChange={(subtitles) => updateState({ subtitles })}
+                                isGenerating={state.isGenerating}
+                                onGenerateAI={handleAutoSuggest}
                             />
                         )}
                     </div>
@@ -963,12 +1117,23 @@ export default function EditorPage() {
                         videoHeight={state.videoHeight}
                         videoFileName={state.videoFile?.name || 'video'}
                         videoSrc={state.videoSrc || ''}
+                        subtitles={state.subtitles}
+                        filters={state.filters}
+                        textOverlays={state.textOverlays}
+                        fps={state.fps}
                     />
 
                     {/* Keyboard Shortcuts Modal */}
                     <KeyboardShortcutsModal
                         isOpen={showShortcuts}
                         onClose={() => setShowShortcuts(false)}
+                    />
+
+                    {/* AI Meta Modal */}
+                    <AiMetaModal
+                        isOpen={showAiMeta}
+                        onClose={() => setShowAiMeta(false)}
+                        transcript={state.subtitles.map(s => s.text).join(' ')}
                     />
 
                     {/* Delete Confirmation Dialog */}
@@ -1001,6 +1166,9 @@ export default function EditorPage() {
                         }}
                         onCancel={() => setConfirmDeleteAll(false)}
                     />
+
+                    {/* Onboarding Modal */}
+                    <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
                 </>
             )}
         </div>

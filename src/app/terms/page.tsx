@@ -1,0 +1,116 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Film, ArrowLeft } from 'lucide-react';
+
+export default function TermsPage() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+        const saved = localStorage.getItem('theme');
+        document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+    }, []);
+
+    if (!mounted) return <div className="min-h-screen flex items-center justify-center bg-[var(--lp-bg)]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--lp-text-faint)]" /></div>;
+
+    return (
+        <div className="min-h-screen bg-[var(--lp-bg)] text-[var(--lp-text)]">
+            {/* Header */}
+            <header className="border-b border-[var(--lp-border)] py-4 px-6">
+                <div className="max-w-3xl mx-auto flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2.5 group">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                            <Film className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <span className="font-bold text-[15px] tracking-[-0.02em]">MakeScript</span>
+                    </Link>
+                    <Link href="/" className="flex items-center gap-1.5 text-[13px] text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] transition-colors">
+                        <ArrowLeft className="w-3.5 h-3.5" /> Back
+                    </Link>
+                </div>
+            </header>
+
+            <main className="max-w-3xl mx-auto px-6 py-16">
+                <h1 className="text-3xl font-bold tracking-[-0.03em] mb-2">Terms of Service</h1>
+                <p className="text-[var(--lp-text-muted)] text-sm mb-10">Last updated: February 25, 2026</p>
+
+                <div className="prose-custom space-y-8">
+                    <section>
+                        <h2>1. Acceptance of Terms</h2>
+                        <p>By accessing or using MakeScript ("Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.</p>
+                    </section>
+
+                    <section>
+                        <h2>2. Description of Service</h2>
+                        <p>MakeScript is an AI-powered video editing platform that provides automated transcription, motion graphics generation, and video enhancement tools. The Service includes free and paid subscription tiers.</p>
+                    </section>
+
+                    <section>
+                        <h2>3. User Accounts</h2>
+                        <p>To access certain features, you must create an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You must provide accurate and complete registration information.</p>
+                    </section>
+
+                    <section>
+                        <h2>4. Subscription Plans</h2>
+                        <p>MakeScript offers Free, Creator ($12/month), and Studio ($29/month) subscription plans. Paid plans are billed monthly or annually. You may cancel your subscription at any time, and your access will continue until the end of the current billing period.</p>
+                        <p>We reserve the right to modify pricing with 30 days advance notice to existing subscribers.</p>
+                    </section>
+
+                    <section>
+                        <h2>5. User Content</h2>
+                        <p>You retain all ownership rights to videos and content you upload to MakeScript. By using the Service, you grant us a limited license to process your content solely for the purpose of providing the Service features (transcription, overlay generation, export).</p>
+                        <p>All video processing occurs client-side in your browser. We do not store your video files on our servers.</p>
+                    </section>
+
+                    <section>
+                        <h2>6. Acceptable Use</h2>
+                        <p>You agree not to:</p>
+                        <ul>
+                            <li>Use the Service for any illegal purpose</li>
+                            <li>Upload content that infringes on intellectual property rights</li>
+                            <li>Attempt to reverse-engineer or compromise the Service</li>
+                            <li>Share your account credentials with others</li>
+                            <li>Use automated tools to access the Service beyond normal usage</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>7. AI-Generated Content</h2>
+                        <p>Motion graphics and overlays generated by AI are provided as-is. While we strive for high-quality, contextually appropriate outputs, we do not guarantee the accuracy or suitability of AI-generated content. You are responsible for reviewing all generated content before publishing.</p>
+                    </section>
+
+                    <section>
+                        <h2>8. Limitation of Liability</h2>
+                        <p>MakeScript is provided "as is" without warranties of any kind. We shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of your use of the Service.</p>
+                    </section>
+
+                    <section>
+                        <h2>9. Termination</h2>
+                        <p>We may terminate or suspend your account at any time for violations of these Terms. Upon termination, your right to access the Service will immediately cease. You may delete your account at any time through the Settings page.</p>
+                    </section>
+
+                    <section>
+                        <h2>10. Changes to Terms</h2>
+                        <p>We reserve the right to modify these Terms at any time. We will notify users of material changes via email or in-app notification. Continued use of the Service after changes constitutes acceptance of the modified Terms.</p>
+                    </section>
+
+                    <section>
+                        <h2>11. Contact</h2>
+                        <p>If you have questions about these Terms, please contact us at <a href="mailto:legal@makescript.app">legal@makescript.app</a>.</p>
+                    </section>
+                </div>
+            </main>
+
+            <footer className="border-t border-[var(--lp-border)] py-6 px-6">
+                <div className="max-w-3xl mx-auto flex items-center justify-between text-[12px] text-[var(--lp-text-dim)]">
+                    <span>MakeScript &copy; 2026</span>
+                    <div className="flex gap-4">
+                        <Link href="/privacy" className="hover:text-[var(--lp-text-sub)] transition-colors">Privacy Policy</Link>
+                        <Link href="/" className="hover:text-[var(--lp-text-sub)] transition-colors">Home</Link>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    );
+}

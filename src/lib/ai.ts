@@ -412,7 +412,54 @@ export function extractLabelFromText(text: string): string {
 }
 
 /**
- * Generate AI image URL using Pollinations.ai
+ * Generate AI image using PaddlePaddle Ernie Image API via our server route
+ * Returns the generated image URL or falls back to Pollinations.ai
+ */
+export async function generateErnieImageUrl(prompt: string, seed: number = -1): Promise<string> {
+    try {
+        const response = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt,
+                width: 1024,
+                height: 768,
+                seed: seed === -1 ? Date.now() % 1000000 : seed,
+                steps: 8,
+                guidanceScale: 1,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.imageUrl) {
+            return data.imageUrl;
+        }
+
+        // If Ernie failed but gave us a fallback, use it
+        if (data.fallbackUrl) {
+            console.warn('Using fallback image URL:', data.fallbackUrl);
+            return data.fallbackUrl;
+        }
+
+        // Ultimate fallback to Pollinations
+        return generateFallbackImageUrl(prompt, seed);
+    } catch (error) {
+        console.error('Ernie image generation failed:', error);
+        return generateFallbackImageUrl(prompt, seed);
+    }
+}
+
+/**
+ * Fallback to Pollinations.ai if Ernie API fails
+ */
+function generateFallbackImageUrl(prompt: string, seed: number): string {
+    const encodedPrompt = encodeURIComponent(`${prompt}, high quality, professional`);
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true&seed=${seed}`;
+}
+
+/**
+ * Generate AI image URL using Pollinations.ai (kept for backward compatibility)
  */
 function generateAIImageUrl(prompt: string, seed: number): string {
     const encodedPrompt = encodeURIComponent(`${prompt}, high quality, professional`);
@@ -467,73 +514,361 @@ export async function suggestOverlaysWithAI(
             return withAISuggestions;
         }
 
-        // API returned no suggestions, fall back to local dynamic generation
-        console.warn('AI returned no suggestions, using local dynamic generation');
-        return generateDynamicOverlays(subtitles);
+        // API returned no suggestions, fall back to local dynamic generation with Ernie images
+        console.warn('AI returned no suggestions, using local dynamic generation with Ernie images');
+        return generateDynamicOverlaysAsync(subtitles);
     } catch (error) {
         console.error('AI suggestion API failed:', error);
-        return generateDynamicOverlays(subtitles);
+        // Use async version with Ernie API for real AI-generated images
+        return generateDynamicOverlaysAsync(subtitles);
     }
 }
 
 /**
  * Local dynamic overlay generation with AI-generated images
  * Creates custom prompts and image URLs based on content analysis
+ * Each video gets UNIQUE B-roll based on its specific transcript
+ * NOW uses async Ernie Image API for real AI-generated images
+ */
+export async function generateDynamicOverlaysAsync(subtitles: SubtitleSegment[]): Promise<SubtitleSegment[]> {
+    // Reset module-level tracking so each video gets fresh scene selection
+    lastUsedScene = '';
+    
+    // Generate a unique session seed for THIS video to ensure fresh content
+    const sessionSeed = Date.now() % 100000;
+
+    // Score each segment for visual relevance
+    const scored = subtitles.map((seg, index) => ({
+        seg,
+        index,
+        score: scoreSegmentRelevance(seg.text),
+    }));
+
+    // Sort by score, pick the top ~30% most relevant segments
+    const totalSegments = subtitles.length;
+    const maxOverlays = Math.max(2, Math.floor(totalSegments * 0.30));
+
+    const topSegments = scored
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxOverlays);
+
+    // Build a set of segment indices that should get overlays
+    // Also enforce minimum gap of 2 segments between overlays
+    const overlayIndices = new Set<number>();
+    const sortedByIndex = topSegments.sort((a, b) => a.index - b.index);
+    let lastOverlayIdx = -3;
+    for (const entry of sortedByIndex) {
+        if (entry.index - lastOverlayIdx >= 2) {
+            overlayIndices.add(entry.index);
+            lastOverlayIdx = entry.index;
+        }
+    }
+
+    // Process overlays asynchronously
+    const results: SubtitleSegment[] = [];
+    let overlayCount = 0;
+    
+    for (let index = 0; index < subtitles.length; index++) {
+        const seg = subtitles[index];
+        
+        if (!overlayIndices.has(index)) {
+            results.push(seg);
+            continue;
+        }
+
+        // Generate a UNIQUE seed for THIS segment based on its content + session
+        const segmentHash = hashString(seg.text);
+        const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
+        
+        // Get async overlay with real AI-generated image
+        const overlay = await selectProOverlayWithErnieImage(seg.text, overlayCount, uniqueSeed);
+        overlayCount++;
+
+        results.push({ ...seg, overlay });
+    }
+
+    return results;
+}
+
+/**
+ * Synchronous version for backward compatibility
+ * Falls back to Pollinations.ai URLs (no real Ernie API calls)
  */
 export function generateDynamicOverlays(subtitles: SubtitleSegment[]): SubtitleSegment[] {
     // Reset module-level tracking so each video gets fresh scene selection
     lastUsedScene = '';
+    
+    // Generate a unique session seed for THIS video to ensure fresh content
+    const sessionSeed = Date.now() % 100000;
 
-    return subtitles.map((seg, index) => {
-        // Always try to add a motion graphic - be more aggressive with overlays
-        // Skip only truly generic/filler text
-        if (isGenericFiller(seg.text)) {
-            return seg; // No overlay for filler text
+    // Score each segment for visual relevance
+    const scored = subtitles.map((seg, index) => ({
+        seg,
+        index,
+        score: scoreSegmentRelevance(seg.text),
+    }));
+
+    // Sort by score, pick the top ~30% most relevant segments
+    const totalSegments = subtitles.length;
+    const maxOverlays = Math.max(2, Math.floor(totalSegments * 0.30));
+
+    const topSegments = scored
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxOverlays);
+
+    // Build a set of segment indices that should get overlays
+    // Also enforce minimum gap of 2 segments between overlays
+    const overlayIndices = new Set<number>();
+    const sortedByIndex = topSegments.sort((a, b) => a.index - b.index);
+    let lastOverlayIdx = -3;
+    for (const entry of sortedByIndex) {
+        if (entry.index - lastOverlayIdx >= 2) {
+            overlayIndices.add(entry.index);
+            lastOverlayIdx = entry.index;
         }
+    }
 
-        const overlayType = selectProOverlay(seg.text, index);
+    let overlayCount = 0;
+    return subtitles.map((seg, index) => {
+        if (!overlayIndices.has(index)) return seg;
 
-        return {
-            ...seg,
-            overlay: overlayType,
-        };
+        // Generate a UNIQUE seed for THIS segment based on its content + session
+        const segmentHash = hashString(seg.text);
+        const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
+        
+        const overlayType = selectProOverlayWithUniqueSeed(seg.text, overlayCount, uniqueSeed);
+        overlayCount++;
+
+        return { ...seg, overlay: overlayType };
     });
 }
 
-function isGenericFiller(text: string): boolean {
+/**
+ * Async overlay selection with real Ernie Image API calls
+ */
+async function selectProOverlayWithErnieImage(text: string, count: number, uniqueSeed: number): Promise<OverlayConfig> {
     const lower = text.toLowerCase();
-    const fillerPatterns = [
-        'thank you for watching',
-        'like and subscribe',
-        'please subscribe',
-        'see you in the next',
-        'don\'t forget',
-        'comment below',
-        'let me know',
-        'that\'s it for',
-    ];
-    return fillerPatterns.some(p => lower.includes(p));
+    const color = getProColor(uniqueSeed);
+    const label = extractLabelFromText(text);
+
+    // Mix overlay types - use AI-generated images for visual B-roll
+    // 0,2,5,8 = ai-generated-image, 1,4,7 = kinetic-text, 3,6 = gif-reaction, 9 = emoji
+    const slot = count % 10;
+
+    switch (slot) {
+        case 0:
+        case 2:
+        case 5:
+        case 8: {
+            // UNIQUE AI-generated image for this segment using Ernie API
+            const dynamicPrompt = generateDynamicPrompt(text);
+            const imagePrompt = dynamicPrompt?.prompt || `${text.substring(0, 100)}, cinematic, professional`;
+            
+            // Call the Ernie API to get a real generated image
+            const imageUrl = await generateErnieImageUrl(imagePrompt, uniqueSeed);
+            
+            return {
+                type: 'ai-generated-image',
+                props: {
+                    imageUrl,
+                    caption: label || text.substring(0, 40),
+                    seed: uniqueSeed,
+                    imagePrompt,
+                },
+            };
+        }
+
+        case 1:
+        case 4:
+        case 7: {
+            const kineticStyles = ['pop', 'slide', 'bounce'] as const;
+            const positions = ['center', 'top', 'bottom'] as const;
+            return {
+                type: 'kinetic-text',
+                props: {
+                    text: label || text.substring(0, 30),
+                    color,
+                    style: kineticStyles[uniqueSeed % kineticStyles.length],
+                    position: positions[uniqueSeed % positions.length],
+                    fontSize: 42,
+                },
+            };
+        }
+
+        case 3:
+        case 6: {
+            // Contextual GIF reaction based on segment content
+            const sizes = ['medium', 'large', 'fullscreen'] as const;
+            const gifPositions = ['center', 'top-right', 'bottom-right'] as const;
+            return {
+                type: 'gif-reaction',
+                props: {
+                    keyword: text.substring(0, 80),
+                    size: sizes[uniqueSeed % sizes.length],
+                    position: gifPositions[uniqueSeed % gifPositions.length],
+                },
+            };
+        }
+
+
+
+        case 9:
+        default: {
+            const emojiMatch = pickEmoji(lower);
+            const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎', '✨', '💪', '🎉', '📈'];
+            return {
+                type: 'emoji-reaction',
+                props: {
+                    emoji: emojiMatch || fallbackEmojis[uniqueSeed % fallbackEmojis.length],
+                    size: 70,
+                },
+            };
+        }
+    }
 }
 
-function hasVisualKeyword(text: string): boolean {
+/**
+ * Hash function for generating consistent but unique seeds from text
+ */
+function hashStringLocal(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0;
+    }
+    return Math.abs(hash);
+}
+
+/**
+ * Select overlay with a unique seed for THIS specific segment
+ * Generates UNIQUE B-roll images based on segment content
+ */
+function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed: number): OverlayConfig {
     const lower = text.toLowerCase();
-    // Check for any meaningful words - be more lenient
+    const color = getProColor(uniqueSeed);
+    const label = extractLabelFromText(text);
+
+    // Mix overlay types - use AI-generated images for visual B-roll
+    // 0,2,5,8 = ai-generated-image, 1,4,7 = kinetic-text, 3,6 = gif-reaction, 9 = emoji
+    const slot = count % 10;
+
+    switch (slot) {
+        case 0:
+        case 2:
+        case 5:
+        case 8: {
+            // UNIQUE AI-generated image for this segment
+            const dynamicPrompt = generateDynamicPrompt(text);
+            const imagePrompt = dynamicPrompt?.prompt || `${text.substring(0, 100)}, cinematic, professional`;
+            const imageUrl = generateAIImageUrl(imagePrompt, uniqueSeed);
+            
+            return {
+                type: 'ai-generated-image',
+                props: {
+                    imageUrl,
+                    caption: label || text.substring(0, 40),
+                    seed: uniqueSeed,
+                },
+            };
+        }
+
+        case 1:
+        case 4:
+        case 7: {
+            const kineticStyles = ['pop', 'slide', 'bounce'] as const;
+            const positions = ['center', 'top', 'bottom'] as const;
+            return {
+                type: 'kinetic-text',
+                props: {
+                    text: label || text.substring(0, 30),
+                    color,
+                    style: kineticStyles[uniqueSeed % kineticStyles.length],
+                    position: positions[uniqueSeed % positions.length],
+                    fontSize: 42,
+                },
+            };
+        }
+
+        case 3:
+        case 6: {
+            // Contextual GIF reaction based on segment content
+            const sizes = ['medium', 'large', 'fullscreen'] as const;
+            const gifPositions = ['center', 'top-right', 'bottom-right'] as const;
+            return {
+                type: 'gif-reaction',
+                props: {
+                    keyword: text.substring(0, 80),
+                    size: sizes[uniqueSeed % sizes.length],
+                    position: gifPositions[uniqueSeed % gifPositions.length],
+                },
+            };
+        }
+
+        case 9:
+        default: {
+            const emojiMatch = pickEmoji(lower);
+            const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎', '✨', '💪', '🎉', '📈'];
+            return {
+                type: 'emoji-reaction',
+                props: {
+                    emoji: emojiMatch || fallbackEmojis[uniqueSeed % fallbackEmojis.length],
+                    size: 70,
+                },
+            };
+        }
+    }
+}
+
+/**
+ * Score a segment's visual relevance (0 = skip, higher = more relevant).
+ * Only segments with a positive score are candidates for overlays.
+ */
+function scoreSegmentRelevance(text: string): number {
+    const lower = text.toLowerCase();
+    if (lower.length < 8) return 0;
+
+    // Skip filler / conversational fluff
+    const fillerPatterns = [
+        'thank you for watching', 'like and subscribe', 'please subscribe',
+        'see you in the next', 'don\'t forget', 'comment below', 'let me know',
+        'that\'s it for', 'alright guys', 'anyway', 'moving on', 'so basically',
+        'as i was saying', 'you know what i mean',
+    ];
+    if (fillerPatterns.some(p => lower.includes(p))) return 0;
+
+    let score = 0;
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
 
-    // If no words of length > 2, check for shorter meaningful words
-    if (words.length === 0) {
-        const shortWords = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1);
-        return shortWords.some(w => CONTENT_SCENE_MAP[w] !== undefined);
+    // Strong keyword matches from CONTENT_SCENE_MAP (not common conversational words)
+    const strongKeywords = new Set([
+        'money', 'revenue', 'profit', 'income', 'growth', 'success', 'rocket',
+        'brain', 'technology', 'code', 'science', 'power', 'energy', 'fire',
+        'earth', 'world', 'mountain', 'ocean', 'celebrate', 'love', 'protect',
+        'invest', 'market', 'stock', 'launch', 'explode', 'scale', 'secret',
+        'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
+    ]);
+    for (const w of words) {
+        if (strongKeywords.has(w)) score += 3;
+        else if (CONTENT_SCENE_MAP[w]) score += 1;
     }
 
-    // Check if any word matches
-    const hasMatch = words.some(w => CONTENT_SCENE_MAP[w] !== undefined);
+    // Numbers / stats are always visually interesting
+    if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 4;
 
-    // Also check for important business/tech terms that might be compound
-    const importantTerms = ['welcome', 'new', 'show', 'talk', 'going', 'really', 'video', 'here', 'today', 'going', 'going to'];
-    const hasImportant = words.some(w => importantTerms.includes(w));
+    // Questions are good overlay points
+    if (text.includes('?')) score += 2;
 
-    return hasMatch || hasImportant;
+    // Exclamations / emphasis
+    if (text.includes('!')) score += 1;
+
+    // Penalize very short or purely conversational text
+    const nonStopWords = words.filter(w => !STOP_WORDS.has(w));
+    if (nonStopWords.length < 2) score -= 2;
+
+    return Math.max(0, score);
 }
 
 /**
@@ -685,16 +1020,16 @@ let lastUsedScene = '';
 
 /**
  * Select the best overlay type based on content analysis.
- * Uses live-rendered SVG motion graphics (VisualIllustration) matched to transcript.
- * These render instantly with no network calls — unique per transcript content.
+ * Uses content-matched animated scenes (VisualIllustration) for B-roll,
+ * kinetic-text for emphasis, transcript-motion for flow, and emoji for reactions.
  */
 function selectProOverlay(text: string, count: number): OverlayConfig {
     const lower = text.toLowerCase();
     const color = getProColor(count);
     const label = extractLabelFromText(text);
 
-    // Round-robin across 10 slots — balanced B-roll + text mix:
-    // 0,2,5,8 = ai-generated-image (unique B-roll), 1,4,7 = kinetic-text, 3,6 = transcript-motion, 9 = emoji
+    // Round-robin across 10 slots — balanced content-matched B-roll + text:
+    // 0,2,5,8 = visual-illustration, 1,4,7 = kinetic-text, 3,6 = gif-reaction, 9 = emoji
     const slot = count % 10;
 
     switch (slot) {
@@ -702,14 +1037,22 @@ function selectProOverlay(text: string, count: number): OverlayConfig {
         case 2:
         case 5:
         case 8: {
-            // Procedurally generated motion graphics B-roll
-            const brollStyles = ['abstract', 'geometric', 'wave', 'particles', 'data'] as const;
+            // Content-matched animated scene — uses VisualIllustration with 30+ scenes
+            const scene = pickSceneForText(text, count);
+            // Avoid repeating the same scene as last overlay
+            const finalScene = scene === lastUsedScene
+                ? ALL_SCENES[(ALL_SCENES.indexOf(scene) + 1) % ALL_SCENES.length]
+                : scene;
+            lastUsedScene = finalScene;
+
+            const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
             return {
-                type: 'dynamic-broll',
+                type: 'visual-illustration',
                 props: {
-                    keywords: (label || text.substring(0, 20)).toUpperCase(),
+                    scene: finalScene,
+                    label: label || '',
                     color,
-                    style: brollStyles[count % brollStyles.length],
+                    transition: transitions[count % transitions.length],
                 },
             };
         }
@@ -733,18 +1076,20 @@ function selectProOverlay(text: string, count: number): OverlayConfig {
 
         case 3:
         case 6: {
-            const styles = ['karaoke', 'typewriter', 'wave'] as const;
-            const positions = ['bottom', 'center', 'bottom'] as const;
+            // Contextual GIF reaction based on segment content
+            const sizes = ['medium', 'large', 'fullscreen'] as const;
+            const gifPositions = ['center', 'top-right', 'bottom-right'] as const;
             return {
-                type: 'transcript-motion',
+                type: 'gif-reaction',
                 props: {
-                    text,
-                    color,
-                    style: styles[count % styles.length],
-                    position: positions[count % positions.length],
+                    keyword: text.substring(0, 80),
+                    size: sizes[count % sizes.length],
+                    position: gifPositions[count % gifPositions.length],
                 },
             };
         }
+
+
 
         case 9:
         default: {

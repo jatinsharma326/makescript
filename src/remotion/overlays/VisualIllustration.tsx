@@ -2784,7 +2784,8 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
     const exitScale = interpolate(localFrame, [duration - 12, duration], [1, 0.85], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
     const opacity = Math.min(enterOpacity, exitOpacity);
-    const scale = enterScale * exitScale;
+    const baseScale = 1.6; // Scale up the graphic significantly
+    const scale = enterScale * exitScale * baseScale;
 
     const SceneComponent = SCENES[scene] || SCENES['solar-system'];
 
@@ -2798,14 +2799,7 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
     return (
         <AbsoluteFill style={{ pointerEvents: 'none' }}>
             {/* UNIQUE gradient background per segment — NOT the same for all */}
-            <div
-                style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 50%, ${palette[2]} 100%)`,
-                    opacity,
-                }}
-            />
+            {/* Removed opaque background to allow video to show through */}
             {/* Secondary radial glow with accent color */}
             <div
                 style={{
@@ -2834,7 +2828,7 @@ export const VisualIllustration: React.FC<VisualIllustrationProps> = ({
             {/* Full-screen motion graphic scene */}
             <div style={{
                 position: 'absolute',
-                inset: '5%',
+                inset: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

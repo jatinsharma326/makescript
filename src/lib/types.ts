@@ -8,6 +8,64 @@ export interface SubtitleSegment {
   overlay?: OverlayConfig;
 }
 
+export type SmartCutTier = 'free' | 'pro' | 'max';
+
+export interface SmartCutRequestSegment {
+  id: string;
+  startTime: number;
+  endTime: number;
+  text: string;
+}
+
+export interface SmartCutRequest {
+  subtitles: SmartCutRequestSegment[];
+}
+
+export type SmartCutFillerType = 'filler-word' | 'long-pause' | 'repetition';
+
+export interface SmartCutFillerSegment extends SmartCutRequestSegment {
+  type: SmartCutFillerType;
+  confidence: number;
+}
+
+export interface SmartCutSummary {
+  totalFillerTime: number;
+  totalSegments: number;
+  fillerCount: number;
+  strategy: 'local' | 'local+ai';
+  tier: SmartCutTier;
+}
+
+export type SmartCutWarningCode = 'AI_UNAVAILABLE' | 'AI_FALLBACK_LOCAL';
+
+export interface SmartCutWarning {
+  code: SmartCutWarningCode;
+  message: string;
+}
+
+export type SmartCutErrorCode =
+  | 'UNAUTHORIZED'
+  | 'INVALID_PAYLOAD'
+  | 'PAYLOAD_TOO_LARGE'
+  | 'INTERNAL_ERROR';
+
+export interface SmartCutSuccessResponse {
+  ok: true;
+  fillers: SmartCutFillerSegment[];
+  summary: SmartCutSummary;
+  warnings?: SmartCutWarning[];
+}
+
+export interface SmartCutErrorResponse {
+  ok: false;
+  error: {
+    code: SmartCutErrorCode;
+    message: string;
+  };
+}
+
+export type SmartCutResponse = SmartCutSuccessResponse | SmartCutErrorResponse;
+
 export interface OverlayConfig {
   type: OverlayType;
   props: Record<string, unknown>;
@@ -28,7 +86,8 @@ export type OverlayType =
   | 'image-card'
   | 'ai-generated-image'
   | 'transcript-motion'
-  | 'dynamic-broll';
+  | 'dynamic-broll'
+  | 'ai-motion-graphic';
 
 export interface OverlayTemplate {
   type: OverlayType;
@@ -137,6 +196,13 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
     icon: '🎬',
     defaultProps: { color: '#8b5cf6', style: 'abstract' },
   },
+  {
+    type: 'ai-motion-graphic',
+    name: 'Generative AI Graphic',
+    description: 'Unique motion graphic generated on the fly by AI',
+    icon: '✨',
+    defaultProps: { svgContent: '<svg viewBox="0 0 100 100"></svg>' },
+  }
 ];
 
 export interface VideoFilters {
@@ -174,7 +240,7 @@ export interface TextOverlay {
   endTime: number;    // seconds
 }
 
-export type EditorTab = 'filters' | 'trim' | 'speed' | 'text';
+export type EditorTab = 'magic' | 'filters' | 'trim' | 'speed' | 'text';
 
 export type TranscriptStatus =
   | 'none'           // No transcript yet

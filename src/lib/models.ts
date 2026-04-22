@@ -1,4 +1,5 @@
 // AI Model registry with tier-based access control
+import { CUSTOM_APIS } from './apiKeys';
 
 export type ModelTier = 'free' | 'creator' | 'studio';
 
@@ -38,7 +39,19 @@ export const TIERS: Record<ModelTier, TierInfo> = {
     },
 };
 
+// Build AI models list from custom APIs + default models
+const customModels: AIModel[] = CUSTOM_APIS.map(api => ({
+    id: api.id,
+    label: api.name,
+    provider: 'ModelScope',
+    tier: 'free' as ModelTier,  // Custom APIs are available to all
+    badge: 'Custom',
+}));
+
 export const AI_MODELS: AIModel[] = [
+    // ── Custom APIs (from apiKeys.ts) ──
+    ...customModels,
+
     // ── Free Tier ──
     { id: 'lightning-ai/DeepSeek-V3.1', label: 'DeepSeek V3.1', provider: 'DeepSeek', tier: 'free', badge: 'Default' },
     { id: 'lightning-ai/llama-3.3-70b', label: 'Llama 3.3 70B', provider: 'Meta', tier: 'free' },

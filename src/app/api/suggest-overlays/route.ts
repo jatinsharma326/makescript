@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Lightning AI API — keys from environment
-const LIGHTNING_API_URL = process.env.LIGHTNING_API_URL || 'https://lightning.ai/api/v1/chat/completions';
-const LIGHTNING_API_KEY = process.env.LIGHTNING_API_KEY || '';
+import { getUserSubscription, getModelForTier } from '@/lib/subscription';
+import { getModelProvider, getApiKey, getApiEndpoint, CUSTOM_APIS, getCustomApiConfig, DEFAULT_PROVIDERS } from '@/lib/apiKeys';
 
 const VALID_OVERLAY_TYPES = [
     'emoji-reaction',
@@ -15,8 +13,9 @@ const VALID_OVERLAY_TYPES = [
     'gif-reaction',
     'visual-illustration',
     'ai-generated-image',
-    'transcript-motion',
     'dynamic-broll',
+    'visual-illustration',
+    'ai-motion-graphic',
 ];
 
 // All available animated motion graphic scenes
@@ -46,7 +45,7 @@ interface OverlaySuggestion {
 
 // Detect overall video topic from full transcript for context-aware matching
 const TOPIC_KEYWORDS: Record<string, string[]> = {
-    'GAMING/ENTERTAINMENT': ['game', 'play', 'player', 'nintendo', 'pokemon', 'xbox', 'playstation', 'level', 'boss', 'quest', 'character', 'multiplayer', 'console', 'controller', 'gamer', 'stream', 'twitch', 'esport', 'mod', 'cheat', 'glitch', 'speedrun', 'lore', 'dex', 'generation'],
+    'GAMING/ENTERTAINMENT': ['game', 'play', 'player', 'nintendo', 'pokemon', 'xbox', 'playstation', 'level', 'boss', 'quest', 'character', 'multiplayer', 'console', 'controller', 'gamer', 'stream', 'twitch', 'esport', 'mod', 'cheat', 'glitch', 'speedrun', 'lore', 'dex', 'generation', 'roblox', 'minecraft', 'fortnite', 'blox', 'obby', 'simulator', 'tycoon', 'raid', 'skin', 'avatar', 'npc', 'mob', 'spawn', 'lobby', 'server', 'craft', 'build', 'survival', 'creative', 'battle', 'royale', 'shoot', 'fps', 'mmorpg', 'rpg', 'adventure', 'sandbox', 'pixel', 'block', 'cube', 'virtual', 'world', 'gameplay', 'gaming'],
     'TECHNOLOGY/CODING': ['code', 'programming', 'software', 'hardware', 'api', 'database', 'server', 'cloud', 'algorithm', 'debug', 'deploy', 'framework', 'react', 'python', 'javascript', 'developer', 'startup', 'saas'],
     'FINANCE/BUSINESS': ['money', 'invest', 'stock', 'crypto', 'bitcoin', 'revenue', 'profit', 'startup', 'entrepreneur', 'business', 'income', 'passive', 'wealth', 'trading', 'market', 'portfolio'],
     'FITNESS/HEALTH': ['workout', 'exercise', 'gym', 'muscle', 'protein', 'diet', 'weight', 'calories', 'cardio', 'training', 'fitness', 'health', 'nutrition', 'supplement'],
@@ -84,6 +83,35 @@ function detectVideoTopic(fullText: string): string {
     );
     return `This video is about ${topTopics.join(' and ')}. Choose scenes that make sense for this topic.`;
 }
+
+/** Detailed topic detection that returns structured data for image prompt generation */
+function detectVideoTopicDetailed(fullText: string): { primaryTopic: string; matchedKeywords: string[] } {
+    const lower = fullText.toLowerCase();
+    const topicScores: Record<string, { count: number; matches: string[] }> = {};
+
+    for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+        const matches: string[] = [];
+        for (const kw of keywords) {
+            if (lower.includes(kw)) {
+                matches.push(kw);
+            }
+        }
+        if (matches.length > 0) {
+            topicScores[topic] = { count: matches.length, matches };
+        }
+    }
+
+    const sorted = Object.entries(topicScores).sort((a, b) => b[1].count - a[1].count);
+    if (sorted.length === 0) {
+        return { primaryTopic: 'general', matchedKeywords: [] };
+    }
+
+    const [topTopic, topData] = sorted[0];
+    return {
+        primaryTopic: topTopic,
+        matchedKeywords: topData.matches.slice(0, 10)
+    };
+}
 export async function POST(request: NextRequest) {
     try {
         const { subtitles, model } = (await request.json()) as { subtitles: SubtitleInput[]; model?: string };
@@ -92,7 +120,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ suggestions: [] });
         }
 
-        const suggestions = await suggestWithAI(subtitles, model);
+        const sub = await getUserSubscription();
+        const activeModel = model || getModelForTier(sub.tier);
+
+        const suggestions = await suggestWithAI(subtitles, activeModel);
         return NextResponse.json({ suggestions });
     } catch (error) {
         console.error('Overlay suggestion error:', error);
@@ -101,6 +132,9 @@ export async function POST(request: NextRequest) {
 }
 
 async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string): Promise<OverlaySuggestion[]> {
+    // Generate a UNIQUE session ID for this request to force fresh AI generation
+    const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    
     const subtitleList = subtitles
         .map((s) => `[${s.id}] "${s.text}" (${s.startTime}s - ${s.endTime}s)`)
         .join('\n');
@@ -108,48 +142,90 @@ async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string
     // Detect video topic from FULL transcript for context-aware scene matching
     const fullTranscript = subtitles.map(s => s.text).join(' ').toLowerCase();
     const videoTopic = detectVideoTopic(fullTranscript);
+    
+    // Create unique segment hashes to ensure each segment gets DIFFERENT visuals
+    const segmentContexts = subtitles.map(s => {
+        const hash = Math.abs(s.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+        return `${s.id}:uniqueSeed=${hash}`;
+    }).join(', ');
 
-    const prompt = `You are a Senior Motion Graphics Director. Add animated overlays to this video based on the transcript.
+    const prompt = `You are a Senior Motion Graphics Director. Create UNIQUE animated overlays for this video.
+
+⚠️ CRITICAL: Session ID ${sessionId} — You MUST generate FRESH, UNIQUE content for THIS specific video. Do NOT reuse previous responses.
 
 VIDEO TOPIC CONTEXT: ${videoTopic}
 
+UNIQUE SEGMENT SEEDS (use these to create different visuals for each segment): ${segmentContexts}
+
 AVAILABLE OVERLAY TYPES:
 
-1. "dynamic-broll" — Procedurally generated motion graphics B-roll, fullscreen (USE THIS 40% of the time)
-   Props: { "keywords": "KEYWORD1,KEYWORD2", "color": "#hex", "style": "abstract"|"geometric"|"wave"|"particles"|"data" }
-   Extract 1-2 of the MOST IMPORTANT words from the segment.
-   Example: "trading in the market" → keywords: "TRADING,MARKET"
-   Example: "go to your settings" → keywords: "SETTINGS"
-   Example: "you need power to make it work" → keywords: "POWER"
+1. "ai-motion-graphic" — GENERATE A UNIQUE CUSTOM ANIMATED SVG for THIS segment's specific content (USE THIS 40% of the time)
+   Props: { "svgContent": "<svg viewBox='0 0 400 300' width='100%' height='100%' xmlns='http://www.w3.org/2000/svg'>...</svg>" }
+   
+   ⚠️ Each SVG must be UNIQUE based on the segment's actual text meaning:
+   - If text mentions "Earth rotating around the sun" → Create sun + orbiting earth with rotation animation
+   - If text mentions "revenue growth" → Create animated rising bars/graph with numbers
+   - If text mentions "brain ideas" → Create neural network with firing synapses
+   - If text mentions "rocket launch" → Create rocket with flame trail ascending
+   - If text mentions specific numbers/stats → Visualize those exact numbers with animations
+   
+   The SVG MUST be self-contained with:
+   - Transparent background (DO NOT use a background <rect> or <svg style="background:...">)</svg>)
+   - Beautiful colors matching the segment's topic
+   - Smooth <animate> or <animateTransform> SMIL animations
+   - Visual elements that DIRECTLY relate to what the speaker is saying
 
-2. "kinetic-text" (25%) Props: { "text": "Phrase", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
-3. "transcript-motion" (20%) Props: { "text": "text", "color": "#hex", "style": "karaoke"|"typewriter"|"wave", "position": "center"|"top"|"bottom" }
-4. "emoji-reaction" (10%) Props: { "emoji": "🔥", "size": 70 }
-5. "highlight-box" (5%) Props: { "text": "phrase", "color": "#hex", "style": "glow"|"underline"|"box" }
+2. "ai-generated-image" (25%) — Generate a unique image URL based on segment content
+   Props: { "imageUrl": "https://image.pollinations.ai/prompt/...", "caption": "short label" }
+   Construct the URL with the segment's text as context: https://image.pollinations.ai/prompt/{encodeURIComponent(segmentText + ', cinematic, professional')}?seed={uniqueSeed}
 
-RULES:
-1. Keywords must be 1-2 STRONG words from the segment (nouns/verbs)
-2. Only overlay 45-55% of segments
-3. Vary types
+3. "kinetic-text" (30%) Props: { "text": "Phrase from segment", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
+4. "emoji-reaction" (5%) Props: { "emoji": "🔥", "size": 70 }
+
+⚠️ MANDATORY RULES:
+1. EACH overlay must be UNIQUE to its segment — match the ACTUAL content being spoken
+2. ONLY overlay 25-35% of segments — skip filler and generic sentences
+3. Never put overlays on consecutive segments — space them out
+4. Vary overlay types across the video
+5. For "ai-motion-graphic", the SVG content MUST reflect the specific words/numbers in that segment
 
 Transcript Segments:
 ${subtitleList}
 
 Return JSON array:
-[{ "segmentId": string, "type": "dynamic-broll"|"kinetic-text"|"transcript-motion"|"emoji-reaction"|"highlight-box", "props": { ... } }]`;
+[{ "segmentId": string, "type": "ai-motion-graphic"|"ai-generated-image"|"kinetic-text"|"emoji-reaction", "props": { ... } }]`;
 
     const MAX_RETRIES = 1;
     const RETRY_DELAY_MS = 500;
 
-    const fallbackModels = [
-        { name: 'DeepSeek V3.1', model: 'lightning-ai/DeepSeek-V3.1' },
-        { name: 'OpenAI o3', model: 'openai/o3' },
-        { name: 'OpenAI o4-mini', model: 'openai/o4-mini' },
+    // Model info type
+    type ModelInfo = {
+        name: string;
+        model: string;
+        provider: string;
+        isCustom?: boolean;
+    };
+
+    // Default fallback models (Lightning AI format)
+    const fallbackModels: ModelInfo[] = [
+        { name: 'DeepSeek V3.1', model: 'lightning-ai/DeepSeek-V3.1', provider: 'deepseek' },
+        { name: 'OpenAI o3', model: 'openai/o3', provider: 'openai' },
+        { name: 'OpenAI o4-mini', model: 'openai/o4-mini', provider: 'openai' },
     ];
 
     // If a specific model was requested, try it first
+    const requestedProvider = requestedModel ? getModelProvider(requestedModel) : 'lightning';
+    
+    // Check if it's a custom API
+    const customApi = requestedModel ? getCustomApiConfig(requestedModel) : undefined;
+    
     const models = requestedModel
-        ? [{ name: requestedModel.split('/').pop() || requestedModel, model: requestedModel }, ...fallbackModels.filter(m => m.model !== requestedModel)]
+        ? [{ 
+            name: customApi?.name || requestedModel.split('/').pop() || requestedModel, 
+            model: requestedModel, 
+            provider: requestedProvider,
+            isCustom: !!customApi
+        }, ...fallbackModels.filter(m => m.model !== requestedModel)]
         : fallbackModels;
 
     for (const modelInfo of models) {
@@ -159,24 +235,47 @@ Return JSON array:
                     console.log(`[AI Suggest] ${modelInfo.name} retry ${retry}/${MAX_RETRIES}...`);
                     await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
                 } else {
-                    console.log(`[AI Suggest] Trying model: ${modelInfo.name}`);
+                    console.log(`[AI Suggest] Trying model: ${modelInfo.name} via ${modelInfo.provider}`);
                 }
 
-                const response = await fetch(LIGHTNING_API_URL, {
+                let apiEndpoint: string;
+                let apiKey: string;
+                let customConfig: typeof customApi = undefined;
+                
+                // Check if this is a custom API
+                if (modelInfo.isCustom) {
+                    // Use the model ID to look up the custom config
+                    customConfig = getCustomApiConfig(modelInfo.model);
+                    if (!customConfig) {
+                        // Try looking up by model name as fallback
+                        customConfig = CUSTOM_APIS.find(api => api.model === modelInfo.model || api.name === modelInfo.name);
+                    }
+                    if (!customConfig) {
+                        console.warn(`[AI Suggest] Custom API config not found: ${modelInfo.model}`);
+                        break;
+                    }
+                    apiEndpoint = customConfig.baseUrl;
+                    apiKey = customConfig.apiKey;
+                } else {
+                    // Get the appropriate API endpoint and key for this provider
+                    apiEndpoint = getApiEndpoint(modelInfo.provider);
+                    apiKey = getApiKey(modelInfo.provider);
+                }
+                
+                if (!apiKey && !modelInfo.isCustom) {
+                    console.warn(`[AI Suggest] No API key for provider: ${modelInfo.provider}, skipping...`);
+                    break;
+                }
+
+                // Build the request based on provider
+                const { url, headers, body } = modelInfo.isCustom 
+                    ? buildCustomApiRequest(customConfig!, prompt)
+                    : buildProviderRequest(apiEndpoint, apiKey, modelInfo.model, prompt);
+                
+                const response = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${LIGHTNING_API_KEY}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        model: modelInfo.model,
-                        messages: [
-                            {
-                                role: 'user',
-                                content: [{ type: 'text', text: prompt }],
-                            },
-                        ],
-                    }),
+                    headers,
+                    body: JSON.stringify(body),
                 });
 
                 if (!response.ok) {
@@ -188,11 +287,12 @@ Return JSON array:
                         console.warn(`[AI Suggest] ${modelInfo.name} ${isRateLimit ? 'rate limited' : 'server error'}, will retry...`);
                         continue;
                     }
+                    console.warn(`[AI Suggest] ${modelInfo.name} failed: ${response.status} - ${errorText.substring(0, 100)}`);
                     break;
                 }
 
                 const data = await response.json();
-                const content = data.choices?.[0]?.message?.content?.trim();
+                const content = extractContentFromResponse(data, modelInfo.provider);
 
                 if (!content) {
                     console.warn(`[AI Suggest] ${modelInfo.name} returned empty content`);
@@ -418,19 +518,118 @@ function matchSceneToText(text: string): string {
     return ALL_SCENES[hash % ALL_SCENES.length];
 }
 
-function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggestion[] {
+// Store the detected video topic globally for the request (used by image prompt generation)
+let currentVideoTopic: { primaryTopic: string; matchedKeywords: string[] } = { primaryTopic: 'general', matchedKeywords: [] };
+
+async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<OverlaySuggestion[]> {
     const results: OverlaySuggestion[] = [];
+    
+    // Generate a unique session seed for this video to ensure fresh content
+    const sessionSeed = Date.now() % 100000;
+    
+    // Detect video topic from full transcript for context-aware image generation
+    const fullTranscriptText = subtitles.map(s => s.text).join(' ');
+    const topicInfo = detectVideoTopicDetailed(fullTranscriptText);
+    currentVideoTopic = topicInfo;
+    console.log('[LocalMotion] Detected video topic:', topicInfo.primaryTopic, 'keywords:', topicInfo.matchedKeywords.slice(0, 5));
+    
     let overlayCount = 0;
+    
+    // Track last used scenes to avoid repetition
+    let lastUsedSceneType = '';
 
+    // Score each segment for relevance
+    const scored = subtitles.map((seg, index) => ({
+        seg,
+        index,
+        score: scoreSegmentRelevanceServer(seg.text),
+    }));
+
+    // Pick top ~30% most relevant
+    const maxOverlays = Math.max(2, Math.floor(subtitles.length * 0.30));
+    const topSegments = scored
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxOverlays);
+
+    // Enforce minimum gap of 2 segments
+    const overlayIndices = new Set<number>();
+    const sortedByIndex = topSegments.sort((a, b) => a.index - b.index);
+    let lastIdx = -3;
+    for (const entry of sortedByIndex) {
+        if (entry.index - lastIdx >= 2) {
+            overlayIndices.add(entry.index);
+            lastIdx = entry.index;
+        }
+    }
+
+    // First, collect all segments that need AI-generated images
+    // We'll generate them all in parallel for faster processing
+    const imageGenerationTasks: { index: number; seg: SubtitleInput; uniqueSeed: number; label: string }[] = [];
+    
     for (let index = 0; index < subtitles.length; index++) {
+        if (!overlayIndices.has(index)) continue;
         const seg = subtitles[index];
-        if (!hasVisualKeyword(seg.text)) continue;
-
-        const color = getProColor(overlayCount);
+        const segmentHash = hashString(seg.text);
+        const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
         const label = extractLabelFromText(seg.text);
 
-        // 10-slot mix: ai-generated-image B-roll (40%) + kinetic-text (30%) + transcript-motion (20%) + emoji (10%)
-        // slots 0,2,5,8 = ai-generated-image, 1,4,7 = kinetic-text, 3,6 = transcript-motion, 9 = emoji
+        // Count overlay position to determine type
+        const overlayPosition = [...overlayIndices].filter(i => i <= index).length - 1;
+        const slot = overlayPosition % 10;
+
+        // Slots 0, 2, 5, 8 need AI-generated images
+        if (slot === 0 || slot === 2 || slot === 5 || slot === 8) {
+            imageGenerationTasks.push({ index, seg, uniqueSeed, label });
+        }
+    }
+    
+    // Generate ALL AI images in PARALLEL (concurrently) for much faster processing
+    console.log(`[Ernie] Starting parallel generation of ${imageGenerationTasks.length} images...`);
+    
+    const imageResults: Map<number, string> = new Map();
+    
+    if (imageGenerationTasks.length > 0) {
+        // Run all image generation requests concurrently
+        const imagePromises = imageGenerationTasks.map(async ({ index, seg, uniqueSeed }) => {
+            const imagePrompt = generateImagePromptFromText(seg.text);
+            console.log(`[Ernie] Generating image for segment ${seg.id}...`);
+            const imageUrl = await generateErnieImageUrl(imagePrompt, uniqueSeed);
+            return { index, imageUrl };
+        });
+        
+        // Wait for all images to complete (but in parallel)
+        const settledResults = await Promise.allSettled(imagePromises);
+        
+        for (const result of settledResults) {
+            if (result.status === 'fulfilled') {
+                imageResults.set(result.value.index, result.value.imageUrl);
+                console.log(`[Ernie] Image ready for index ${result.value.index}`);
+            } else {
+                console.warn('[Ernie] Image generation failed:', result.reason);
+            }
+        }
+        
+        console.log(`[Ernie] Completed ${imageResults.size}/${imageGenerationTasks.length} image generations`);
+    }
+    
+    // Now build the overlay suggestions using the pre-generated images
+    for (let index = 0; index < subtitles.length; index++) {
+        if (!overlayIndices.has(index)) continue;
+        const seg = subtitles[index];
+
+        // Generate a unique seed for THIS segment based on its content + session
+        const segmentHash = hashString(seg.text);
+        const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
+        
+        const color = getProColor(uniqueSeed);
+        const label = extractLabelFromText(seg.text);
+
+        // Mix overlay types with UNIQUE content per segment:
+        // - ai-generated-image (40%): Dynamic B-roll image with segment-specific prompt
+        // - kinetic-text (30%): Text animation with segment's key phrase
+        // - transcript-motion (20%): Transcript animation
+        // - emoji-reaction (10%): Contextual emoji
         const slot = overlayCount % 10;
         let overlay: OverlaySuggestion;
 
@@ -439,25 +638,31 @@ function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggest
             case 2:
             case 5:
             case 8: {
-                // Procedurally generated motion graphics B-roll
-                const kwLabel = extractLabelFromText(seg.text);
-                const brollStyles = ['abstract', 'geometric', 'wave', 'particles', 'data'];
+                // AI-GENERATED IMAGE - use pre-generated image from parallel batch
+                const imagePrompt = generateImagePromptFromText(seg.text);
+                // Get the pre-generated image URL (or fallback if failed)
+                const imageUrl = imageResults.get(index) || generatePollinationsUrl(imagePrompt, uniqueSeed);
+                
                 overlay = {
                     segmentId: seg.id,
-                    type: 'dynamic-broll',
+                    type: 'ai-generated-image',
                     props: {
-                        keywords: (kwLabel || seg.text.substring(0, 20)).toUpperCase(),
-                        color,
-                        style: brollStyles[overlayCount % brollStyles.length],
+                        imageUrl,
+                        caption: label || seg.text.substring(0, 40),
+                        seed: uniqueSeed,
+                        imagePrompt,
                     },
                 };
+                lastUsedSceneType = 'ai-generated-image';
                 break;
             }
 
             case 1:
+            case 3:
             case 4:
+            case 6:
             case 7: {
-                // Kinetic text
+                // Kinetic text - use segment's extracted label
                 const kineticStyles = ['pop', 'slide', 'bounce'];
                 const positions = ['center', 'top', 'bottom'];
                 overlay = {
@@ -466,45 +671,29 @@ function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggest
                     props: {
                         text: label || seg.text.substring(0, 30),
                         color,
-                        style: kineticStyles[overlayCount % kineticStyles.length],
-                        position: positions[overlayCount % positions.length],
+                        style: kineticStyles[uniqueSeed % kineticStyles.length],
+                        position: positions[uniqueSeed % positions.length],
                         fontSize: 42,
                     },
                 };
-                break;
-            }
-
-            case 3:
-            case 6: {
-                // Transcript motion
-                const styles = ['karaoke', 'typewriter', 'wave'];
-                const positions = ['bottom', 'center', 'bottom'];
-                overlay = {
-                    segmentId: seg.id,
-                    type: 'transcript-motion',
-                    props: {
-                        text: seg.text,
-                        color,
-                        style: styles[overlayCount % styles.length],
-                        position: positions[overlayCount % positions.length],
-                    },
-                };
+                lastUsedSceneType = 'kinetic-text';
                 break;
             }
 
             case 9:
             default: {
-                // Emoji reaction
+                // Emoji reaction - pick contextual emoji from segment text
                 const emoji = pickEmojiFromText(seg.text);
-                const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎'];
+                const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎', '✨', '💪', '🎉', '📈'];
                 overlay = {
                     segmentId: seg.id,
                     type: 'emoji-reaction',
                     props: {
-                        emoji: emoji || fallbackEmojis[overlayCount % fallbackEmojis.length],
+                        emoji: emoji || fallbackEmojis[uniqueSeed % fallbackEmojis.length],
                         size: 70,
                     },
                 };
+                lastUsedSceneType = 'emoji-reaction';
                 break;
             }
         }
@@ -516,24 +705,272 @@ function generateLocalMotionGraphics(subtitles: SubtitleInput[]): OverlaySuggest
     return results;
 }
 
-/** Generate a vivid image prompt directly from transcript text for Pollinations.ai */
+/**
+ * Score segment relevance for server-side overlay generation.
+ * Higher score = more visually relevant.
+ */
+function scoreSegmentRelevanceServer(text: string): number {
+    const lower = text.toLowerCase();
+    if (lower.length < 8) return 0;
+
+    const fillerPatterns = [
+        'thank you for watching', 'like and subscribe', 'please subscribe',
+        'see you in the next', 'don\'t forget', 'comment below', 'let me know',
+        'that\'s it for', 'alright guys', 'anyway', 'moving on', 'so basically',
+    ];
+    if (fillerPatterns.some(p => lower.includes(p))) return 0;
+
+    let score = 0;
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+
+    const strongKeywords = new Set([
+        'money', 'revenue', 'profit', 'income', 'growth', 'success', 'rocket',
+        'brain', 'technology', 'code', 'science', 'power', 'energy', 'fire',
+        'earth', 'world', 'mountain', 'ocean', 'celebrate', 'love', 'protect',
+        'invest', 'market', 'stock', 'launch', 'explode', 'scale', 'secret',
+        'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
+    ]);
+    for (const w of words) {
+        if (strongKeywords.has(w)) score += 3;
+        else if (CONTENT_SCENE_MAP[w]) score += 1;
+    }
+
+    if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 4;
+    if (text.includes('?')) score += 2;
+    if (text.includes('!')) score += 1;
+
+    const nonStopWords = words.filter(w => !STOP_WORDS.has(w));
+    if (nonStopWords.length < 2) score -= 2;
+
+    return Math.max(0, score);
+}
+
+/** Generate a vivid image prompt directly from transcript text for Ernie API
+ *  Incorporates the detected video topic to ensure images match the video's context
+ */
 function generateImagePromptFromText(text: string): string {
     // Clean up the text and use it directly as the visual scene description
     const cleaned = text.replace(/[^\w\s,.!?'-]/g, '').trim();
-
-    // Use the actual transcript text as the core of the prompt
-    // This ensures every B-roll is unique to what the speaker is actually saying
+    
+    // Get the video's topic context for relevant image generation
+    const { primaryTopic, matchedKeywords } = currentVideoTopic;
+    
+    // Build topic-specific context prefix for the image prompt
+    // This ensures images match the VIDEO's overall theme, not just the segment text
+    let topicContext = '';
+    
+    if (primaryTopic === 'GAMING/ENTERTAINMENT') {
+        // For gaming videos (Roblox, Minecraft, etc.), explicitly mention the game context
+        const gameKeywords = matchedKeywords.filter(k => 
+            ['roblox', 'minecraft', 'fortnite', 'pokemon', 'game', 'player', 'character', 'level', 'boss', 'obby', 'simulator', 'tycoon', 'gameplay', 'gaming', 'avatar', 'npc', 'lobby', 'server', 'skin'].includes(k)
+        );
+        if (gameKeywords.length > 0) {
+            // Use the specific game mentioned in the video
+            topicContext = `${gameKeywords[0]} game screenshot, video game scene, `;
+        } else {
+            topicContext = 'video game scene, gaming content, ';
+        }
+    } else if (primaryTopic === 'TECHNOLOGY/CODING') {
+        topicContext = 'technology, coding screen, software development, ';
+    } else if (primaryTopic === 'FINANCE/BUSINESS') {
+        topicContext = 'business, financial, professional setting, ';
+    } else if (primaryTopic === 'FITNESS/HEALTH') {
+        topicContext = 'fitness, workout, gym scene, ';
+    } else if (primaryTopic === 'BEAUTY/FASHION') {
+        topicContext = 'beauty, fashion, style, ';
+    } else if (primaryTopic === 'EDUCATION/SCIENCE') {
+        topicContext = 'education, science, learning, ';
+    } else if (primaryTopic === 'COOKING/FOOD') {
+        topicContext = 'cooking, food, kitchen scene, ';
+    } else if (primaryTopic === 'MUSIC/ARTS') {
+        topicContext = 'music, artistic, creative scene, ';
+    } else if (primaryTopic === 'TRAVEL/ADVENTURE') {
+        topicContext = 'travel, adventure, destination, ';
+    } else if (primaryTopic === 'NEWS/DRAMA/STORY') {
+        topicContext = 'news, dramatic scene, ';
+    }
+    
+    // Use the actual transcript text as the core of the prompt, with topic context
     if (cleaned.length > 10) {
-        return `${cleaned}, realistic visual scene, cinematic lighting, professional quality, 4k, detailed`;
+        return `${topicContext}${cleaned}, professional, cinematic lighting, high quality`;
     }
 
-    return `Abstract professional concept art, cinematic lighting, dark moody background, modern design, high quality`;
+    return `${topicContext}professional scene, cinematic lighting, high quality`;
 }
 
 
 
 /**
- * Generate Pollinations.ai image URL
+ * Generate image using PaddlePaddle Ernie Image API
+ * Falls back to Pollinations.ai if Ernie fails
+ * The API returns results quickly (1-2 seconds) with SSE format:
+ * event: complete
+ * data: [{"path": "...", "url": "..."}]
+ */
+async function generateErnieImageUrl(prompt: string, seed: number): Promise<string> {
+    const ERNIE_API_BASE = 'https://paddlepaddle-ernie-image.ms.fun';
+    
+    console.log('[Ernie] Generating image for prompt:', prompt.substring(0, 100));
+    
+    try {
+        // Step 1: Call the Gradio API to get an event_id
+        const initiateResponse = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                data: [
+                    prompt,  // First parameter - the image prompt for context-specific generation
+                    "",  // Second parameter (negative prompt - keep empty)
+                    1024, // width
+                    768,  // height
+                    seed,
+                    8,    // steps
+                    1     // guidanceScale
+                ]
+            }),
+        });
+
+        if (!initiateResponse.ok) {
+            console.warn('[Ernie] Failed to initiate:', initiateResponse.status);
+            return generatePollinationsUrl(prompt, seed);
+        }
+
+        const initiateText = await initiateResponse.text();
+        
+        // Parse the response to get event_id: {"event_id":"xxx"}
+        let eventId: string;
+        try {
+            const initiateData = JSON.parse(initiateText);
+            eventId = initiateData.event_id;
+        } catch {
+            const match = initiateText.match(/"event_id"\s*:\s*"([^"]+)"/);
+            if (match) {
+                eventId = match[1];
+            } else {
+                console.warn('[Ernie] Could not parse event_id:', initiateText);
+                return generatePollinationsUrl(prompt, seed);
+            }
+        }
+
+        if (!eventId) {
+            console.warn('[Ernie] No event_id received');
+            return generatePollinationsUrl(prompt, seed);
+        }
+
+        console.log('[Ernie] Got event_id:', eventId);
+
+        // Step 2: Fetch the result - Ernie returns result quickly (within 1-2 seconds)
+        const resultUrl = `${ERNIE_API_BASE}/gradio_api/call/generate_image/${eventId}`;
+        
+        // Wait just 1 second for the image to be generated
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        let imageUrl: string | null = null;
+        
+        // Try fetching the result (may need a couple attempts if still generating)
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                console.log(`[Ernie] Fetching result, attempt ${attempt + 1}...`);
+                const resultResponse = await fetch(resultUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/event-stream',
+                    },
+                });
+
+                if (!resultResponse.ok) {
+                    console.warn(`[Ernie] Attempt ${attempt + 1} failed: ${resultResponse.status}`);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    continue;
+                }
+
+                const resultText = await resultResponse.text();
+                console.log(`[Ernie] Response: ${resultText.substring(0, 200)}`);
+                
+                // Parse SSE format: "event: complete\ndata: [{...}]"
+                // The URL is in the data JSON array
+                if (resultText.includes('event: complete')) {
+                    // Extract the JSON data after "data:"
+                    const dataMatch = resultText.match(/data:\s*(\[.*\])/);
+                    if (dataMatch) {
+                        try {
+                            const jsonData = JSON.parse(dataMatch[1]);
+                            if (Array.isArray(jsonData) && jsonData[0]?.url) {
+                                imageUrl = jsonData[0].url;
+                                console.log('[Ernie] Successfully extracted URL:', imageUrl);
+                                break;
+                            }
+                        } catch (parseError) {
+                            console.warn('[Ernie] JSON parse error:', parseError);
+                        }
+                    }
+                }
+                
+                // Fallback regex extraction if JSON parsing fails
+                if (!imageUrl) {
+                    const urlMatch = resultText.match(/"url"\s*:\s*"([^"]+)"/);
+                    if (urlMatch) {
+                        imageUrl = urlMatch[1];
+                        console.log('[Ernie] Extracted URL via regex:', imageUrl);
+                        break;
+                    }
+                }
+                
+                // If still generating, wait a bit more
+                if (resultText.includes('event: generating') || !resultText.includes('event:')) {
+                    console.log('[Ernie] Still generating, waiting...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+            } catch (fetchError) {
+                console.warn(`[Ernie] Fetch error:`, fetchError);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        if (imageUrl) {
+            console.log('[Ernie] Success! Got image URL:', imageUrl.substring(0, 80));
+            
+            // Download the actual image from Ernie
+            // This is critical - Remotion can't load external URLs due to CORS
+            console.log('[Ernie] Downloading image content...');
+            try {
+                const imageResponse = await fetch(imageUrl);
+                
+                if (imageResponse.ok) {
+                    const imageBuffer = await imageResponse.arrayBuffer();
+                    const base64 = Buffer.from(imageBuffer).toString('base64');
+                    const mimeType = imageResponse.headers.get('content-type') || 'image/webp';
+                    const dataUrl = `data:${mimeType};base64,${base64}`;
+                    
+                    console.log('[Ernie] Image downloaded, size:', imageBuffer.byteLength, 'bytes');
+                    return dataUrl;  // Return base64 data URL
+                } else {
+                    console.warn('[Ernie] Failed to download image:', imageResponse.status);
+                }
+            } catch (downloadError) {
+                console.warn('[Ernie] Download error:', downloadError);
+            }
+            
+            // If download failed, fall back to Pollinations
+            console.warn('[Ernie] Using Pollinations fallback due to download failure');
+            return generatePollinationsUrl(prompt, seed);
+        }
+
+        // If no URL found, use Pollinations fallback
+        console.warn('[Ernie] No image URL found, using Pollinations fallback');
+        return generatePollinationsUrl(prompt, seed);
+        
+    } catch (error) {
+        console.error('[Ernie] Error:', error);
+        return generatePollinationsUrl(prompt, seed);
+    }
+}
+
+/**
+ * Generate Pollinations.ai image URL (fallback)
  */
 function generatePollinationsUrl(prompt: string, seed: number): string {
     const encodedPrompt = encodeURIComponent(`${prompt}, high quality, professional`);
@@ -630,4 +1067,250 @@ function hashString(str: string): number {
         hash |= 0;
     }
     return Math.abs(hash);
+}
+
+// ==================== MULTI-PROVIDER API ROUTING ====================
+
+/**
+ * Build API request based on the provider type
+ */
+function buildProviderRequest(
+    apiEndpoint: string,
+    apiKey: string,
+    modelId: string,
+    prompt: string
+): { url: string; headers: Record<string, string>; body: Record<string, unknown> } {
+    
+    // Map model IDs to provider-specific model names
+    const modelMap: Record<string, Record<string, string>> = {
+        anthropic: {
+            'anthropic/claude-sonnet-4-20250514': 'claude-sonnet-4-20250514',
+            'anthropic/claude-sonnet-4-6': 'claude-sonnet-4-6',
+            'anthropic/claude-opus-4-6': 'claude-opus-4-6',
+            'anthropic/claude-haiku-4-5-20251001': 'claude-haiku-4-5-20251001',
+        },
+        openai: {
+            'openai/gpt-5-nano': 'gpt-5-nano',
+            'openai/gpt-5': 'gpt-5',
+            'openai/gpt-5.2-2025-12-11': 'gpt-5.2-2025-12-11',
+            'openai/o3': 'o3',
+            'openai/o4-mini': 'o4-mini',
+        },
+        google: {
+            'google/gemini-3-flash-preview': 'gemini-3-flash-preview',
+            'google/gemini-3-pro-preview': 'gemini-3-pro-preview',
+        },
+        deepseek: {
+            'lightning-ai/DeepSeek-V3.1': 'deepseek-chat',
+            'deepseek/deepseek-v3': 'deepseek-chat',
+        },
+    };
+
+    // Determine the provider from the model ID
+    let provider = 'lightning';
+    if (modelId.startsWith('anthropic/')) provider = 'anthropic';
+    else if (modelId.startsWith('openai/')) provider = 'openai';
+    else if (modelId.startsWith('google/')) provider = 'google';
+    else if (modelId.startsWith('deepseek/') || modelId === 'lightning-ai/DeepSeek-V3.1') provider = 'deepseek';
+    else if (modelId.includes('kimi')) provider = 'moonshot';
+    else if (modelId.startsWith('lightning-ai/')) provider = 'lightning';
+
+    switch (provider) {
+        case 'anthropic':
+            return {
+                url: apiEndpoint,
+                headers: {
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    model: modelMap.anthropic?.[modelId] || 'claude-sonnet-4-6',
+                    max_tokens: 4096,
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                },
+            };
+
+        case 'openai':
+            return {
+                url: apiEndpoint,
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    model: modelMap.openai?.[modelId] || 'gpt-5',
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: 4096,
+                },
+            };
+
+        case 'google':
+            // Google Gemini uses a different format
+            const geminiModel = modelMap.google?.[modelId] || 'gemini-3-flash-preview';
+            return {
+                url: `${apiEndpoint}/${geminiModel}:generateContent`,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    contents: [
+                        { parts: [{ text: prompt }] }
+                    ],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 4096,
+                    },
+                },
+            };
+
+        case 'moonshot':
+            // Moonshot (Kimi) API
+            return {
+                url: apiEndpoint,
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    model: 'kimi-k2.5',
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: 4096,
+                },
+            };
+
+        case 'deepseek':
+            return {
+                url: apiEndpoint,
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    model: 'deepseek-chat',
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: 4096,
+                },
+            };
+
+        case 'lightning':
+        default:
+            // Lightning AI format (unified gateway)
+            return {
+                url: apiEndpoint,
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: {
+                    model: modelId,
+                    messages: [
+                        { role: 'user', content: [{ type: 'text', text: prompt }] }
+                    ],
+                },
+            };
+    }
+}
+
+/**
+ * Extract content from API response based on provider
+ */
+function extractContentFromResponse(data: unknown, provider: string): string | null {
+    if (!data || typeof data !== 'object') return null;
+
+    const response = data as Record<string, unknown>;
+
+    switch (provider) {
+        case 'anthropic':
+            // Anthropic response format
+            const anthropicContent = response.content as Array<{ type: string; text?: string }> | undefined;
+            if (Array.isArray(anthropicContent)) {
+                const textBlock = anthropicContent.find((block) => block.type === 'text');
+                return textBlock?.text || null;
+            }
+            return null;
+
+        case 'google':
+            // Google Gemini response format
+            const candidates = response.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
+            if (Array.isArray(candidates) && candidates[0]?.content?.parts) {
+                return candidates[0].content.parts[0]?.text || null;
+            }
+            return null;
+
+        case 'openai':
+        case 'moonshot':
+        case 'deepseek':
+        case 'lightning':
+        default:
+            // OpenAI/Lightning format
+            const choices = response.choices as Array<{ message?: { content?: string | null } }> | undefined;
+            if (Array.isArray(choices) && choices.length > 0 && choices[0]?.message?.content) {
+                return choices[0].message.content;
+            }
+            // Handle string content (some endpoints return directly)
+            if (choices && choices.length > 0 && typeof choices[0].message?.content === 'string') {
+                return choices[0].message.content;
+            }
+            return null;
+    }
+}
+
+/**
+ * Build custom API request for user-defined endpoints
+ * Supports any OpenAI-compatible API
+ */
+function buildCustomApiRequest(
+    config: { baseUrl: string; apiKey: string; model: string; authHeader?: string; authPrefix?: string },
+    prompt: string
+): { url: string; headers: Record<string, string>; body: Record<string, unknown> } {
+    const { baseUrl, apiKey, model, authHeader = 'Authorization', authPrefix = 'Bearer' } = config;
+    
+    // Build auth header
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+    
+    if (authHeader && apiKey) {
+        const authValue = authPrefix ? `${authPrefix} ${apiKey}` : apiKey;
+        headers[authHeader] = authValue;
+    }
+    
+    // Check if it's a custom endpoint (may have different URL format)
+    let url = baseUrl;
+    
+    // Check if URL already contains the path
+    if (!url.includes('/chat/completions') && !url.includes('/generateContent') && !url.includes('/api/chat')) {
+        // Append appropriate path based on common patterns
+        if (baseUrl.includes('ollama')) {
+            // Ollama local API
+            url = `${baseUrl}`;
+        } else if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+            // Local APIs like LM Studio
+            url = baseUrl.endsWith('/') ? `${baseUrl}v1/chat/completions` : `${baseUrl}/v1/chat/completions`;
+        } else {
+            // Default to OpenAI-compatible endpoint
+            url = baseUrl.endsWith('/') ? `${baseUrl}chat/completions` : `${baseUrl}/chat/completions`;
+        }
+    }
+    
+    // Build request body (OpenAI-compatible format)
+    const body: Record<string, unknown> = {
+        model: model,
+        messages: [
+            { role: 'user', content: prompt }
+        ],
+        max_tokens: 4096,
+        temperature: 0.7,
+    };
+    
+    return { url, headers, body };
 }
