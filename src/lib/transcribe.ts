@@ -15,6 +15,7 @@ export async function transcribeVideo(
     try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('duration', String(duration));
 
         const response = await fetch('/api/transcribe', {
             method: 'POST',
