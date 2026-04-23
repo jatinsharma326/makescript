@@ -2,7 +2,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url='https://api-inference.modelscope.ai/v1',
-    api_key='ms-692f5732-147d-40f9-be6f-72df23f95bb0',
+    api_key='ms--147d-40f9-be6f-72df23f95bb0',
 )
 
 print('Testing ModelScope API...')
