@@ -145,6 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (error.message.includes('Invalid login credentials')) {
                     return { success: false, error: 'Invalid email or password. Please try again.' };
                 }
+                if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many requests') || (error as any).status === 429) {
+                    return { success: false, error: 'Too many attempts. Please wait a few minutes and try again.' };
+                }
                 return { success: false, error: error.message };
             }
             
@@ -201,6 +204,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (error.message.includes('Password')) {
                     return { success: false, error: 'Password does not meet requirements. Please use at least 6 characters.' };
+                }
+                if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many requests') || error.status === 429) {
+                    return { success: false, error: 'Too many attempts. Please wait a few minutes and try again.' };
                 }
                 return { success: false, error: error.message };
             }
@@ -280,6 +286,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 redirectTo: `${window.location.origin}/auth/reset-password`,
             });
             if (error) {
+                if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many requests') || (error as any).status === 429) {
+                    return { success: false, error: 'Too many attempts. Please wait a few minutes and try again.' };
+                }
                 return { success: false, error: error.message };
             }
             return { success: true };

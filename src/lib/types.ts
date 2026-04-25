@@ -1,11 +1,55 @@
 // Shared TypeScript types for AI Video Factory
 
+// ═══════════════ Agentic Editing Plan Types ═══════════════
+
+export type SegmentEffectType = 'zoom-in' | 'zoom-out' | 'ken-burns' | 'shake';
+
+export interface SegmentEffect {
+  type: SegmentEffectType;
+  intensity?: number;     // e.g. 1.2 for zoom scale
+  direction?: string;     // e.g. 'left', 'right' for ken-burns
+}
+
+export type SegmentTransitionType = 'fade' | 'slide-left' | 'slide-right' | 'glitch' | 'wipe' | 'zoom';
+
+export interface SegmentTransition {
+  type: SegmentTransitionType;
+  duration: number; // in seconds
+}
+
+export type SegmentAction = 'keep' | 'speed-up' | 'slow-down' | 'cut';
+
+export interface EditingPlanSegment {
+  segmentId: string;
+  action: SegmentAction;
+  speedFactor?: number;   // e.g. 1.5 for speed-up
+  overlay?: OverlayConfig | null;
+  effect?: SegmentEffect | null;
+  transition?: SegmentTransition | null;
+}
+
+export interface EditingPlan {
+  mood: string;                     // e.g. 'energetic', 'calm', 'dramatic'
+  colorGrade?: {
+    brightness?: number;
+    contrast?: number;
+    saturation?: number;
+    temperature?: number;
+  };
+  segments: EditingPlanSegment[];
+}
+
+// ═══════════════ Core Types ═══════════════
+
 export interface SubtitleSegment {
   id: string;
   startTime: number; // in seconds
   endTime: number;   // in seconds
   text: string;
   overlay?: OverlayConfig;
+  effect?: SegmentEffect;       // Agentic: zoom/pan/shake on base video
+  transition?: SegmentTransition; // Agentic: transition to NEXT segment
+  speedFactor?: number;          // Agentic: per-segment speed multiplier
 }
 
 export type SmartCutTier = 'free' | 'pro' | 'max';
@@ -240,7 +284,7 @@ export interface TextOverlay {
   endTime: number;    // seconds
 }
 
-export type EditorTab = 'magic' | 'filters' | 'trim' | 'speed' | 'text';
+export type EditorTab = 'magic' | 'ai-insights' | 'filters' | 'trim' | 'speed' | 'text';
 
 export type TranscriptStatus =
   | 'none'           // No transcript yet
@@ -269,6 +313,7 @@ export interface ProjectState {
   activeEditorTab: EditorTab;
   showEditorPanel: boolean;
   transcriptStatus: TranscriptStatus;
+  editingPlan?: EditingPlan;    // Agentic: full AI editing plan
 }
 
 export interface ProjectMeta {

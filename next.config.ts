@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   // Disable StrictMode to prevent Remotion Player from double-mounting
   // video elements (which causes double audio playback)
   reactStrictMode: false,
+
+  // Explicitly set Turbopack root to avoid wrong workspace detection
+  // (Next.js was picking c:\Users\jatin from a stray package-lock.json)
+  turbopack: {
+    root: 'c:\\Users\\jatin\\OneDrive\\Documents\\myctproj',
+  },
   
   // Allow larger request bodies for video file uploads (50MB)
   experimental: {

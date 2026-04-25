@@ -1,8 +1,8 @@
-// Usage tracking — free tier limits, monthly resets
+// Usage tracking — free tier limits, monthly resets (per-user)
 
 export type PlanType = 'free' | 'creator' | 'studio';
 
-const USAGE_KEY = 'makescript-usage';
+const USAGE_KEY_PREFIX = 'makescript-usage';
 
 interface UsageData {
     month: string; // "2026-02"
@@ -10,7 +10,7 @@ interface UsageData {
 }
 
 const PLAN_LIMITS: Record<PlanType, number> = {
-    free: 3,
+    free: 10,
     creator: 20,
     studio: Infinity,
 };
@@ -20,9 +20,14 @@ function getCurrentMonth(): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function getUsageData(): UsageData {
+function getUsageKey(userId?: string): string {
+    return userId ? `${USAGE_KEY_PREFIX}:${userId}` : USAGE_KEY_PREFIX;
+}
+
+function getUsageData(userId?: string): UsageData {
+    const key = getUsageKey(userId);
     try {
-        const raw = localStorage.getItem(USAGE_KEY);
+        const raw = localStorage.getItem(key);
         if (raw) {
             const data: UsageData = JSON.parse(raw);
             // Reset if different month
@@ -37,12 +42,13 @@ function getUsageData(): UsageData {
     return { month: getCurrentMonth(), videoCount: 0 };
 }
 
-function saveUsageData(data: UsageData): void {
-    localStorage.setItem(USAGE_KEY, JSON.stringify(data));
+function saveUsageData(data: UsageData, userId?: string): void {
+    const key = getUsageKey(userId);
+    localStorage.setItem(key, JSON.stringify(data));
 }
 
-export function getUsage(planOverride?: PlanType): { used: number; limit: number; plan: PlanType } {
-    const data = getUsageData();
+export function getUsage(planOverride?: PlanType, userId?: string): { used: number; limit: number; plan: PlanType } {
+    const data = getUsageData(userId);
     let plan: PlanType = planOverride || 'free';
     if (!planOverride) {
         // Fallback: try localStorage if no plan passed
@@ -58,19 +64,19 @@ export function getUsage(planOverride?: PlanType): { used: number; limit: number
     };
 }
 
-export function canCreateProject(planOverride?: PlanType): boolean {
-    const { used, limit } = getUsage(planOverride);
+export function canCreateProject(planOverride?: PlanType, userId?: string): boolean {
+    const { used, limit } = getUsage(planOverride, userId);
     return used < limit;
 }
 
-export function incrementUsage(): void {
-    const data = getUsageData();
+export function incrementUsage(userId?: string): void {
+    const data = getUsageData(userId);
     data.videoCount += 1;
-    saveUsageData(data);
+    saveUsageData(data, userId);
 }
 
-export function getUsageDisplay(planOverride?: PlanType): { text: string; percent: number; isNearLimit: boolean; isAtLimit: boolean } {
-    const { used, limit, plan } = getUsage(planOverride);
+export function getUsageDisplay(planOverride?: PlanType, userId?: string): { text: string; percent: number; isNearLimit: boolean; isAtLimit: boolean } {
+    const { used, limit, plan } = getUsage(planOverride, userId);
     if (plan === 'studio') {
         return { text: `${used} videos`, percent: 0, isNearLimit: false, isAtLimit: false };
     }
@@ -81,4 +87,11 @@ export function getUsageDisplay(planOverride?: PlanType): { text: string; percen
         isNearLimit: percent >= 80,
         isAtLimit: used >= limit,
     };
+}
+
+/** Clear all legacy/global usage keys so old unscoped data stops interfering */
+export function clearLegacyUsage(): void {
+    try {
+        localStorage.removeItem(USAGE_KEY_PREFIX);
+    } catch { /* ignore */ }
 }

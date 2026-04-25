@@ -26,8 +26,10 @@ import {
     Trash2,
     Sparkles,
     Loader2,
-    Wand2
+    Wand2,
+    Brain
 } from 'lucide-react';
+import { AiInsightsPanel } from './AiInsightsPanel';
 
 /* ===== Editor Slider Wrapper ===== */
 const EditorSliderField: React.FC<{
@@ -196,7 +198,17 @@ const MagicTab: React.FC<{
     onSubtitlesChange?: (subtitles: SubtitleSegment[]) => void;
     isGenerating?: boolean;
     onGenerateAI?: () => void;
-}> = ({ subtitles, onSubtitlesChange, isGenerating, onGenerateAI }) => {
+    onAgenticEdit?: () => void;
+    agenticResult?: {
+        segmentsRemoved: number;
+        segmentsSpedUp: number;
+        overlaysAdded: number;
+        effectsAdded: number;
+        transitionsAdded: number;
+        originalDuration: number;
+        newDuration: number;
+    } | null;
+}> = ({ subtitles, onSubtitlesChange, isGenerating, onGenerateAI, onAgenticEdit, agenticResult }) => {
     const [fillers, setFillers] = useState<SmartCutFillerSegment[]>([]);
     const [selectedFillers, setSelectedFillers] = useState<Set<string>>(new Set());
     const [isDetecting, setIsDetecting] = useState(false);
@@ -231,6 +243,53 @@ const MagicTab: React.FC<{
                 <p className="text-[10px] text-muted-foreground mt-1 max-w-[220px]">
                     Let AI automatically edit your video to save you hours of manual work.
                 </p>
+            </div>
+
+            {/* 🤖 Agentic Auto Edit Section */}
+            <div className="pt-4 border-t border-border">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Brain className="w-3 h-3 text-violet-400" />
+                        Auto Edit Video
+                    </h3>
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">
+                    The AI agent analyzes your video, cuts dead air, speeds up boring parts, adds zooms on key moments, inserts transitions at topic changes, and applies color grading — all automatically.
+                </p>
+                <Button
+                    onClick={onAgenticEdit}
+                    disabled={isGenerating || !subtitles?.length}
+                    className="w-full h-10 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-lg disabled:opacity-40 font-semibold shadow-lg shadow-violet-500/20"
+                >
+                    {isGenerating ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Brain className="w-3 h-3 mr-2" />}
+                    {isGenerating ? 'AI Agent Editing...' : '🤖 Auto Edit Video'}
+                </Button>
+
+                {agenticResult && (
+                    <div className="mt-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/10 space-y-1.5">
+                        <div className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider">Edit Complete</div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <div className="text-[10px] text-muted-foreground">
+                                <span className="text-violet-300 font-medium">{agenticResult.segmentsRemoved}</span> cuts
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                <span className="text-violet-300 font-medium">{agenticResult.segmentsSpedUp}</span> sped up
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                <span className="text-violet-300 font-medium">{agenticResult.overlaysAdded}</span> overlays
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                <span className="text-violet-300 font-medium">{agenticResult.effectsAdded}</span> effects
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                <span className="text-violet-300 font-medium">{agenticResult.transitionsAdded}</span> transitions
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                <span className="text-emerald-300 font-medium">{agenticResult.originalDuration.toFixed(1)}s → {agenticResult.newDuration.toFixed(1)}s</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Auto B-Roll Section */}
@@ -721,6 +780,16 @@ interface EditorPanelProps {
     onSubtitlesChange?: (subtitles: SubtitleSegment[]) => void;
     isGenerating?: boolean;
     onGenerateAI?: () => void;
+    onAgenticEdit?: () => void;
+    agenticResult?: {
+        segmentsRemoved: number;
+        segmentsSpedUp: number;
+        overlaysAdded: number;
+        effectsAdded: number;
+        transitionsAdded: number;
+        originalDuration: number;
+        newDuration: number;
+    } | null;
 }
 
 const EditorPanel: React.FC<EditorPanelProps> = ({
@@ -741,9 +810,12 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
     onSubtitlesChange,
     isGenerating,
     onGenerateAI,
+    onAgenticEdit,
+    agenticResult,
 }) => {
     const tabs: { id: EditorTab; label: string; icon: React.FC<{ className?: string }> }[] = [
         { id: 'magic', label: 'Magic', icon: Wand2 },
+        { id: 'ai-insights', label: 'AI', icon: Brain },
         { id: 'filters', label: 'Filters', icon: SlidersHorizontal },
         { id: 'trim', label: 'Trim', icon: Scissors },
         { id: 'speed', label: 'Speed', icon: Gauge },
@@ -785,7 +857,13 @@ const EditorPanel: React.FC<EditorPanelProps> = ({
             {/* Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar relative">
                 <div className="absolute inset-0">
-                    {activeTab === 'magic' && <MagicTab subtitles={subtitles} onSubtitlesChange={onSubtitlesChange} isGenerating={isGenerating} onGenerateAI={onGenerateAI} />}
+                    {activeTab === 'magic' && <MagicTab subtitles={subtitles} onSubtitlesChange={onSubtitlesChange} isGenerating={isGenerating} onGenerateAI={onGenerateAI} onAgenticEdit={onAgenticEdit} agenticResult={agenticResult} />}
+                    {activeTab === 'ai-insights' && <AiInsightsPanel subtitles={subtitles || []} isGenerating={isGenerating} onApplySmartCuts={(ids) => {
+                        if (onSubtitlesChange && subtitles) {
+                            const newSubs = subtitles.filter(s => !ids.includes(s.id));
+                            onSubtitlesChange(newSubs);
+                        }
+                    }} />}
                     {activeTab === 'filters' && <FiltersTab filters={filters} onChange={onFiltersChange} transcript={transcript} />}
                     {activeTab === 'trim' && <TrimTab trimPoints={trimPoints} duration={duration} onChange={onTrimChange} />}
                     {activeTab === 'speed' && <SpeedTab speed={speed} onChange={onSpeedChange} />}

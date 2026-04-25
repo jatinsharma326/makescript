@@ -54,6 +54,32 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
     },
     
     // ═══════════════════════════════════════════════════════════════════
+    // NVIDIA API MODELS — via integrate.api.nvidia.com
+    // ═══════════════════════════════════════════════════════════════════
+    
+    // GLM-5 via NVIDIA API
+    {
+        id: 'glm-5-nvidia',
+        name: 'GLM-5 NVIDIA',
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.NVIDIA_GLM5_API_KEY || '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',
+        model: 'openai/z-ai/glm-5.1',
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer',
+    },
+    
+    // MiniMax M2.7 via NVIDIA API
+    {
+        id: 'minimax-m2.7',
+        name: 'MiniMax M2.7 NVIDIA',
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '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',
+        model: 'openai/minimaxai/minimax-m2.7',
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer',
+    },
+    
+    // ═══════════════════════════════════════════════════════════════════
     // EXAMPLES - Add more custom APIs below:
     // ═══════════════════════════════════════════════════════════════════
     
@@ -145,6 +171,13 @@ export const DEFAULT_PROVIDERS = {
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
+    
+    // NVIDIA API (for GLM-5, MiniMax via LiteLLM proxy)
+    nvidia: {
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer',
+    },
 };
 
 // Legacy support - map model IDs to their provider
@@ -176,6 +209,10 @@ export const MODEL_PROVIDER_MAP: Record<string, string> = {
     
     // Lightning AI models
     'lightning-ai/llama-3.3-70b': 'lightning',
+    
+    // NVIDIA models (via LiteLLM proxy)
+    'glm-5-nvidia': 'nvidia',
+    'minimax-m2.7': 'nvidia',
 };
 
 // Get provider for a model ID

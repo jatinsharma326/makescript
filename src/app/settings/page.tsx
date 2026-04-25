@@ -31,8 +31,8 @@ export default function SettingsPage() {
         return <div className="min-h-screen flex items-center justify-center bg-[var(--lp-bg)]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--lp-text-faint)]" /></div>;
     }
 
-    const usage = getUsageDisplay(user?.plan);
-    const usageData = getUsage();
+    const usage = getUsageDisplay(user?.plan, user?.id);
+    const usageData = getUsage(undefined, user?.id);
     const tierInfo = TIERS[user.plan as ModelTier] || TIERS.free;
     const tierIcons: Record<string, React.ReactNode> = {
         free: <Sparkles className="w-4 h-4" />,
@@ -46,10 +46,13 @@ export default function SettingsPage() {
     };
 
     const handleDeleteAccount = () => {
-        // Clear all user data
+        // Clear all user data (legacy + per-user scoped)
         localStorage.removeItem('makescript-user');
         localStorage.removeItem('makescript-users');
         localStorage.removeItem('makescript-usage');
+        if (user?.id) {
+            localStorage.removeItem(`makescript-usage:${user.id}`);
+        }
         localStorage.removeItem('makescript-onboarded');
         localStorage.removeItem('makescript-project-list');
         logout();

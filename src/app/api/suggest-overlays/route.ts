@@ -112,6 +112,7 @@ function detectVideoTopicDetailed(fullText: string): { primaryTopic: string; mat
         matchedKeywords: topData.matches.slice(0, 10)
     };
 }
+
 export async function POST(request: NextRequest) {
     try {
         const { subtitles, model } = (await request.json()) as { subtitles: SubtitleInput[]; model?: string };
@@ -132,73 +133,98 @@ export async function POST(request: NextRequest) {
 }
 
 async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string): Promise<OverlaySuggestion[]> {
-    // Generate a UNIQUE session ID for this request to force fresh AI generation
     const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     
     const subtitleList = subtitles
         .map((s) => `[${s.id}] "${s.text}" (${s.startTime}s - ${s.endTime}s)`)
         .join('\n');
 
-    // Detect video topic from FULL transcript for context-aware scene matching
     const fullTranscript = subtitles.map(s => s.text).join(' ').toLowerCase();
     const videoTopic = detectVideoTopic(fullTranscript);
     
-    // Create unique segment hashes to ensure each segment gets DIFFERENT visuals
     const segmentContexts = subtitles.map(s => {
         const hash = Math.abs(s.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
         return `${s.id}:uniqueSeed=${hash}`;
     }).join(', ');
 
-    const prompt = `You are a Senior Motion Graphics Director. Create UNIQUE animated overlays for this video.
+    const prompt = `You are an elite Motion Graphics Director for a top-tier video production studio. Your job is to create PROFESSIONAL, contextually-relevant motion graphics based EXACTLY on what the speaker is saying.
 
-⚠️ CRITICAL: Session ID ${sessionId} — You MUST generate FRESH, UNIQUE content for THIS specific video. Do NOT reuse previous responses.
+⚠️ CRITICAL: Session ID ${sessionId} — Generate FRESH content for THIS video only.
 
 VIDEO TOPIC CONTEXT: ${videoTopic}
 
-UNIQUE SEGMENT SEEDS (use these to create different visuals for each segment): ${segmentContexts}
+AVAILABLE PROFESSIONAL OVERLAY TYPES:
 
-AVAILABLE OVERLAY TYPES:
-
-1. "ai-motion-graphic" — GENERATE A UNIQUE CUSTOM ANIMATED SVG for THIS segment's specific content (USE THIS 40% of the time)
-   Props: { "svgContent": "<svg viewBox='0 0 400 300' width='100%' height='100%' xmlns='http://www.w3.org/2000/svg'>...</svg>" }
+1. "visual-illustration" — PRE-BUILT PROFESSIONAL ANIMATED SCENE (Use 20% of the time)
+   This renders a stunning pre-built animated SVG scene. You just pick the right scene name.
+   Available scenes: solar-system, growth-chart, globe, rocket-launch, brain-idea, connections, clock-time, heartbeat, money-flow, lightning, shopping-cart, cooking, nature-tree, city-skyline, person-walking, celebration, music-notes, book-reading, camera, code-terminal, fire-blaze, water-wave, shield-protect, target-bullseye, explosion-burst, magnet-attract, gear-system, energy-pulse, eye-vision, arrow-growth, checkmark-success, diamond-gem, crown-royal, atom-science, mountain-peak
+   Props: { "scene": "scene-name-from-list", "label": "Key phrase from segment", "color": "#6366f1", "transition": "fade-in" }
    
-   ⚠️ Each SVG must be UNIQUE based on the segment's actual text meaning:
-   - If text mentions "Earth rotating around the sun" → Create sun + orbiting earth with rotation animation
-   - If text mentions "revenue growth" → Create animated rising bars/graph with numbers
-   - If text mentions "brain ideas" → Create neural network with firing synapses
-   - If text mentions "rocket launch" → Create rocket with flame trail ascending
-   - If text mentions specific numbers/stats → Visualize those exact numbers with animations
+   Scene selection guide (MATCH THE SPEAKER'S WORDS):
+   - Money/revenue/profit → "money-flow" or "growth-chart"
+   - Brain/ideas/AI/think → "brain-idea"
+   - Rocket/launch/start → "rocket-launch"
+   - Earth/world/global → "globe"
+   - Success/win/achieve → "checkmark-success" or "crown-royal"
+   - Growth/increase/scale → "arrow-growth"
+   - Fire/power/energy → "fire-blaze" or "energy-pulse"
+   - Time/schedule/deadline → "clock-time"
+   - Protection/security → "shield-protect"
+   - Goal/target/focus → "target-bullseye"
+   - Technology/code/software → "code-terminal" or "atom-science"
+   - Nature/tree/environment → "nature-tree"
+   - City/building/urban → "city-skyline"
+   - Connection/network/social → "connections"
+   - Heart/love/care → "heartbeat"
+   - Lightning/fast/speed → "lightning"
+   - Explosion/impact/massive → "explosion-burst"
+   - Mountain/climb/challenge → "mountain-peak"
+
+2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE (Use 60% of the time)
+   Creates a cinematic AI-generated image as B-roll. Provide a RICH, DETAILED, CINEMATIC image prompt that captures the MOOD and TONE of the segment.
+   Props: { "caption": "Short label", "imagePrompt": "the detailed prompt" }
    
-   The SVG MUST be self-contained with:
-   - Transparent background (DO NOT use a background <rect> or <svg style="background:...">)</svg>)
-   - Beautiful colors matching the segment's topic
-   - Smooth <animate> or <animateTransform> SMIL animations
-   - Visual elements that DIRECTLY relate to what the speaker is saying
+   ⚠️ IMAGE PROMPT RULES:
+   - Write prompts that evoke the EMOTIONAL MOOD of the segment (dramatic, triumphant, calm, energetic, mysterious, warm, etc.)
+   - Use cinematic language: lighting terms (golden hour, chiaroscuro, volumetric, rim light), composition terms (wide shot, close-up, aerial, Dutch angle), atmosphere (foggy, misty, ethereal, gritty)
+   - Match the visual style to the topic: corporate luxury for business, futuristic for tech, editorial for fashion, gritty for gaming
+   - Be SPECIFIC about what the image shows — not abstract concepts
+   - Include style quality tags: "cinematic lighting, 8k, hyperrealistic, professional color grading, shallow depth of field"
+   
+   BAD examples (avoid these):
+   - "business growth" — too vague
+   - "happy person working" — generic and boring
+   - "technology concept" — meaningless
+   
+   GOOD examples:
+   - "A dramatic upward-trending stock chart rendered as a glowing glass sculpture in a dark executive boardroom, golden hour light streaming through floor-to-ceiling windows, cinematic wide shot, hyperrealistic, professional color grading, 8k"
+   - "Close-up of weathered hands typing code on a backlit mechanical keyboard, neon blue reflections dancing on the keys, shallow depth of field, cyberpunk atmosphere, volumetric fog, moody lighting"
+   - "A lone explorer standing atop a mountain peak at sunrise, arms raised in triumph, golden sun rays bursting through dramatic clouds, inspirational adventure photography, 8k, National Geographic style"
 
-2. "ai-generated-image" (25%) — Generate a unique image URL based on segment content
-   Props: { "imageUrl": "https://image.pollinations.ai/prompt/...", "caption": "short label" }
-   Construct the URL with the segment's text as context: https://image.pollinations.ai/prompt/{encodeURIComponent(segmentText + ', cinematic, professional')}?seed={uniqueSeed}
+3. "gif-reaction" — CONTEXTUAL GIF REACTION (Use 10% of the time)
+   Props: { "keyword": "search term from segment", "size": "large", "position": "center" }
 
-3. "kinetic-text" (30%) Props: { "text": "Phrase from segment", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
-4. "emoji-reaction" (5%) Props: { "emoji": "🔥", "size": 70 }
+4. "emoji-reaction" — SUBTLE EMOJI (Use 5% of the time, only for casual moments)
+   Props: { "emoji": "🔥", "size": 70 }
 
-⚠️ MANDATORY RULES:
-1. EACH overlay must be UNIQUE to its segment — match the ACTUAL content being spoken
-2. ONLY overlay 25-35% of segments — skip filler and generic sentences
-3. Never put overlays on consecutive segments — space them out
-4. Vary overlay types across the video
-5. For "ai-motion-graphic", the SVG content MUST reflect the specific words/numbers in that segment
+⚠️ MANDATORY RULES FOR PROFESSIONAL RESULTS:
+1. READ EACH SEGMENT CAREFULLY — the overlay MUST reflect the SPECIFIC words and meaning
+2. ONLY overlay 25-35% of segments — skip filler ("um", "like", "so yeah", "anyway")
+3. NEVER put overlays on consecutive segments — minimum 2 segments apart
+4. For "visual-illustration", ALWAYS choose a scene that MATCHES the segment's keywords
+5. For "ai-generated-image", write a RICH, DETAILED prompt (not just the raw text)
+6. The "label" prop should be a SHORT, PUNCHY phrase extracted from the segment (2-4 words, capitalized)
+7. If a segment has numbers/stats, HIGHLIGHT them in the label or image
 
 Transcript Segments:
 ${subtitleList}
 
-Return JSON array:
-[{ "segmentId": string, "type": "ai-motion-graphic"|"ai-generated-image"|"kinetic-text"|"emoji-reaction", "props": { ... } }]`;
+Return ONLY a JSON array. No markdown, no explanation:
+[{ "segmentId": string, "type": "visual-illustration"|"ai-generated-image"|"gif-reaction"|"emoji-reaction", "props": { ... } }]`;
 
     const MAX_RETRIES = 1;
     const RETRY_DELAY_MS = 500;
 
-    // Model info type
     type ModelInfo = {
         name: string;
         model: string;
@@ -206,17 +232,14 @@ Return JSON array:
         isCustom?: boolean;
     };
 
-    // Default fallback models (Lightning AI format)
     const fallbackModels: ModelInfo[] = [
         { name: 'DeepSeek V3.1', model: 'lightning-ai/DeepSeek-V3.1', provider: 'deepseek' },
         { name: 'OpenAI o3', model: 'openai/o3', provider: 'openai' },
         { name: 'OpenAI o4-mini', model: 'openai/o4-mini', provider: 'openai' },
     ];
 
-    // If a specific model was requested, try it first
     const requestedProvider = requestedModel ? getModelProvider(requestedModel) : 'lightning';
     
-    // Check if it's a custom API
     const customApi = requestedModel ? getCustomApiConfig(requestedModel) : undefined;
     
     const models = requestedModel
@@ -242,12 +265,9 @@ Return JSON array:
                 let apiKey: string;
                 let customConfig: typeof customApi = undefined;
                 
-                // Check if this is a custom API
                 if (modelInfo.isCustom) {
-                    // Use the model ID to look up the custom config
                     customConfig = getCustomApiConfig(modelInfo.model);
                     if (!customConfig) {
-                        // Try looking up by model name as fallback
                         customConfig = CUSTOM_APIS.find(api => api.model === modelInfo.model || api.name === modelInfo.name);
                     }
                     if (!customConfig) {
@@ -257,7 +277,6 @@ Return JSON array:
                     apiEndpoint = customConfig.baseUrl;
                     apiKey = customConfig.apiKey;
                 } else {
-                    // Get the appropriate API endpoint and key for this provider
                     apiEndpoint = getApiEndpoint(modelInfo.provider);
                     apiKey = getApiKey(modelInfo.provider);
                 }
@@ -267,7 +286,6 @@ Return JSON array:
                     break;
                 }
 
-                // Build the request based on provider
                 const { url, headers, body } = modelInfo.isCustom 
                     ? buildCustomApiRequest(customConfig!, prompt)
                     : buildProviderRequest(apiEndpoint, apiKey, modelInfo.model, prompt);
@@ -309,17 +327,26 @@ Return JSON array:
 
                 const suggestions: OverlaySuggestion[] = JSON.parse(jsonStr);
 
-                // Validate: ensure all have valid overlay types
                 const validatedSuggestions = suggestions
                     .filter((s) => s.segmentId && VALID_OVERLAY_TYPES.includes(s.type))
                     .map((s) => {
                         const count = hashString(s.segmentId);
                         const origSeg = subtitles.find(sub => sub.id === s.segmentId);
-                        // Ensure color is set
                         if (!s.props.color) s.props.color = getProColor(count);
-                        // For kinetic-text, ensure text prop exists
                         if (s.type === 'kinetic-text' && !s.props.text && origSeg) {
                             s.props.text = extractLabelFromText(origSeg.text);
+                        }
+                        if (s.type === 'ai-generated-image') {
+                            if (s.props.imageUrl) {
+                                // Strip out hallucinated imageUrls so the client generates a fresh one
+                                // based on the imagePrompt or segment text.
+                                delete s.props.imageUrl;
+                            }
+                            if (s.props.seed !== undefined) {
+                                // Strip out hallucinated seeds to ensure we generate a truly unique seed
+                                // per segment based on the segment ID.
+                                delete s.props.seed;
+                            }
                         }
                         return s;
                     });
@@ -336,7 +363,7 @@ Return JSON array:
         console.warn(`[AI Suggest] ${modelInfo.name} failed, trying next model...`);
     }
 
-    console.log('[AI Suggest] Using local motion graphic generation');
+    console.log('[AI Suggest] Using local motion graphic generation with LLM-powered image prompts');
     return generateLocalMotionGraphics(subtitles);
 }
 
@@ -507,27 +534,22 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     thousand: 'growth-chart', percent: 'growth-chart',
 };
 
-/** Match transcript text to the best animated scene using keyword mapping */
 function matchSceneToText(text: string): string {
     const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
     for (const word of words) {
         if (CONTENT_SCENE_MAP[word]) return CONTENT_SCENE_MAP[word];
     }
-    // Fallback: pick a random scene based on text hash
     const hash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
     return ALL_SCENES[hash % ALL_SCENES.length];
 }
 
-// Store the detected video topic globally for the request (used by image prompt generation)
 let currentVideoTopic: { primaryTopic: string; matchedKeywords: string[] } = { primaryTopic: 'general', matchedKeywords: [] };
 
 async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<OverlaySuggestion[]> {
     const results: OverlaySuggestion[] = [];
     
-    // Generate a unique session seed for this video to ensure fresh content
     const sessionSeed = Date.now() % 100000;
     
-    // Detect video topic from full transcript for context-aware image generation
     const fullTranscriptText = subtitles.map(s => s.text).join(' ');
     const topicInfo = detectVideoTopicDetailed(fullTranscriptText);
     currentVideoTopic = topicInfo;
@@ -535,24 +557,20 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
     
     let overlayCount = 0;
     
-    // Track last used scenes to avoid repetition
     let lastUsedSceneType = '';
 
-    // Score each segment for relevance
     const scored = subtitles.map((seg, index) => ({
         seg,
         index,
         score: scoreSegmentRelevanceServer(seg.text),
     }));
 
-    // Pick top ~30% most relevant
     const maxOverlays = Math.max(2, Math.floor(subtitles.length * 0.30));
     const topSegments = scored
         .filter(s => s.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, maxOverlays);
 
-    // Enforce minimum gap of 2 segments
     const overlayIndices = new Set<number>();
     const sortedByIndex = topSegments.sort((a, b) => a.index - b.index);
     let lastIdx = -3;
@@ -563,86 +581,95 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
         }
     }
 
-    // First, collect all segments that need AI-generated images
-    // We'll generate them all in parallel for faster processing
-    const imageGenerationTasks: { index: number; seg: SubtitleInput; uniqueSeed: number; label: string }[] = [];
+    // Generate AI images for ALL overlay segments upfront (type is decided later per content)
+    console.log(`[ImageGen] Starting parallel generation of ${[...overlayIndices].length} images with LLM-powered prompts...`);
     
-    for (let index = 0; index < subtitles.length; index++) {
-        if (!overlayIndices.has(index)) continue;
+    const imageResults: Map<number, string> = new Map();
+    
+    const allOverlaySegments = [...overlayIndices].map(index => {
         const seg = subtitles[index];
         const segmentHash = hashString(seg.text);
         const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
         const label = extractLabelFromText(seg.text);
+        return { index, seg, uniqueSeed, label };
+    });
 
-        // Count overlay position to determine type
-        const overlayPosition = [...overlayIndices].filter(i => i <= index).length - 1;
-        const slot = overlayPosition % 10;
-
-        // Slots 0, 2, 5, 8 need AI-generated images
-        if (slot === 0 || slot === 2 || slot === 5 || slot === 8) {
-            imageGenerationTasks.push({ index, seg, uniqueSeed, label });
-        }
-    }
-    
-    // Generate ALL AI images in PARALLEL (concurrently) for much faster processing
-    console.log(`[Ernie] Starting parallel generation of ${imageGenerationTasks.length} images...`);
-    
-    const imageResults: Map<number, string> = new Map();
-    
-    if (imageGenerationTasks.length > 0) {
-        // Run all image generation requests concurrently
-        const imagePromises = imageGenerationTasks.map(async ({ index, seg, uniqueSeed }) => {
-            const imagePrompt = generateImagePromptFromText(seg.text);
-            console.log(`[Ernie] Generating image for segment ${seg.id}...`);
+    if (allOverlaySegments.length > 0) {
+        const imagePromises = allOverlaySegments.map(async ({ index, seg, uniqueSeed }) => {
+            const imagePrompt = await generateLLMPoweredImagePrompt(seg.text, topicInfo);
+            console.log(`[ImageGen] Prompt for segment ${seg.id}: "${imagePrompt.substring(0, 120)}..."`);
             const imageUrl = await generateErnieImageUrl(imagePrompt, uniqueSeed);
             return { index, imageUrl };
         });
         
-        // Wait for all images to complete (but in parallel)
         const settledResults = await Promise.allSettled(imagePromises);
         
         for (const result of settledResults) {
             if (result.status === 'fulfilled') {
                 imageResults.set(result.value.index, result.value.imageUrl);
-                console.log(`[Ernie] Image ready for index ${result.value.index}`);
+                console.log(`[ImageGen] Image ready for index ${result.value.index}`);
             } else {
-                console.warn('[Ernie] Image generation failed:', result.reason);
+                console.warn('[ImageGen] Image generation failed:', result.reason);
             }
         }
         
-        console.log(`[Ernie] Completed ${imageResults.size}/${imageGenerationTasks.length} image generations`);
+        console.log(`[ImageGen] Completed ${imageResults.size}/${allOverlaySegments.length} image generations`);
     }
     
-    // Now build the overlay suggestions using the pre-generated images
+    // Build overlay suggestions — type chosen per-segment based on CONTENT, not a fixed slot
     for (let index = 0; index < subtitles.length; index++) {
         if (!overlayIndices.has(index)) continue;
         const seg = subtitles[index];
 
-        // Generate a unique seed for THIS segment based on its content + session
         const segmentHash = hashString(seg.text);
         const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
         
         const color = getProColor(uniqueSeed);
         const label = extractLabelFromText(seg.text);
 
-        // Mix overlay types with UNIQUE content per segment:
-        // - ai-generated-image (40%): Dynamic B-roll image with segment-specific prompt
-        // - kinetic-text (30%): Text animation with segment's key phrase
-        // - transcript-motion (20%): Transcript animation
-        // - emoji-reaction (10%): Contextual emoji
-        const slot = overlayCount % 10;
+        // ── Content-driven type selection ──
+        const lower = seg.text.toLowerCase();
+        const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+        const contentHash = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+
+        const hasStrongSceneKeyword = words.some(w => CONTENT_SCENE_MAP[w]);
+        const hasVisualNoun = words.some(w => [
+            'money', 'rocket', 'brain', 'fire', 'ocean', 'mountain', 'city',
+            'star', 'earth', 'code', 'heart', 'clock', 'tree', 'food',
+        ].includes(w));
+        const hasEmotionWord = words.some(w => [
+            'love', 'happy', 'amazing', 'incredible', 'awesome', 'fire', 'lit',
+            'crazy', 'insane', 'wow', 'excited', 'cool', 'funny',
+        ].includes(w));
+        const hasNumbers = /\$[\d,.]+|\d+%|\d{3,}/.test(seg.text);
+        const isQuestion = seg.text.includes('?');
+        const textLen = seg.text.length;
+
+        let chosenType: 'ai-generated-image' | 'visual-illustration' | 'gif-reaction' | 'emoji-reaction';
+
+        if (hasStrongSceneKeyword && (contentHash % 3 !== 0)) {
+            chosenType = 'visual-illustration';
+        } else if (textLen > 40 && !hasEmotionWord && (contentHash % 4 !== 0)) {
+            chosenType = 'ai-generated-image';
+        } else if (hasEmotionWord && !hasNumbers) {
+            chosenType = (contentHash % 2 === 0) ? 'gif-reaction' : 'emoji-reaction';
+        } else if (hasNumbers || hasVisualNoun) {
+            chosenType = (contentHash % 2 === 0) ? 'ai-generated-image' : 'visual-illustration';
+        } else if (isQuestion) {
+            chosenType = 'visual-illustration';
+        } else {
+            const pick = contentHash % 10;
+            if (pick < 4) chosenType = 'visual-illustration';
+            else if (pick < 7) chosenType = 'ai-generated-image';
+            else if (pick < 9) chosenType = 'gif-reaction';
+            else chosenType = 'emoji-reaction';
+        }
+
         let overlay: OverlaySuggestion;
 
-        switch (slot) {
-            case 0:
-            case 2:
-            case 5:
-            case 8: {
-                // AI-GENERATED IMAGE - use pre-generated image from parallel batch
-                const imagePrompt = generateImagePromptFromText(seg.text);
-                // Get the pre-generated image URL (or fallback if failed)
-                const imageUrl = imageResults.get(index) || generatePollinationsUrl(imagePrompt, uniqueSeed);
-                
+        switch (chosenType) {
+            case 'ai-generated-image': {
+                const imageUrl = imageResults.get(index) || generatePollinationsUrlFromText(seg.text, topicInfo, uniqueSeed);
                 overlay = {
                     segmentId: seg.id,
                     type: 'ai-generated-image',
@@ -650,46 +677,55 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
                         imageUrl,
                         caption: label || seg.text.substring(0, 40),
                         seed: uniqueSeed,
-                        imagePrompt,
+                        imagePrompt: deriveImagePromptFromText(seg.text, topicInfo),
                     },
                 };
                 lastUsedSceneType = 'ai-generated-image';
                 break;
             }
 
-            case 1:
-            case 3:
-            case 4:
-            case 6:
-            case 7: {
-                // Kinetic text - use segment's extracted label
-                const kineticStyles = ['pop', 'slide', 'bounce'];
-                const positions = ['center', 'top', 'bottom'];
+            case 'visual-illustration': {
+                const scene = pickSceneFromText(seg.text, overlayCount, lastUsedSceneType);
+                const transitions = ['fade-in', 'slide-in', 'zoom-in'];
                 overlay = {
                     segmentId: seg.id,
-                    type: 'kinetic-text',
+                    type: 'visual-illustration',
                     props: {
-                        text: label || seg.text.substring(0, 30),
+                        scene,
+                        label: label || seg.text.substring(0, 30),
                         color,
-                        style: kineticStyles[uniqueSeed % kineticStyles.length],
-                        position: positions[uniqueSeed % positions.length],
-                        fontSize: 42,
+                        transition: transitions[contentHash % transitions.length],
                     },
                 };
-                lastUsedSceneType = 'kinetic-text';
+                lastUsedSceneType = scene;
                 break;
             }
 
-            case 9:
+            case 'gif-reaction': {
+                const sizes = ['medium', 'large', 'fullscreen'];
+                const gifPositions = ['center', 'top-right', 'bottom-right'];
+                overlay = {
+                    segmentId: seg.id,
+                    type: 'gif-reaction',
+                    props: {
+                        keyword: seg.text.substring(0, 80),
+                        size: sizes[contentHash % sizes.length],
+                        position: gifPositions[contentHash % gifPositions.length],
+                    },
+                };
+                lastUsedSceneType = 'gif-reaction';
+                break;
+            }
+
+            case 'emoji-reaction':
             default: {
-                // Emoji reaction - pick contextual emoji from segment text
                 const emoji = pickEmojiFromText(seg.text);
                 const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎', '✨', '💪', '🎉', '📈'];
                 overlay = {
                     segmentId: seg.id,
                     type: 'emoji-reaction',
                     props: {
-                        emoji: emoji || fallbackEmojis[uniqueSeed % fallbackEmojis.length],
+                        emoji: emoji || fallbackEmojis[contentHash % fallbackEmojis.length],
                         size: 70,
                     },
                 };
@@ -705,10 +741,6 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
     return results;
 }
 
-/**
- * Score segment relevance for server-side overlay generation.
- * Higher score = more visually relevant.
- */
 function scoreSegmentRelevanceServer(text: string): number {
     const lower = text.toLowerCase();
     if (lower.length < 8) return 0;
@@ -745,75 +777,329 @@ function scoreSegmentRelevanceServer(text: string): number {
     return Math.max(0, score);
 }
 
-/** Generate a vivid image prompt directly from transcript text for Ernie API
- *  Incorporates the detected video topic to ensure images match the video's context
- */
-function generateImagePromptFromText(text: string): string {
-    // Clean up the text and use it directly as the visual scene description
-    const cleaned = text.replace(/[^\w\s,.!?'-]/g, '').trim();
-    
-    // Get the video's topic context for relevant image generation
-    const { primaryTopic, matchedKeywords } = currentVideoTopic;
-    
-    // Build topic-specific context prefix for the image prompt
-    // This ensures images match the VIDEO's overall theme, not just the segment text
-    let topicContext = '';
-    
-    if (primaryTopic === 'GAMING/ENTERTAINMENT') {
-        // For gaming videos (Roblox, Minecraft, etc.), explicitly mention the game context
-        const gameKeywords = matchedKeywords.filter(k => 
-            ['roblox', 'minecraft', 'fortnite', 'pokemon', 'game', 'player', 'character', 'level', 'boss', 'obby', 'simulator', 'tycoon', 'gameplay', 'gaming', 'avatar', 'npc', 'lobby', 'server', 'skin'].includes(k)
-        );
-        if (gameKeywords.length > 0) {
-            // Use the specific game mentioned in the video
-            topicContext = `${gameKeywords[0]} game screenshot, video game scene, `;
-        } else {
-            topicContext = 'video game scene, gaming content, ';
-        }
-    } else if (primaryTopic === 'TECHNOLOGY/CODING') {
-        topicContext = 'technology, coding screen, software development, ';
-    } else if (primaryTopic === 'FINANCE/BUSINESS') {
-        topicContext = 'business, financial, professional setting, ';
-    } else if (primaryTopic === 'FITNESS/HEALTH') {
-        topicContext = 'fitness, workout, gym scene, ';
-    } else if (primaryTopic === 'BEAUTY/FASHION') {
-        topicContext = 'beauty, fashion, style, ';
-    } else if (primaryTopic === 'EDUCATION/SCIENCE') {
-        topicContext = 'education, science, learning, ';
-    } else if (primaryTopic === 'COOKING/FOOD') {
-        topicContext = 'cooking, food, kitchen scene, ';
-    } else if (primaryTopic === 'MUSIC/ARTS') {
-        topicContext = 'music, artistic, creative scene, ';
-    } else if (primaryTopic === 'TRAVEL/ADVENTURE') {
-        topicContext = 'travel, adventure, destination, ';
-    } else if (primaryTopic === 'NEWS/DRAMA/STORY') {
-        topicContext = 'news, dramatic scene, ';
-    }
-    
-    // Use the actual transcript text as the core of the prompt, with topic context
-    if (cleaned.length > 10) {
-        return `${topicContext}${cleaned}, professional, cinematic lighting, high quality`;
-    }
+// ==================== MOOD DETECTION ====================
 
-    return `${topicContext}professional scene, cinematic lighting, high quality`;
+type VideoMood = 'triumphant' | 'dramatic' | 'calm' | 'energetic' | 'mysterious' | 'warm' | 'dark' | 'futuristic' | 'nostalgic' | 'neutral';
+
+function detectSegmentMood(text: string): VideoMood {
+    const lower = text.toLowerCase();
+    
+    // Score each mood
+    const scores: Record<VideoMood, number> = {
+        triumphant: 0, dramatic: 0, calm: 0, energetic: 0, mysterious: 0, warm: 0, dark: 0, futuristic: 0, nostalgic: 0, neutral: 0,
+    };
+    
+    const moodWords: Record<VideoMood, string[]> = {
+        triumphant: ['triumph', 'victory', 'won', 'winning', 'champion', 'conquered', 'dominated', 'crushed it', 'unstoppable', 'glory', 'achievement', 'milestone', 'record', 'broke', 'breakthrough', 'finally'],
+        dramatic: ['shocking', 'revealed', 'secret', 'exposed', 'truth', 'scandal', 'controversy', 'banned', 'forbidden', 'danger', 'warning', 'never before', 'unprecedented', 'crisis', 'disaster', 'war', 'battle'],
+        calm: ['peaceful', 'serene', 'tranquil', 'gentle', 'quiet', 'soft', 'smooth', 'relax', 'meditate', 'breathe', 'slow', 'steady', 'patient', 'mindful', 'balanced', 'harmony'],
+        energetic: ['explosive', 'insane', 'crazy', 'wild', 'hype', 'pumped', 'amazing', 'incredible', 'awesome', 'fantastic', 'mind-blowing', 'game-changer', 'revolutionary', 'fast', 'rapid', 'instant'],
+        mysterious: ['mystery', 'unknown', 'conspiracy', 'unsolved', 'strange', 'weird', 'bizarre', 'odd', 'curious', 'hidden', 'secret', 'cloak', 'shadow', 'enigma', 'puzzle', 'riddle', 'cipher'],
+        warm: ['love', 'heart', 'happy', 'joy', 'celebrate', 'family', 'friend', 'together', 'community', 'kindness', 'grateful', 'blessed', 'cozy', 'comfort', 'home', 'welcome', 'hug'],
+        dark: ['death', 'destroy', 'ruin', 'apocalypse', 'doom', 'darkness', 'evil', 'horror', 'terror', 'fear', 'nightmare', 'haunt', 'bleak', 'hopeless', 'despair', 'suffer', 'pain', 'agony'],
+        futuristic: ['future', 'cyber', 'hologram', 'robot', 'android', 'spaceship', 'interstellar', 'quantum', 'nanotech', 'artificial', 'synthetic', 'digital', 'virtual', 'metaverse', 'neural', 'upload'],
+        nostalgic: ['remember', 'memories', 'throwback', 'vintage', 'retro', 'classic', 'old school', 'back then', 'used to', 'childhood', 'growing up', 'nostalgia', 'reminisce', 'past', 'era', 'decade'],
+        neutral: [],
+    };
+    
+    for (const [mood, words] of Object.entries(moodWords)) {
+        for (const word of words) {
+            if (lower.includes(word)) {
+                scores[mood as VideoMood] += 2;
+            }
+        }
+    }
+    
+    // Analyze sentence structure
+    if (text.includes('!')) scores.energetic += 1;
+    if (text.includes('?')) scores.mysterious += 1;
+    if (text.includes('...')) scores.dramatic += 1;
+    
+    // Capital letters ratio (for ENERGY)
+    const capsRatio = (text.match(/[A-Z]/g) || []).length / Math.max(1, text.length);
+    if (capsRatio > 0.3) scores.energetic += 1;
+    
+    // Find highest scoring mood
+    let bestMood: VideoMood = 'neutral';
+    let bestScore = 0;
+    for (const [mood, score] of Object.entries(scores)) {
+        if (score > bestScore) {
+            bestScore = score;
+            bestMood = mood as VideoMood;
+        }
+    }
+    
+    return bestMood;
 }
 
-
+// ==================== LLM-POWERED IMAGE PROMPT GENERATION ====================
 
 /**
- * Generate image using PaddlePaddle Ernie Image API
- * Falls back to Pollinations.ai if Ernie fails
- * The API returns results quickly (1-2 seconds) with SSE format:
- * event: complete
- * data: [{"path": "...", "url": "..."}]
+ * Generate a cinematic image prompt using an LLM (uses NVIDIA GLM-5 or MiniMax).
+ * This is the PRIMARY method — produces rich, mood-synced, professional prompts.
+ * Falls back to keyword-based generation if the LLM is unavailable.
  */
+async function generateLLMPoweredImagePrompt(
+    segmentText: string,
+    topicInfo: { primaryTopic: string; matchedKeywords: string[] }
+): Promise<string> {
+    const mood = detectSegmentMood(segmentText);
+    const topicContext = topicInfo.primaryTopic !== 'general' 
+        ? `Video category: ${topicInfo.primaryTopic}. Key themes: ${topicInfo.matchedKeywords.slice(0, 5).join(', ')}.`
+        : '';
+    
+    const moodGuide = getMoodPromptGuide(mood);
+    const topicStyleGuide = getTopicStyleGuide(topicInfo.primaryTopic);
+    
+    const llmPrompt = `You are a world-class cinematographer and visual artist. Generate ONE highly specific, cinematic image prompt based on this video segment.
+
+VIDEO SEGMENT TEXT: "${segmentText}"
+
+EMOTIONAL MOOD: ${mood}
+MOOD VISUAL GUIDE: ${moodGuide}
+STYLE DIRECTION: ${topicStyleGuide}
+${topicContext}
+
+RULES FOR THE IMAGE PROMPT:
+1. Describe a SPECIFIC, CONCRETE scene — not an abstract concept
+2. Use cinematic language: specify lighting (golden hour, neon, volumetric, rim light), composition (close-up, wide shot, aerial, Dutch angle), atmosphere
+3. The prompt MUST be 50-200 words, rich in visual detail
+4. Match the emotional tone (${mood}) precisely through color palette, lighting, and composition
+5. Include these quality tags at the end: "cinematic lighting, hyperrealistic, professional color grading, 8k, high detail"
+6. NEVER use placeholder words like "concept of" or "visualization of" — describe the actual scene
+7. If the segment mentions specific objects/places/actions, INCLUDE them visually
+8. Make it feel like a frame from a premium film or documentary
+
+Respond with ONLY the image prompt, nothing else. No quotes, no labels, no markdown.`;
+
+    // Try NVIDIA APIs first (GLM-5 or MiniMax), then fall back to any available LLM
+    const llmConfigs = [
+        { 
+            name: 'MiniMax M2.7',
+            baseUrl: 'https://integrate.api.nvidia.com/v1',
+            apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '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',
+            model: 'openai/minimaxai/minimax-m2.7',
+        },
+        {
+            name: 'GLM-5',
+            baseUrl: 'https://integrate.api.nvidia.com/v1',
+            apiKey: process.env.NVIDIA_GLM5_API_KEY || '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',
+            model: 'openai/z-ai/glm-5.1',
+        },
+    ];
+
+    for (const config of llmConfigs) {
+        if (!config.apiKey) continue;
+        
+        try {
+            console.log(`[LLMPrompt] Trying ${config.name} for image prompt generation...`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            const response = await fetch(`${config.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: config.model,
+                    messages: [{ role: 'user', content: llmPrompt }],
+                    max_tokens: 300,
+                    temperature: 0.85,
+                }),
+                signal: controller.signal,
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                console.warn(`[LLMPrompt] ${config.name} failed: ${response.status}`);
+                continue;
+            }
+            
+            const data = await response.json();
+            const content = data?.choices?.[0]?.message?.content;
+            
+            if (content && typeof content === 'string' && content.trim().length > 20) {
+                const cleanPrompt = content.trim()
+                    .replace(/^["']|["']$/g, '')  // Remove surrounding quotes
+                    .replace(/^Image prompt:?\s*/i, '')  // Remove "Image prompt:" prefix
+                    .replace(/\n+/g, ' ')  // Collapse newlines
+                    .trim();
+                
+                console.log(`[LLMPrompt] ${config.name} generated prompt (${cleanPrompt.length} chars)`);
+                return cleanPrompt;
+            }
+            
+            console.warn(`[LLMPrompt] ${config.name} returned insufficient content`);
+        } catch (error) {
+            console.warn(`[LLMPrompt] ${config.name} error:`, error);
+            continue;
+        }
+    }
+    
+    // Fallback: use enhanced keyword-based generation
+    console.log('[LLMPrompt] All LLMs failed, using enhanced keyword-based prompt generation');
+    return generateEnhancedImagePrompt(segmentText, topicInfo, mood);
+}
+
+function getMoodPromptGuide(mood: VideoMood): string {
+    const guides: Record<VideoMood, string> = {
+        triumphant: 'Warm golden lighting, heroic low-angle composition, lens flare, epic scale, vibrant warm colors, upward movement, inspirational atmosphere, rays of sunlight bursting through',
+        dramatic: 'High contrast chiaroscuro lighting, deep shadows, intense atmosphere, dramatic color grading with teal and orange, shallow depth of field, tension-filled composition, cinematic wide shot',
+        calm: 'Soft diffused natural lighting, pastel muted tones, peaceful atmosphere, gentle bokeh background, serene composition, zen aesthetic, clean minimal space, smooth gradients',
+        energetic: 'Dynamic motion blur, neon accent lighting, high energy action composition, saturated vibrant pop colors, explosive particles, fast shutter effect, electric atmosphere, bold graphic elements',
+        mysterious: 'Foggy atmospheric lighting, deep shadows with rim light, silhouette composition, enigmatic mood, dark teal and purple palette, volumetric light rays piercing darkness, smoke and haze',
+        warm: 'Warm tungsten lighting, cozy intimate atmosphere, golden amber tones, soft focus background, emotional shallow depth of field, comfortable lived-in setting, gentle warm glow',
+        dark: 'Low-key lighting, desaturated cold tones, gritty texture, harsh shadows, bleak atmosphere, muted earth tones, stark contrast, somber mood, film noir aesthetic',
+        futuristic: 'Cool blue and cyan lighting, sleek metallic surfaces, holographic neon accents, clean minimal composition, cyberpunk aesthetic, glass and steel materials, ethereal glow, sci-fi atmosphere',
+        nostalgic: 'Film grain texture, warm faded colors, vintage soft focus, sun-bleached tones, analog photography feel, gentle vignette, retro color palette, dreamy hazy atmosphere',
+        neutral: 'Balanced studio lighting, clean professional composition, neutral gray background, crisp details, editorial photography style, well-lit even exposure',
+    };
+    return guides[mood] || guides.neutral;
+}
+
+function getTopicStyleGuide(primaryTopic: string): string {
+    const guides: Record<string, string> = {
+        'GAMING/ENTERTAINMENT': 'Video game cinematic style, dynamic action angles, neon-lit environments, character-driven scenes, epic boss battle atmosphere, pixel art or high-poly aesthetic depending on context, gaming setup with RGB lighting',
+        'TECHNOLOGY/CODING': 'Sleek futuristic tech aesthetic, dark mode interfaces with glowing syntax, clean minimal hardware shots, data center/server room atmosphere, circuit board macro photography, holographic displays',
+        'FINANCE/BUSINESS': 'Corporate luxury aesthetic, modern glass office buildings, executive boardroom atmosphere, premium materials (marble, gold, leather), professional attire, power-dressing, stock exchange energy',
+        'FITNESS/HEALTH': 'Athletic dynamic shots, gym atmosphere with dramatic lighting, sweat and determination, muscular definition, healthy vibrant food photography, medical/professional clean aesthetic',
+        'BEAUTY/FASHION': 'High fashion editorial style, soft glamour lighting, luxury cosmetic textures, runway atmosphere, beauty macro shots, elegant minimalist composition, Vogue magazine aesthetic',
+        'EDUCATION/SCIENCE': 'Academic library atmosphere, laboratory with scientific equipment, chalkboard with complex equations, microscope macro shots, clean research facility aesthetic, scholarly warm lighting',
+        'COOKING/FOOD': 'Gourmet food photography, steam and sizzle action shots, rustic kitchen atmosphere, fresh ingredients overhead flat lay, dramatic plating presentation, warm inviting restaurant lighting',
+        'MUSIC/ARTS': 'Concert stage dramatic lighting, recording studio atmosphere, instruments in spotlight, artistic creative process, gallery exhibition aesthetic, vibrant creative energy',
+        'TRAVEL/ADVENTURE': 'National Geographic documentary style, dramatic landscapes, golden hour adventure, aerial drone photography, cultural authentic moments, wanderlust atmosphere',
+        'NEWS/DRAMA/STORY': 'Breaking news urgency, dramatic investigative atmosphere, documentary realism, high-stakes tension, journalistic integrity aesthetic, truth-revealing spotlight',
+    };
+    return guides[primaryTopic] || 'Professional cinematic style, clean composition, balanced lighting, editorial quality, 8k detail';
+}
+
+/**
+ * Enhanced fallback image prompt generator — produces much better results than the old keyword matcher.
+ * Used when LLM is unavailable. Uses mood, topic, and content analysis.
+ */
+function generateEnhancedImagePrompt(
+    text: string,
+    topicInfo: { primaryTopic: string; matchedKeywords: string[] },
+    mood: VideoMood
+): string {
+    const lower = text.toLowerCase();
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+    const keyPhrase = words.slice(0, 5).join(' ');
+    
+    const moodLighting: Record<VideoMood, string> = {
+        triumphant: 'golden hour sunlight streaming through clouds, dramatic lens flare, warm amber glow',
+        dramatic: 'harsh chiaroscuro lighting, deep shadows cutting across the frame, moody atmosphere',
+        calm: 'soft diffused morning light, gentle pastel sky, peaceful serenity',
+        energetic: 'vibrant neon lights, dynamic motion, electric energy crackling',
+        mysterious: 'volumetric fog illuminated by a single light source, deep shadows, enigmatic atmosphere',
+        warm: 'warm tungsten light, cozy golden glow, intimate soft focus',
+        dark: 'low-key dramatic lighting, cold desaturated tones, stark shadows',
+        futuristic: 'cool blue holographic light, sleek metallic reflections, cyberpunk neon glow',
+        nostalgic: 'warm sun-bleached film look, gentle lens flare, vintage color palette',
+        neutral: 'balanced studio lighting, clean professional look, crisp shadows',
+    };
+
+    // ----- Build a scene description UNIQUE to this segment's actual words -----
+    // Map individual content words to concrete visual elements
+    const visualElements: Record<string, string> = {
+        money: 'stacks of golden coins and currency bills', revenue: 'rising financial bar chart', profit: 'gleaming gold bars',
+        income: 'flowing stream of golden light', dollar: 'crisp hundred dollar bills', cash: 'briefcase full of cash',
+        growth: 'a dramatic upward-trending arrow piercing through clouds', grow: 'a seedling growing into a massive tree in time-lapse',
+        success: 'a glowing trophy on a pedestal', achieve: 'a runner crossing a finish line',
+        rocket: 'a rocket launching with fiery exhaust trail', launch: 'a countdown clock reaching zero with sparks flying',
+        brain: 'a luminous brain with electric synapses firing', think: 'a silhouette surrounded by floating lightbulbs',
+        idea: 'a single lightbulb igniting with brilliant golden light', smart: 'holographic data flowing around a head silhouette',
+        code: 'lines of glowing code cascading down a dark screen', software: 'a futuristic IDE with holographic debugging',
+        tech: 'a sleek circuit board with pulsing blue light traces', digital: 'digital particles assembling into a geometric shape',
+        fire: 'intense flames dancing against a dark background', hot: 'glowing embers and sparks rising in the heat',
+        power: 'an energy surge radiating from a central source', energy: 'electric arcs between two tesla coils',
+        earth: 'planet Earth viewed from space with aurora borealis', world: 'a spinning globe with golden trade routes',
+        mountain: 'a snow-capped mountain peak at sunrise', climb: 'a climber reaching a summit silhouetted against sunset',
+        ocean: 'massive turquoise ocean waves crashing dramatically', water: 'crystal clear water with sunlight refracting through',
+        love: 'a warm glowing heart surrounded by soft light', heart: 'a beating heart made of light particles',
+        celebrate: 'golden confetti exploding in slow motion', win: 'a champion raising a trophy with stadium spotlights',
+        protect: 'a glowing shield deflecting incoming particles', safe: 'a secure vault door with golden light behind it',
+        time: 'an elegant clock face with hands frozen in motion', fast: 'light streaks of a car at high speed on a highway',
+        learn: 'an ancient library with sunlight streaming through windows', education: 'floating books with pages turning magically',
+        music: 'sound waves visualized as colorful flowing ribbons', art: 'a paintbrush creating vibrant strokes on canvas',
+        food: 'a gourmet dish with steam rising dramatically', cook: 'flames leaping from a chef\'s pan in a professional kitchen',
+        travel: 'a winding road leading into a breathtaking mountain valley', adventure: 'a lone explorer on a cliff edge at golden hour',
+        city: 'a modern city skyline reflecting in water at twilight', building: 'a futuristic glass skyscraper reaching into clouds',
+        team: 'diverse hands joining together from above', people: 'a crowd of silhouettes under a dramatic sky',
+        star: 'a brilliant star exploding in a supernova', galaxy: 'a spiral galaxy with billions of glowing stars',
+        secret: 'a mysterious locked chest with light escaping through cracks', mystery: 'fog-shrouded forest with a single beam of light',
+        game: 'a neon-lit gaming controller with RGB reflections', play: 'colorful game elements floating in zero gravity',
+        science: 'a DNA double helix spiraling with bioluminescent light', research: 'a microscope revealing glowing cells',
+        network: 'glowing interconnected nodes forming a web pattern', connect: 'two glowing hands reaching toward each other',
+        data: 'holographic data streams flowing through a futuristic corridor', cloud: 'a luminous cloud computing infrastructure',
+        invest: 'a hand planting a golden seed that sprouts into a tree of coins', stock: 'a dramatic candlestick chart with green candles rising',
+        health: 'a human body silhouette radiating vibrant health energy', fitness: 'an athlete mid-jump with perfect form',
+        nature: 'lush green forest with light filtering through canopy', tree: 'a majestic ancient tree with sunlight rays through its branches',
+    };
+
+    // Collect concrete visual elements from the actual segment text
+    const matchedVisuals: string[] = [];
+    for (const word of words) {
+        if (visualElements[word] && !matchedVisuals.includes(visualElements[word])) {
+            matchedVisuals.push(visualElements[word]);
+            if (matchedVisuals.length >= 2) break; // cap at 2 for focused imagery
+        }
+    }
+
+    let sceneDescription: string;
+    if (matchedVisuals.length > 0) {
+        // Build scene from the actual words in the segment
+        sceneDescription = `A cinematic composition featuring ${matchedVisuals.join(' alongside ')}, professional composition with depth and atmosphere`;
+    } else if (keyPhrase) {
+        // No keyword hits — use the segment's own key phrase as the visual subject
+        sceneDescription = `A visually stunning cinematic scene depicting "${keyPhrase}", rendered as a photorealistic still from a premium documentary, dramatic composition with leading lines`;
+    } else {
+        sceneDescription = `An abstract cinematic visual with flowing light particles, professional composition, premium feel`;
+    }
+    
+    const lighting = moodLighting[mood] || moodLighting.neutral;
+    const styleGuide = getTopicStyleGuide(topicInfo.primaryTopic);
+    
+    return `${sceneDescription}, ${lighting}, ${styleGuide}, cinematic lighting, hyperrealistic, professional color grading, 8k, high detail, shallow depth of field`;
+}
+
+/**
+ * Generate a Pollinations URL using the enhanced prompt system (non-async fallback)
+ */
+function generatePollinationsUrlFromText(
+    text: string,
+    topicInfo: { primaryTopic: string; matchedKeywords: string[] },
+    seed: number
+): string {
+    const mood = detectSegmentMood(text);
+    const prompt = generateEnhancedImagePrompt(text, topicInfo, mood);
+    const encodedPrompt = encodeURIComponent(prompt);
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true&seed=${seed}`;
+}
+
+/**
+ * Derive a text-only image prompt (for storage in props) without async calls
+ */
+function deriveImagePromptFromText(
+    text: string,
+    topicInfo: { primaryTopic: string; matchedKeywords: string[] }
+): string {
+    const mood = detectSegmentMood(text);
+    return generateEnhancedImagePrompt(text, topicInfo, mood);
+}
+
+// ==================== IMAGE GENERATION API ====================
+
 async function generateErnieImageUrl(prompt: string, seed: number): Promise<string> {
     const ERNIE_API_BASE = 'https://paddlepaddle-ernie-image.ms.fun';
     
     console.log('[Ernie] Generating image for prompt:', prompt.substring(0, 100));
     
     try {
-        // Step 1: Call the Gradio API to get an event_id
         const initiateResponse = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image`, {
             method: 'POST',
             headers: {
@@ -821,13 +1107,13 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
             },
             body: JSON.stringify({
                 data: [
-                    prompt,  // First parameter - the image prompt for context-specific generation
-                    "",  // Second parameter (negative prompt - keep empty)
-                    1024, // width
-                    768,  // height
+                    prompt,
+                    "",
+                    1024,
+                    768,
                     seed,
-                    8,    // steps
-                    1     // guidanceScale
+                    8,
+                    1
                 ]
             }),
         });
@@ -839,7 +1125,6 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
 
         const initiateText = await initiateResponse.text();
         
-        // Parse the response to get event_id: {"event_id":"xxx"}
         let eventId: string;
         try {
             const initiateData = JSON.parse(initiateText);
@@ -861,15 +1146,12 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
 
         console.log('[Ernie] Got event_id:', eventId);
 
-        // Step 2: Fetch the result - Ernie returns result quickly (within 1-2 seconds)
         const resultUrl = `${ERNIE_API_BASE}/gradio_api/call/generate_image/${eventId}`;
         
-        // Wait just 1 second for the image to be generated
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         let imageUrl: string | null = null;
         
-        // Try fetching the result (may need a couple attempts if still generating)
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 console.log(`[Ernie] Fetching result, attempt ${attempt + 1}...`);
@@ -889,10 +1171,7 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
                 const resultText = await resultResponse.text();
                 console.log(`[Ernie] Response: ${resultText.substring(0, 200)}`);
                 
-                // Parse SSE format: "event: complete\ndata: [{...}]"
-                // The URL is in the data JSON array
                 if (resultText.includes('event: complete')) {
-                    // Extract the JSON data after "data:"
                     const dataMatch = resultText.match(/data:\s*(\[.*\])/);
                     if (dataMatch) {
                         try {
@@ -908,7 +1187,6 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
                     }
                 }
                 
-                // Fallback regex extraction if JSON parsing fails
                 if (!imageUrl) {
                     const urlMatch = resultText.match(/"url"\s*:\s*"([^"]+)"/);
                     if (urlMatch) {
@@ -918,7 +1196,6 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
                     }
                 }
                 
-                // If still generating, wait a bit more
                 if (resultText.includes('event: generating') || !resultText.includes('event:')) {
                     console.log('[Ernie] Still generating, waiting...');
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -933,8 +1210,6 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
         if (imageUrl) {
             console.log('[Ernie] Success! Got image URL:', imageUrl.substring(0, 80));
             
-            // Download the actual image from Ernie
-            // This is critical - Remotion can't load external URLs due to CORS
             console.log('[Ernie] Downloading image content...');
             try {
                 const imageResponse = await fetch(imageUrl);
@@ -946,7 +1221,7 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
                     const dataUrl = `data:${mimeType};base64,${base64}`;
                     
                     console.log('[Ernie] Image downloaded, size:', imageBuffer.byteLength, 'bytes');
-                    return dataUrl;  // Return base64 data URL
+                    return dataUrl;
                 } else {
                     console.warn('[Ernie] Failed to download image:', imageResponse.status);
                 }
@@ -954,12 +1229,10 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
                 console.warn('[Ernie] Download error:', downloadError);
             }
             
-            // If download failed, fall back to Pollinations
             console.warn('[Ernie] Using Pollinations fallback due to download failure');
             return generatePollinationsUrl(prompt, seed);
         }
 
-        // If no URL found, use Pollinations fallback
         console.warn('[Ernie] No image URL found, using Pollinations fallback');
         return generatePollinationsUrl(prompt, seed);
         
@@ -969,21 +1242,16 @@ async function generateErnieImageUrl(prompt: string, seed: number): Promise<stri
     }
 }
 
-/**
- * Generate Pollinations.ai image URL (fallback)
- */
 function generatePollinationsUrl(prompt: string, seed: number): string {
-    const encodedPrompt = encodeURIComponent(`${prompt}, high quality, professional`);
+    const encodedPrompt = encodeURIComponent(`${prompt}`);
     return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true&seed=${seed}`;
 }
 
 function hasVisualKeyword(text: string): boolean {
     const lower = text.toLowerCase().trim();
-    // Accept ANY text with at least 2 meaningful words (not just filler)
     if (lower.length < 5) return false;
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1);
     if (words.length < 2) return false;
-    // Reject pure filler phrases
     const fillerPhrases = ['um', 'uh', 'like', 'you know', 'so yeah', 'and then', 'okay so'];
     if (fillerPhrases.some(f => lower === f)) return false;
     return true;
@@ -993,7 +1261,6 @@ function pickSceneFromText(text: string, index: number, lastScene?: string): str
     const lower = text.toLowerCase();
     const allWords = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
 
-    // Score all matching scenes
     const sceneScores: Record<string, number> = {};
     for (const word of allWords) {
         const scene = CONTENT_SCENE_MAP[word];
@@ -1002,7 +1269,6 @@ function pickSceneFromText(text: string, index: number, lastScene?: string): str
         }
     }
 
-    // Filter out lastScene and pick best match
     const scoredScenes = Object.entries(sceneScores)
         .filter(([scene]) => scene !== lastScene)
         .sort((a, b) => b[1] - a[1]);
@@ -1011,7 +1277,6 @@ function pickSceneFromText(text: string, index: number, lastScene?: string): str
         return scoredScenes[0][0];
     }
 
-    // Fallback: use TEXT HASH (different text → different scene)
     const allScenes = [
         'solar-system', 'growth-chart', 'globe', 'rocket-launch', 'brain-idea',
         'connections', 'clock-time', 'heartbeat', 'money-flow', 'lightning',
@@ -1071,9 +1336,6 @@ function hashString(str: string): number {
 
 // ==================== MULTI-PROVIDER API ROUTING ====================
 
-/**
- * Build API request based on the provider type
- */
 function buildProviderRequest(
     apiEndpoint: string,
     apiKey: string,
@@ -1081,7 +1343,6 @@ function buildProviderRequest(
     prompt: string
 ): { url: string; headers: Record<string, string>; body: Record<string, unknown> } {
     
-    // Map model IDs to provider-specific model names
     const modelMap: Record<string, Record<string, string>> = {
         anthropic: {
             'anthropic/claude-sonnet-4-20250514': 'claude-sonnet-4-20250514',
@@ -1106,7 +1367,6 @@ function buildProviderRequest(
         },
     };
 
-    // Determine the provider from the model ID
     let provider = 'lightning';
     if (modelId.startsWith('anthropic/')) provider = 'anthropic';
     else if (modelId.startsWith('openai/')) provider = 'openai';
@@ -1150,7 +1410,6 @@ function buildProviderRequest(
             };
 
         case 'google':
-            // Google Gemini uses a different format
             const geminiModel = modelMap.google?.[modelId] || 'gemini-3-flash-preview';
             return {
                 url: `${apiEndpoint}/${geminiModel}:generateContent`,
@@ -1169,7 +1428,6 @@ function buildProviderRequest(
             };
 
         case 'moonshot':
-            // Moonshot (Kimi) API
             return {
                 url: apiEndpoint,
                 headers: {
@@ -1203,7 +1461,6 @@ function buildProviderRequest(
 
         case 'lightning':
         default:
-            // Lightning AI format (unified gateway)
             return {
                 url: apiEndpoint,
                 headers: {
@@ -1220,9 +1477,6 @@ function buildProviderRequest(
     }
 }
 
-/**
- * Extract content from API response based on provider
- */
 function extractContentFromResponse(data: unknown, provider: string): string | null {
     if (!data || typeof data !== 'object') return null;
 
@@ -1230,7 +1484,6 @@ function extractContentFromResponse(data: unknown, provider: string): string | n
 
     switch (provider) {
         case 'anthropic':
-            // Anthropic response format
             const anthropicContent = response.content as Array<{ type: string; text?: string }> | undefined;
             if (Array.isArray(anthropicContent)) {
                 const textBlock = anthropicContent.find((block) => block.type === 'text');
@@ -1239,7 +1492,6 @@ function extractContentFromResponse(data: unknown, provider: string): string | n
             return null;
 
         case 'google':
-            // Google Gemini response format
             const candidates = response.candidates as Array<{ content?: { parts?: Array<{ text?: string }> } }> | undefined;
             if (Array.isArray(candidates) && candidates[0]?.content?.parts) {
                 return candidates[0].content.parts[0]?.text || null;
@@ -1251,12 +1503,10 @@ function extractContentFromResponse(data: unknown, provider: string): string | n
         case 'deepseek':
         case 'lightning':
         default:
-            // OpenAI/Lightning format
             const choices = response.choices as Array<{ message?: { content?: string | null } }> | undefined;
             if (Array.isArray(choices) && choices.length > 0 && choices[0]?.message?.content) {
                 return choices[0].message.content;
             }
-            // Handle string content (some endpoints return directly)
             if (choices && choices.length > 0 && typeof choices[0].message?.content === 'string') {
                 return choices[0].message.content;
             }
@@ -1264,17 +1514,12 @@ function extractContentFromResponse(data: unknown, provider: string): string | n
     }
 }
 
-/**
- * Build custom API request for user-defined endpoints
- * Supports any OpenAI-compatible API
- */
 function buildCustomApiRequest(
     config: { baseUrl: string; apiKey: string; model: string; authHeader?: string; authPrefix?: string },
     prompt: string
 ): { url: string; headers: Record<string, string>; body: Record<string, unknown> } {
     const { baseUrl, apiKey, model, authHeader = 'Authorization', authPrefix = 'Bearer' } = config;
     
-    // Build auth header
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
@@ -1284,25 +1529,18 @@ function buildCustomApiRequest(
         headers[authHeader] = authValue;
     }
     
-    // Check if it's a custom endpoint (may have different URL format)
     let url = baseUrl;
     
-    // Check if URL already contains the path
     if (!url.includes('/chat/completions') && !url.includes('/generateContent') && !url.includes('/api/chat')) {
-        // Append appropriate path based on common patterns
         if (baseUrl.includes('ollama')) {
-            // Ollama local API
             url = `${baseUrl}`;
         } else if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
-            // Local APIs like LM Studio
             url = baseUrl.endsWith('/') ? `${baseUrl}v1/chat/completions` : `${baseUrl}/v1/chat/completions`;
         } else {
-            // Default to OpenAI-compatible endpoint
             url = baseUrl.endsWith('/') ? `${baseUrl}chat/completions` : `${baseUrl}/chat/completions`;
         }
     }
     
-    // Build request body (OpenAI-compatible format)
     const body: Record<string, unknown> = {
         model: model,
         messages: [

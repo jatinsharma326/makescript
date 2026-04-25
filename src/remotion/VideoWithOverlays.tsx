@@ -1,6 +1,6 @@
 'use client';
 
-import type { VideoFilters, TextOverlay } from '../lib/types';
+import type { VideoFilters, TextOverlay, SegmentEffect, SegmentTransition } from '../lib/types';
 
 import React from 'react';
 import {
@@ -22,6 +22,7 @@ import { GifReaction } from './overlays/GifReaction';
 import { TranscriptMotion } from './overlays/TranscriptMotion';
 import { DynamicBRoll } from './overlays/DynamicBRoll';
 import { AiMotionGraphic } from './overlays/AiMotionGraphic';
+import { ZoomPanEffect } from './effects/ZoomPanEffect';
 import { SubtitleSegment } from '../lib/types';
 
 // Overlay types that already render the segment text visually.
@@ -62,12 +63,12 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
             const startFrame = Math.round(seg.startTime * fps);
             const endFrame = Math.round(seg.endTime * fps);
             if (frame >= startFrame && frame <= endFrame) {
-                const isFullScreenGraphic = 
+                const isFullScreenGraphic =
                     seg.overlay.type === 'ai-motion-graphic' ||
                     seg.overlay.type === 'visual-illustration' ||
                     seg.overlay.type === 'dynamic-broll' ||
                     (seg.overlay.type === 'ai-generated-image' && seg.overlay.props.displayMode === 'fullscreen');
-                
+
                 if (isFullScreenGraphic) {
                     // Calculate a smooth blur transition (fade in over 8 frames, out over 12)
                     const localF = frame - startFrame;
@@ -75,7 +76,7 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                     const fadeIn = Math.min(1, localF / 8);
                     const fadeOut = Math.min(1, (dur - localF) / 12);
                     const intensity = Math.min(fadeIn, fadeOut);
-                    
+
                     dynamicBlur = Math.max(dynamicBlur, intensity * 15); // max 15px blur
                 }
             }
@@ -90,25 +91,57 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
         if (filters.saturation !== 100) filterParts.push(`saturate(${filters.saturation / 100})`);
         if (filters.blur > 0) filterParts.push(`blur(${filters.blur}px)`);
     }
-    
+
     // Add dynamic blur if active
     if (dynamicBlur > 0) {
         filterParts.push(`blur(${dynamicBlur}px)`);
         // Also darken slightly to make overlays pop more
-        filterParts.push(`brightness(${1 - (dynamicBlur / 15) * 0.4})`); 
+        filterParts.push(`brightness(${1 - (dynamicBlur / 15) * 0.4})`);
     }
 
     const cssFilter = filterParts.length > 0 ? filterParts.join(' ') : 'none';
 
+    // ── Determine if any segment has a zoom/pan/shake effect active NOW ──
+    let activeEffect: SegmentEffect | null = null;
+    let effectStartFrame = 0;
+    let effectEndFrame = 0;
+    for (const seg of subtitles) {
+        if (seg.effect) {
+            const sf = Math.round(seg.startTime * fps);
+            const ef = Math.round(seg.endTime * fps);
+            if (frame >= sf && frame <= ef) {
+                activeEffect = seg.effect;
+                effectStartFrame = sf;
+                effectEndFrame = ef;
+                break;
+            }
+        }
+    }
+
+    // ── Build the video layer (optionally wrapped in ZoomPanEffect) ──
+    const videoLayer = (
+        <AbsoluteFill style={{
+            filter: cssFilter !== 'none' ? cssFilter : undefined,
+            transition: 'filter 0.1s',
+        }}>
+            <Video src={videoSrc} volume={1} />
+        </AbsoluteFill>
+    );
+
+    const wrappedVideoLayer = activeEffect ? (
+        <ZoomPanEffect
+            effect={activeEffect}
+            startFrame={effectStartFrame}
+            endFrame={effectEndFrame}
+        >
+            {videoLayer}
+        </ZoomPanEffect>
+    ) : videoLayer;
+
     return (
         <AbsoluteFill style={{ backgroundColor: 'transparent' }}>
-            {/* Base video — always visible, overlays appear on top */}
-            <AbsoluteFill style={{
-                filter: cssFilter !== 'none' ? cssFilter : undefined,
-                transition: 'filter 0.1s', // Smooth minor jitter
-            }}>
-                <Video src={videoSrc} volume={1} />
-            </AbsoluteFill>
+            {/* Base video — optionally wrapped in zoom/pan/shake effect */}
+            {wrappedVideoLayer}
 
             {/* Vignette overlay */}
             {filters && filters.vignette > 0 && (
@@ -349,8 +382,8 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                         // Use the imageUrl directly from the API response
                         // If no URL provided, generate a context-specific fallback using Pollinations
                         // The imagePrompt is crafted by the API to be context-specific to the transcript
-                        const seed = Number(seg.overlay.props.seed) || Math.abs(imagePrompt.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
-                        
+                        const seed = Number(seg.overlay.props.seed) || Math.abs((seg.id + imagePrompt).split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+
                         // Generate context-specific image URL if not provided
                         // Use Pollinations.ai with the actual prompt from transcript
                         const imageUrl = existingUrl || `https://image.pollinations.ai/prompt/${encodeURIComponent(`${imagePrompt}, professional photography, cinematic lighting, realistic, 4k`)}?width=1280&height=720&nologo=true&seed=${seed}`;
@@ -398,7 +431,8 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                         const validStyles = ['karaoke', 'typewriter', 'wave'];
                         const tmStyle = validStyles.includes(rawStyle) ? rawStyle : 'karaoke';
                         const rawPos = String(seg.overlay.props.position || 'bottom');
-                        const validPos = ['center', 'top', 'bottom'];
+                        const validPos = ['center', 'top'
+                            , 'bottom'];
                         const tmPos = validPos.includes(rawPos) ? rawPos : 'bottom';
                         return (
                             <TranscriptMotion
@@ -457,6 +491,38 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                     default:
                         return null;
                 }
+            })}
+
+            {/* ── Inter-segment transitions from agentic editing plan ── */}
+            {subtitles.map((seg, idx) => {
+                if (!seg.transition) return null;
+
+                // The transition fires at the START of this segment (between prev and this)
+                const transitionDurationSec = seg.transition.duration || 0.4;
+                const transitionDurationFrames = Math.round(transitionDurationSec * fps);
+                const segStartFrame = Math.round(seg.startTime * fps);
+
+                // Center the transition around the segment boundary
+                const tStart = Math.max(0, segStartFrame - Math.floor(transitionDurationFrames / 2));
+                const tEnd = tStart + transitionDurationFrames;
+
+                // Map transition types to SceneTransition styles
+                let sceneStyle: 'fade' | 'wipe' | 'zoom' = 'fade';
+                if (seg.transition.type === 'wipe' || seg.transition.type === 'slide-left' || seg.transition.type === 'slide-right') {
+                    sceneStyle = 'wipe';
+                } else if (seg.transition.type === 'zoom' || seg.transition.type === 'glitch') {
+                    sceneStyle = 'zoom';
+                }
+
+                return (
+                    <SceneTransition
+                        key={`transition-${seg.id}`}
+                        color="#6366f1"
+                        style={sceneStyle}
+                        startFrame={tStart}
+                        endFrame={tEnd}
+                    />
+                );
             })}
         </AbsoluteFill>
     );

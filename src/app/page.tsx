@@ -595,7 +595,7 @@ export default function LandingPage() {
                                 <div className="text-4xl font-bold text-[var(--lp-text)] mb-2">$0</div>
                                 <p className="text-[12px] text-[var(--lp-text-muted)] mb-6">Get started with powerful open models</p>
                                 <div className="space-y-2.5 mb-6">
-                                    {['3 videos / month', 'AI transcription (Whisper)', '10 overlay types', '1080p export'].map(f => (
+                                    {['10 videos / month', 'AI transcription (Whisper)', '10 overlay types', '1080p export'].map(f => (
                                         <div key={f} className="flex items-center gap-2 text-[13px] text-[var(--lp-text-sub)]">
                                             <Check className="w-3.5 h-3.5 text-[var(--lp-check-free)] shrink-0" />
                                             {f}

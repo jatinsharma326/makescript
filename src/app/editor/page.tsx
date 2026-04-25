@@ -14,9 +14,10 @@ import {
     EditorTab,
     TranscriptStatus,
     SubtitleSegment,
+    EditingPlan,
 } from '../../lib/types';
 import { transcribeVideo, generateMockTranscript } from '../../lib/transcribe';
-import { suggestOverlaysWithAI, generateDynamicOverlays as autoSuggestOverlays } from '../../lib/ai';
+import { suggestOverlaysWithAI, generateDynamicOverlays as autoSuggestOverlays, requestAgentEditPlan, applyEditingPlan } from '../../lib/ai';
 import { AI_MODELS, DEFAULT_MODEL, TIERS, getModelsForTier, isModelAccessible, type ModelTier, type AIModel } from '../../lib/models';
 import {
     saveProject,
@@ -52,7 +53,7 @@ import {
 import { ProjectSidebar } from '../../components/dashboard/ProjectSidebar';
 import { Dashboard } from '../../components/dashboard/Dashboard';
 import { useAuth } from '../../lib/AuthContext';
-import { canCreateProject, incrementUsage, getUsageDisplay } from '../../lib/usage';
+import { canCreateProject, incrementUsage, getUsageDisplay, clearLegacyUsage } from '../../lib/usage';
 import dynamic2 from 'next/dynamic';
 const OnboardingModal = dynamic2(() => import('../../components/ui/OnboardingModal'), { ssr: false });
 
@@ -81,6 +82,8 @@ export default function EditorPage() {
         if (user?.id) {
             setCurrentUser(user.id);
             console.log('[Editor] Set storage user ID:', user.id);
+            // Clear any legacy global usage counter so it doesn't leak into this user's limit
+            clearLegacyUsage();
         } else {
             setCurrentUser(null);
             console.log('[Editor] cleared storage user ID (no user)');
@@ -115,6 +118,15 @@ export default function EditorPage() {
     const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
     const [activePopup, setActivePopup] = useState<{ segmentId: string; top: number; left: number } | null>(null);
     const [processingStep, setProcessingStep] = useState<'idle' | 'uploading' | 'transcribing' | 'generating' | 'done'>('idle');
+    const [agenticResult, setAgenticResult] = useState<{
+        segmentsRemoved: number;
+        segmentsSpedUp: number;
+        overlaysAdded: number;
+        effectsAdded: number;
+        transitionsAdded: number;
+        originalDuration: number;
+        newDuration: number;
+    } | null>(null);
     const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
     const [userTier, setUserTier] = useState<ModelTier>('free');
     const [showModelPicker, setShowModelPicker] = useState(false);
@@ -311,7 +323,7 @@ export default function EditorPage() {
 
     const handleUpload = useCallback(async (file: File) => {
         // Usage limit check — uses the user's plan from Supabase profile
-        if (!canCreateProject(user?.plan)) {
+        if (!canCreateProject(user?.plan, user?.id)) {
             toast('Monthly video limit reached. Upgrade your plan for more.', 'error');
             return;
         }
@@ -363,7 +375,7 @@ export default function EditorPage() {
 
         toast('Analyzing video and transcribing audio...', 'info');
         setProcessingStep('transcribing');
-        incrementUsage(); // Track usage
+        incrementUsage(user?.id); // Track usage per user
 
         try {
             const { subtitles: transcript, isReal, noAudio } = await transcribeVideo(file, duration);
@@ -426,8 +438,6 @@ export default function EditorPage() {
 
     const handleGenerateOverlays = async (currentSubtitles = state.subtitles) => {
         console.log('[handleGenerateOverlays] Called with', currentSubtitles.length, 'subtitles');
-        console.log('[handleGenerateOverlays] Current state subtitles:', state.subtitles.length);
-        console.log('[handleGenerateOverlays] isGenerating:', state.isGenerating);
 
         if (currentSubtitles.length === 0) {
             console.log('[handleGenerateOverlays] Skipping - no subtitles');
@@ -442,56 +452,78 @@ export default function EditorPage() {
 
         updateState({ isGenerating: true });
         setProcessingStep('generating');
-        toast('Generating dynamic overlays...', 'info');
+        toast('🤖 AI Agent creating full editing plan...', 'info');
 
         try {
-            console.log('[handleGenerateOverlays] Calling suggestOverlaysWithAI with model:', selectedModel);
-            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel);
+            // ═══ TRY AGENTIC PIPELINE FIRST ═══
+            console.log('[handleGenerateOverlays] Trying agentic editing plan...');
+            const plan = await requestAgentEditPlan(
+                currentSubtitles,
+                state.videoDuration,
+                state.videoWidth,
+                state.videoHeight,
+                'auto',
+                selectedModel,
+            );
 
-            console.log('[handleGenerateOverlays] Result:', newSubtitles.length, 'segments');
-            const overlaysCount = newSubtitles.filter(s => s.overlay).length;
-            console.log('[handleGenerateOverlays] Segments with overlays:', overlaysCount);
+            if (plan && plan.segments && plan.segments.length > 0) {
+                console.log('[handleGenerateOverlays] Agent plan received! Mood:', plan.mood, 'Segments:', plan.segments.length);
 
-            newSubtitles.forEach((s, i) => {
-                if (s.overlay) {
-                    console.log(`  [${i}] "${s.text.substring(0, 30)}..." -> ${s.overlay.type}:${s.overlay.props.scene}`);
-                }
-            });
+                // Apply the full editing plan
+                const { subtitles: editedSubtitles, filters: planFilters } = applyEditingPlan(currentSubtitles, plan);
 
-            // Ensure at least some overlays are generated - force if none
-            if (overlaysCount === 0 && newSubtitles.length > 0) {
-                console.log('[handleGenerateOverlays] No overlays generated, forcing fallback...');
-                const forced = autoSuggestOverlays(newSubtitles);
-                const forcedCount = forced.filter(s => s.overlay).length;
-                console.log('[handleGenerateOverlays] Forced overlays:', forcedCount);
+                const overlaysCount = editedSubtitles.filter(s => s.overlay).length;
+                const effectsCount = editedSubtitles.filter(s => s.effect).length;
+                const transitionsCount = editedSubtitles.filter(s => s.transition).length;
+
+                console.log(`[handleGenerateOverlays] Applied: ${overlaysCount} overlays, ${effectsCount} effects, ${transitionsCount} transitions`);
+
+                // Apply filters from the plan's color grade
+                const updatedFilters = {
+                    ...state.filters,
+                    ...planFilters,
+                };
+
                 updateState({
-                    subtitles: forced,
+                    subtitles: editedSubtitles,
+                    filters: updatedFilters,
                     isGenerating: false,
+                    editingPlan: plan,
                 });
-                toast('Added motion graphics to your video!', 'success');
+
+                toast(
+                    `✨ AI Agent applied ${overlaysCount} overlays, ${effectsCount} effects, ${transitionsCount} transitions!`,
+                    'success'
+                );
                 setProcessingStep('done');
                 setTimeout(() => setProcessingStep('idle'), 2000);
-            } else {
-                updateState({
-                    subtitles: newSubtitles,
-                    isGenerating: false,
-                });
-                toast('AI overlays applied successfully!', 'success');
-                setProcessingStep('done');
-                setTimeout(() => setProcessingStep('idle'), 2000);
+                return;
             }
+
+            // ═══ FALLBACK: Old overlay-only pipeline ═══
+            console.log('[handleGenerateOverlays] Agent plan failed, falling back to overlay-only pipeline');
+            toast('Generating dynamic overlays...', 'info');
+
+            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel);
+            const overlaysCount = newSubtitles.filter(s => s.overlay).length;
+
+            if (overlaysCount === 0 && newSubtitles.length > 0) {
+                const forced = autoSuggestOverlays(newSubtitles);
+                updateState({ subtitles: forced, isGenerating: false });
+                toast('Added motion graphics to your video!', 'success');
+            } else {
+                updateState({ subtitles: newSubtitles, isGenerating: false });
+                toast('AI overlays applied successfully!', 'success');
+            }
+            setProcessingStep('done');
+            setTimeout(() => setProcessingStep('idle'), 2000);
+
         } catch (e) {
             console.error('[handleGenerateOverlays] Error:', e);
-            // Fallback — use local rule-based overlay suggestions
             const fallback = autoSuggestOverlays(currentSubtitles);
             const fallbackCount = fallback.filter(s => s.overlay).length;
-            console.log('[handleGenerateOverlays] Fallback overlays:', fallbackCount);
 
-            // Use whatever the local rules produced — don't force overlays on every segment
-            updateState({
-                subtitles: fallback,
-                isGenerating: false,
-            });
+            updateState({ subtitles: fallback, isGenerating: false });
             toast(fallbackCount > 0
                 ? `AI unavailable — added ${fallbackCount} overlays using local rules.`
                 : 'AI unavailable — you can manually add overlays from the transcript panel.',
@@ -555,6 +587,86 @@ export default function EditorPage() {
         const next = redo();
         if (next) setState(prev => ({ ...prev, ...next }));
     };
+
+    const handleAgenticEdit = useCallback(async () => {
+        if (state.isGenerating) {
+            console.log('[handleAgenticEdit] Already generating, skipping');
+            return;
+        }
+        if (state.subtitles.length === 0) {
+            toast('No transcript available. Please wait for transcription to complete.', 'warning');
+            return;
+        }
+
+        setState(prev => ({ ...prev, isGenerating: true }));
+        setProcessingStep('generating');
+        toast('🤖 AI Agent analyzing and editing your video...', 'info');
+
+        try {
+            const res = await fetch('/api/agentic-edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subtitles: state.subtitles,
+                    videoDuration: state.videoDuration,
+                    options: {
+                        editingStyle: 'auto',
+                        aggressiveness: 'moderate',
+                    },
+                }),
+            });
+
+            const data = await res.json();
+
+            if (data.ok && data.result) {
+                const result = data.result;
+                console.log('[handleAgenticEdit] Agentic edit complete:', result);
+
+                // Apply the edited subtitles, filters, and duration
+                setState(prev => ({
+                    ...prev,
+                    subtitles: result.subtitles,
+                    filters: {
+                        ...prev.filters,
+                        ...result.colorGrade,
+                    },
+                    videoDuration: result.newDuration,
+                    trimPoints: {
+                        inPoint: 0,
+                        outPoint: result.newDuration,
+                    },
+                    isGenerating: false,
+                }));
+
+                setAgenticResult({
+                    segmentsRemoved: result.segmentsRemoved,
+                    segmentsSpedUp: result.segmentsSpedUp,
+                    overlaysAdded: result.overlaysAdded,
+                    effectsAdded: result.effectsAdded,
+                    transitionsAdded: result.transitionsAdded,
+                    originalDuration: result.originalDuration,
+                    newDuration: result.newDuration,
+                });
+
+                toast(
+                    `🎬 AI Agent edited your video! Removed ${result.segmentsRemoved} segments, added ${result.overlaysAdded} overlays.`,
+                    'success'
+                );
+                setProcessingStep('done');
+                setTimeout(() => setProcessingStep('idle'), 2000);
+            } else {
+                console.error('[handleAgenticEdit] API returned error:', data.error);
+                toast('AI Agent edit failed. Please try again.', 'error');
+                setState(prev => ({ ...prev, isGenerating: false }));
+                setProcessingStep('idle');
+            }
+        } catch (e) {
+            console.error('[handleAgenticEdit] Error:', e);
+            toast('AI Agent edit failed. Please try again.', 'error');
+            setState(prev => ({ ...prev, isGenerating: false }));
+            setProcessingStep('idle');
+        }
+    }, [state.subtitles, state.videoDuration, state.isGenerating, toast]);
 
     const handleAutoSuggest = useCallback(async () => {
         console.log('[handleAutoSuggest] Starting with', state.subtitles.length, 'subtitles, model:', selectedModel);
@@ -863,6 +975,19 @@ export default function EditorPage() {
                                     >
                                         <Sparkles className="w-3 h-3" /> Magic
                                     </button>
+                                    {state.subtitles?.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className="h-7 px-3 rounded-md flex items-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40"
+                                            style={{ background: 'linear-gradient(135deg, #ec4899, #f43f5e)', color: '#fff' }}
+                                            onClick={handleAgenticEdit}
+                                            disabled={state.isGenerating}
+                                            title="🤖 Auto Edit Video"
+                                        >
+                                            {state.isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                            {state.isGenerating ? 'Editing...' : 'Auto Edit'}
+                                        </button>
+                                    )}
                                 </>
                             )}
                             {state.videoSrc && (
@@ -1084,6 +1209,8 @@ export default function EditorPage() {
                                 onSubtitlesChange={(subtitles) => updateState({ subtitles })}
                                 isGenerating={state.isGenerating}
                                 onGenerateAI={handleAutoSuggest}
+                                onAgenticEdit={handleAgenticEdit}
+                                agenticResult={agenticResult}
                             />
                         )}
                     </div>

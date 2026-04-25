@@ -3,7 +3,7 @@
 // Falls back to local keyword matching if API fails
 // Now supports AI-generated images based on script content analysis
 
-import { SubtitleSegment, OverlayConfig } from './types';
+import { SubtitleSegment, OverlayConfig, EditingPlan, VideoFilters } from './types';
 
 // Enhanced scene descriptors for generating dynamic prompts
 const SCENE_DESCRIPTORS: { concept: string; promptTemplate: string; style: string }[] = [
@@ -190,168 +190,194 @@ const KEYWORD_MAP: Record<string, { prompt: string; style: string }> = {
     'instant': { prompt: 'Instant delivery with glowing effect, immediate result concept, modern visualization', style: 'digital art' },
 };
 
-/**
- * Generate a dynamic image prompt based on text content using keyword analysis
- */
-function generateDynamicPrompt(text: string): { prompt: string; style: string } | null {
+// ==================== MOOD DETECTION (Client-side) ====================
+
+type VideoMood = 'triumphant' | 'dramatic' | 'calm' | 'energetic' | 'mysterious' | 'warm' | 'dark' | 'futuristic' | 'nostalgic' | 'neutral';
+
+function detectSegmentMood(text: string): VideoMood {
     const lower = text.toLowerCase();
-
-    // First, try to find a direct keyword match from our extended map
-    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-
-    for (const word of words) {
-        if (KEYWORD_MAP[word]) {
-            const match = KEYWORD_MAP[word];
-            // Add context from the text
-            const contextualizedPrompt = `${match.prompt}, context: ${text.substring(0, 80)}`;
-            return { prompt: contextualizedPrompt, style: match.style };
-        }
-    }
-
-    // Check for multi-word phrases
-    for (let i = 0; i < words.length - 1; i++) {
-        const phrase = words[i] + ' ' + words[i + 1];
-        if (KEYWORD_MAP[phrase]) {
-            const match = KEYWORD_MAP[phrase];
-            const contextualizedPrompt = `${match.prompt}, context: ${text.substring(0, 80)}`;
-            return { prompt: contextualizedPrompt, style: match.style };
-        }
-    }
-
-    // Fall back to SCENE_DESCRIPTORS for broader matching
-    for (const descriptor of SCENE_DESCRIPTORS) {
-        if (lower.includes(descriptor.concept)) {
-            const contextualizedPrompt = `${descriptor.promptTemplate}, context: ${text.substring(0, 100)}`;
-            return { prompt: contextualizedPrompt, style: descriptor.style };
-        }
-    }
-
-    // For texts without matching keywords, generate a contextual prompt based on the content
-    // Analyze what the text is about and create a relevant visualization
-    const contentAnalysis = analyzeContent(text);
-    if (contentAnalysis) {
-        return contentAnalysis;
-    }
-
-    // Ultimate fallback: abstract professional visualization
-    return {
-        prompt: `Professional abstract visualization representing key message, modern minimalist design, clean composition, soft lighting, conceptual art style, corporate presentation background`,
-        style: 'minimalist illustration'
+    
+    const scores: Record<VideoMood, number> = {
+        triumphant: 0, dramatic: 0, calm: 0, energetic: 0, mysterious: 0, warm: 0, dark: 0, futuristic: 0, nostalgic: 0, neutral: 0,
     };
+    
+    const moodWords: Record<VideoMood, string[]> = {
+        triumphant: ['triumph', 'victory', 'won', 'winning', 'champion', 'conquered', 'dominated', 'crushed it', 'unstoppable', 'glory', 'achievement', 'milestone', 'record', 'broke', 'breakthrough', 'finally'],
+        dramatic: ['shocking', 'revealed', 'secret', 'exposed', 'truth', 'scandal', 'controversy', 'banned', 'forbidden', 'danger', 'warning', 'never before', 'unprecedented', 'crisis', 'disaster', 'war', 'battle'],
+        calm: ['peaceful', 'serene', 'tranquil', 'gentle', 'quiet', 'soft', 'smooth', 'relax', 'meditate', 'breathe', 'slow', 'steady', 'patient', 'mindful', 'balanced', 'harmony'],
+        energetic: ['explosive', 'insane', 'crazy', 'wild', 'hype', 'pumped', 'amazing', 'incredible', 'awesome', 'fantastic', 'mind-blowing', 'game-changer', 'revolutionary', 'fast', 'rapid', 'instant'],
+        mysterious: ['mystery', 'unknown', 'conspiracy', 'unsolved', 'strange', 'weird', 'bizarre', 'odd', 'curious', 'hidden', 'secret', 'cloak', 'shadow', 'enigma', 'puzzle', 'riddle', 'cipher'],
+        warm: ['love', 'heart', 'happy', 'joy', 'celebrate', 'family', 'friend', 'together', 'community', 'kindness', 'grateful', 'blessed', 'cozy', 'comfort', 'home', 'welcome', 'hug'],
+        dark: ['death', 'destroy', 'ruin', 'apocalypse', 'doom', 'darkness', 'evil', 'horror', 'terror', 'fear', 'nightmare', 'haunt', 'bleak', 'hopeless', 'despair', 'suffer', 'pain', 'agony'],
+        futuristic: ['future', 'cyber', 'hologram', 'robot', 'android', 'spaceship', 'interstellar', 'quantum', 'nanotech', 'artificial', 'synthetic', 'digital', 'virtual', 'metaverse', 'neural', 'upload'],
+        nostalgic: ['remember', 'memories', 'throwback', 'vintage', 'retro', 'classic', 'old school', 'back then', 'used to', 'childhood', 'growing up', 'nostalgia', 'reminisce', 'past', 'era', 'decade'],
+        neutral: [],
+    };
+    
+    for (const [mood, words] of Object.entries(moodWords)) {
+        for (const word of words) {
+            if (lower.includes(word)) {
+                scores[mood as VideoMood] += 2;
+            }
+        }
+    }
+    
+    if (text.includes('!')) scores.energetic += 1;
+    if (text.includes('?')) scores.mysterious += 1;
+    if (text.includes('...')) scores.dramatic += 1;
+    
+    const capsRatio = (text.match(/[A-Z]/g) || []).length / Math.max(1, text.length);
+    if (capsRatio > 0.3) scores.energetic += 1;
+    
+    let bestMood: VideoMood = 'neutral';
+    let bestScore = 0;
+    for (const [mood, score] of Object.entries(scores)) {
+        if (score > bestScore) {
+            bestScore = score;
+            bestMood = mood as VideoMood;
+        }
+    }
+    
+    return bestMood;
+}
+
+// ==================== ENHANCED IMAGE PROMPT GENERATION (Client-side) ====================
+
+function getMoodPromptGuide(mood: VideoMood): string {
+    const guides: Record<VideoMood, string> = {
+        triumphant: 'Warm golden lighting, heroic low-angle composition, lens flare, epic scale, vibrant warm colors, upward movement, inspirational atmosphere, rays of sunlight bursting through',
+        dramatic: 'High contrast chiaroscuro lighting, deep shadows, intense atmosphere, dramatic color grading with teal and orange, shallow depth of field, tension-filled composition, cinematic wide shot',
+        calm: 'Soft diffused natural lighting, pastel muted tones, peaceful atmosphere, gentle bokeh background, serene composition, zen aesthetic, clean minimal space, smooth gradients',
+        energetic: 'Dynamic motion blur, neon accent lighting, high energy action composition, saturated vibrant pop colors, explosive particles, fast shutter effect, electric atmosphere, bold graphic elements',
+        mysterious: 'Foggy atmospheric lighting, deep shadows with rim light, silhouette composition, enigmatic mood, dark teal and purple palette, volumetric light rays piercing darkness, smoke and haze',
+        warm: 'Warm tungsten lighting, cozy intimate atmosphere, golden amber tones, soft focus background, emotional shallow depth of field, comfortable lived-in setting, gentle warm glow',
+        dark: 'Low-key lighting, desaturated cold tones, gritty texture, harsh shadows, bleak atmosphere, muted earth tones, stark contrast, somber mood, film noir aesthetic',
+        futuristic: 'Cool blue and cyan lighting, sleek metallic surfaces, holographic neon accents, clean minimal composition, cyberpunk aesthetic, glass and steel materials, ethereal glow, sci-fi atmosphere',
+        nostalgic: 'Film grain texture, warm faded colors, vintage soft focus, sun-bleached tones, analog photography feel, gentle vignette, retro color palette, dreamy hazy atmosphere',
+        neutral: 'Balanced studio lighting, clean professional composition, neutral gray background, crisp details, editorial photography style, well-lit even exposure',
+    };
+    return guides[mood] || guides.neutral;
+}
+
+function getTopicStyleGuide(primaryTopic: string): string {
+    const guides: Record<string, string> = {
+        'GAMING/ENTERTAINMENT': 'Video game cinematic style, dynamic action angles, neon-lit environments, character-driven scenes, epic boss battle atmosphere, gaming setup with RGB lighting',
+        'TECHNOLOGY/CODING': 'Sleek futuristic tech aesthetic, dark mode interfaces with glowing syntax, clean minimal hardware shots, circuit board macro photography, holographic displays',
+        'FINANCE/BUSINESS': 'Corporate luxury aesthetic, modern glass office buildings, executive boardroom atmosphere, premium materials marble gold leather, professional attire, stock exchange energy',
+        'FITNESS/HEALTH': 'Athletic dynamic shots, gym atmosphere with dramatic lighting, sweat and determination, muscular definition, healthy vibrant food photography, medical clean aesthetic',
+        'BEAUTY/FASHION': 'High fashion editorial style, soft glamour lighting, luxury cosmetic textures, runway atmosphere, beauty macro shots, elegant minimalist composition, Vogue aesthetic',
+        'EDUCATION/SCIENCE': 'Academic library atmosphere, laboratory with scientific equipment, chalkboard with complex equations, microscope macro shots, clean research facility aesthetic, scholarly warm lighting',
+        'COOKING/FOOD': 'Gourmet food photography, steam and sizzle action shots, rustic kitchen atmosphere, fresh ingredients overhead flat lay, dramatic plating presentation, warm inviting restaurant lighting',
+        'MUSIC/ARTS': 'Concert stage dramatic lighting, recording studio atmosphere, instruments in spotlight, artistic creative process, gallery exhibition aesthetic, vibrant creative energy',
+        'TRAVEL/ADVENTURE': 'National Geographic documentary style, dramatic landscapes, golden hour adventure, aerial drone photography, cultural authentic moments, wanderlust atmosphere',
+        'NEWS/DRAMA/STORY': 'Breaking news urgency, dramatic investigative atmosphere, documentary realism, high-stakes tension, journalistic integrity aesthetic, truth-revealing spotlight',
+    };
+    return guides[primaryTopic] || 'Professional cinematic style, clean composition, balanced lighting, editorial quality, 8k detail';
 }
 
 /**
- * Analyze text content and generate appropriate visualization
+ * Generate a dynamic image prompt based on text content using mood + topic analysis.
+ * Produces RICH, CINEMATIC prompts that match the segment's emotional tone.
  */
-function analyzeContent(text: string): { prompt: string; style: string } | null {
+function generateDynamicPrompt(text: string): { prompt: string; style: string } | null {
     const lower = text.toLowerCase();
+    const mood = detectSegmentMood(text);
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2 && !isStopWord(w));
+    const keyPhrase = words.slice(0, 5).join(' ');
+    
+    // Detect rough topic from text
+    let primaryTopic = 'general';
+    const topicHints: Record<string, string[]> = {
+        'GAMING/ENTERTAINMENT': ['game', 'play', 'level', 'character', 'player', 'gaming', 'stream'],
+        'TECHNOLOGY/CODING': ['code', 'software', 'app', 'tech', 'digital', 'data', 'cloud', 'ai', 'algorithm'],
+        'FINANCE/BUSINESS': ['money', 'revenue', 'profit', 'business', 'market', 'stock', 'invest', 'startup'],
+        'FITNESS/HEALTH': ['workout', 'exercise', 'gym', 'muscle', 'health', 'fitness', 'diet'],
+        'EDUCATION/SCIENCE': ['research', 'study', 'science', 'learn', 'education', 'course', 'university'],
+        'COOKING/FOOD': ['recipe', 'cook', 'food', 'meal', 'kitchen', 'ingredient', 'chef'],
+        'MUSIC/ARTS': ['music', 'song', 'art', 'artist', 'concert', 'guitar', 'piano'],
+        'TRAVEL/ADVENTURE': ['travel', 'trip', 'destination', 'explore', 'adventure', 'country'],
+    };
+    for (const [topic, hints] of Object.entries(topicHints)) {
+        if (hints.some(h => lower.includes(h))) {
+            primaryTopic = topic;
+            break;
+        }
+    }
+    
+    const moodLighting: Record<VideoMood, string> = {
+        triumphant: 'golden hour sunlight streaming through clouds, dramatic lens flare, warm amber glow',
+        dramatic: 'harsh chiaroscuro lighting, deep shadows cutting across the frame, moody atmosphere',
+        calm: 'soft diffused morning light, gentle pastel sky, peaceful serenity',
+        energetic: 'vibrant neon lights, dynamic motion, electric energy crackling',
+        mysterious: 'volumetric fog illuminated by a single light source, deep shadows, enigmatic atmosphere',
+        warm: 'warm tungsten light, cozy golden glow, intimate soft focus',
+        dark: 'low-key dramatic lighting, cold desaturated tones, stark shadows',
+        futuristic: 'cool blue holographic light, sleek metallic reflections, cyberpunk neon glow',
+        nostalgic: 'warm sun-bleached film look, gentle lens flare, vintage color palette',
+        neutral: 'balanced studio lighting, clean professional look, crisp shadows',
+    };
+    
+    // Map individual content words to concrete visual elements for UNIQUE per-segment prompts
+    const visualElements: Record<string, string> = {
+        money: 'stacks of golden coins and currency bills', revenue: 'rising financial bar chart', profit: 'gleaming gold bars',
+        income: 'flowing stream of golden light', dollar: 'crisp hundred dollar bills', cash: 'briefcase full of cash',
+        growth: 'a dramatic upward-trending arrow piercing through clouds', grow: 'a seedling growing into a massive tree',
+        success: 'a glowing trophy on a pedestal', achieve: 'a runner crossing a finish line',
+        rocket: 'a rocket launching with fiery exhaust trail', launch: 'a countdown clock reaching zero with sparks',
+        brain: 'a luminous brain with electric synapses firing', think: 'a silhouette surrounded by floating lightbulbs',
+        idea: 'a single lightbulb igniting with brilliant golden light', smart: 'holographic data flowing around a head silhouette',
+        code: 'lines of glowing code cascading down a dark screen', software: 'a futuristic IDE with holographic debugging',
+        tech: 'a sleek circuit board with pulsing blue light traces', digital: 'digital particles assembling into a geometric shape',
+        fire: 'intense flames dancing against a dark background', hot: 'glowing embers and sparks rising in the heat',
+        power: 'an energy surge radiating from a central source', energy: 'electric arcs between two tesla coils',
+        earth: 'planet Earth viewed from space with aurora borealis', world: 'a spinning globe with golden trade routes',
+        mountain: 'a snow-capped mountain peak at sunrise', climb: 'a climber reaching a summit silhouetted against sunset',
+        ocean: 'massive turquoise ocean waves crashing dramatically', water: 'crystal clear water with sunlight refracting through',
+        love: 'a warm glowing heart surrounded by soft light', heart: 'a beating heart made of light particles',
+        celebrate: 'golden confetti exploding in slow motion', win: 'a champion raising a trophy with stadium spotlights',
+        protect: 'a glowing shield deflecting incoming particles', safe: 'a secure vault door with golden light behind it',
+        time: 'an elegant clock face with hands frozen in motion', fast: 'light streaks of a car at high speed on a highway',
+        learn: 'an ancient library with sunlight streaming through windows', education: 'floating books with pages turning magically',
+        music: 'sound waves visualized as colorful flowing ribbons', art: 'a paintbrush creating vibrant strokes on canvas',
+        food: 'a gourmet dish with steam rising dramatically', cook: 'flames leaping from a chef\'s pan',
+        travel: 'a winding road leading into a breathtaking mountain valley', adventure: 'a lone explorer on a cliff edge at golden hour',
+        city: 'a modern city skyline reflecting in water at twilight', building: 'a futuristic glass skyscraper reaching into clouds',
+        team: 'diverse hands joining together from above', people: 'a crowd of silhouettes under a dramatic sky',
+        star: 'a brilliant star exploding in a supernova', galaxy: 'a spiral galaxy with billions of glowing stars',
+        secret: 'a mysterious locked chest with light escaping through cracks', mystery: 'fog-shrouded forest with a single beam of light',
+        game: 'a neon-lit gaming controller with RGB reflections', play: 'colorful game elements floating in zero gravity',
+        science: 'a DNA double helix spiraling with bioluminescent light', research: 'a microscope revealing glowing cells',
+        network: 'glowing interconnected nodes forming a web', connect: 'two glowing hands reaching toward each other',
+        data: 'holographic data streams flowing through a futuristic corridor', cloud: 'a luminous cloud computing infrastructure',
+        invest: 'a hand planting a golden seed that sprouts into coins', stock: 'a dramatic candlestick chart with green candles rising',
+        health: 'a human body silhouette radiating vibrant energy', fitness: 'an athlete mid-jump with perfect form',
+        nature: 'lush green forest with light filtering through canopy', tree: 'a majestic ancient tree with sunlight through its branches',
+    };
 
-    // Check for question patterns
-    if (lower.includes('?') || lower.startsWith('what') || lower.startsWith('how') || lower.startsWith('why')) {
-        return {
-            prompt: 'Question mark transforming to lightbulb, answer revelation concept, inspiring visualization with soft glow, professional lighting',
-            style: 'digital art'
-        };
+    // Collect concrete visual elements from the actual segment text
+    const matchedVisuals: string[] = [];
+    for (const word of words) {
+        if (visualElements[word] && !matchedVisuals.includes(visualElements[word])) {
+            matchedVisuals.push(visualElements[word]);
+            if (matchedVisuals.length >= 2) break;
+        }
     }
 
-    // Check for instruction/command patterns (imperative mood)
-    if (lower.startsWith('click') || lower.startsWith('tap') || lower.startsWith('press')) {
-        return {
-            prompt: 'Touch screen interaction with glowing finger tap, digital button press, modern UI concept with blue glow',
-            style: 'digital art'
-        };
+    let sceneDescription: string;
+    if (matchedVisuals.length > 0) {
+        sceneDescription = `A cinematic composition featuring ${matchedVisuals.join(' alongside ')}, professional composition with depth`;
+    } else if (keyPhrase) {
+        sceneDescription = `A visually stunning cinematic scene depicting "${keyPhrase}", rendered as a photorealistic still from a premium documentary, dramatic composition`;
+    } else {
+        sceneDescription = 'An abstract cinematic visual with flowing light particles, professional composition';
     }
-
-    // Check for promise/guarantee language
-    if (lower.includes('guarantee') || lower.includes('promise') || lower.includes('ensure')) {
-        return {
-            prompt: 'Shield with glowing checkmark, security and trust concept, professional blue background with light rays',
-            style: 'minimalist illustration'
-        };
-    }
-
-    // Check for comparison/contrast
-    if (lower.includes('vs') || lower.includes('versus') || lower.includes('compare')) {
-        return {
-            prompt: 'Two options with comparison visual, choice decision concept, modern professional visualization',
-            style: 'minimalist illustration'
-        };
-    }
-
-    // Check for list/enumeration
-    const bulletMatch = text.match(/^(\d+\.|\•|\-)\s*/m);
-    if (bulletMatch) {
-        return {
-            prompt: 'Numbered list with glowing checkmarks, organized checklist concept, productivity visualization',
-            style: 'minimalist illustration'
-        };
-    }
-
-    // Check for urgency
-    if (lower.includes('limited') || lower.includes('only') || lower.includes('today') || lower.includes('hurry')) {
-        return {
-            prompt: 'Countdown timer with urgency, limited time offer concept, red and gold warning colors',
-            style: 'digital art'
-        };
-    }
-
-    // Check for exclusive content
-    if (lower.includes('exclusive') || lower.includes('private') || lower.includes('members')) {
-        return {
-            prompt: 'VIP exclusive access with golden glow, premium membership concept, luxurious dark background',
-            style: 'digital art'
-        };
-    }
-
-    // Check for value proposition
-    if (lower.includes('free') || lower.includes('discount') || lower.includes('save')) {
-        return {
-            prompt: 'Sale discount tag with golden glow, savings concept, promotional offer visualization',
-            style: 'digital art'
-        };
-    }
-
-    // Check for transformation/change
-    if (lower.includes('transform') || lower.includes('change') || lower.includes('improve')) {
-        return {
-            prompt: 'Transformation arrow with glowing particles, before and after concept, improvement visualization',
-            style: 'digital art'
-        };
-    }
-
-    // Check for problem/solution
-    if (lower.includes('problem') || lower.includes('solve') || lower.includes('solution')) {
-        return {
-            prompt: 'Puzzle pieces coming together, problem solving concept, solution with light bulb moment',
-            style: 'digital art'
-        };
-    }
-
-    // Check for testimonials/social proof
-    if (lower.includes('review') || lower.includes('testimonial') || lower.includes('customer said')) {
-        return {
-            prompt: 'Customer testimonial with star ratings, review concept, social proof visualization',
-            style: 'minimalist illustration'
-        };
-    }
-
-    // Check for bio/creator introduction
-    if (lower.includes('i am') || lower.includes('my name') || lower.includes('creator')) {
-        return {
-            prompt: 'Professional portrait silhouette, creator introduction, warm welcoming lighting',
-            style: 'cinematic photography'
-        };
-    }
-
-    // Check for call to action
-    if (lower.includes('subscribe') || lower.includes('follow') || lower.includes('like') || lower.includes('comment')) {
-        return {
-            prompt: 'Social media engagement concept with glowing icons, subscriber growth visualization',
-            style: 'digital art'
-        };
-    }
-
-    return null;
+    
+    const lighting = moodLighting[mood] || moodLighting.neutral;
+    const styleGuide = getTopicStyleGuide(primaryTopic);
+    
+    const prompt = `${sceneDescription}, ${lighting}, ${styleGuide}, cinematic lighting, hyperrealistic, professional color grading, 8k, high detail, shallow depth of field`;
+    
+    return { prompt, style: 'cinematic photography' };
 }
 
 const STOP_WORDS = new Set([
@@ -494,12 +520,13 @@ export async function suggestOverlaysWithAI(
 
         if (data.suggestions && data.suggestions.length > 0) {
             // Apply AI suggestions to the subtitle segments
+            // OVERWRITE existing overlays so re-generation works with different models
             const withAISuggestions = subtitles.map((seg) => {
                 const suggestion = data.suggestions.find(
                     (s: { segmentId: string; type: string; props: Record<string, unknown> }) =>
                         s.segmentId === seg.id
                 );
-                if (suggestion && !seg.overlay) {
+                if (suggestion) {
                     return {
                         ...seg,
                         overlay: {
@@ -646,29 +673,65 @@ export function generateDynamicOverlays(subtitles: SubtitleSegment[]): SubtitleS
 }
 
 /**
- * Async overlay selection with real Ernie Image API calls
+ * Async overlay selection with real Ernie Image API calls.
+ * Overlay TYPE is chosen based on content analysis, not a fixed pattern.
  */
 async function selectProOverlayWithErnieImage(text: string, count: number, uniqueSeed: number): Promise<OverlayConfig> {
     const lower = text.toLowerCase();
     const color = getProColor(uniqueSeed);
     const label = extractLabelFromText(text);
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
 
-    // Mix overlay types - use AI-generated images for visual B-roll
-    // 0,2,5,8 = ai-generated-image, 1,4,7 = kinetic-text, 3,6 = gif-reaction, 9 = emoji
-    const slot = count % 10;
+    // ── Decide overlay type based on CONTENT, not a fixed slot ──
+    // Score how well this text matches each overlay type
+    const hasStrongSceneKeyword = words.some(w => CONTENT_SCENE_MAP[w]);
+    const hasVisualNoun = words.some(w => [
+        'money', 'rocket', 'brain', 'fire', 'ocean', 'mountain', 'city',
+        'star', 'earth', 'code', 'heart', 'clock', 'tree', 'food',
+    ].includes(w));
+    const hasEmotionWord = words.some(w => [
+        'love', 'happy', 'amazing', 'incredible', 'awesome', 'fire', 'lit',
+        'crazy', 'insane', 'wow', 'excited', 'cool', 'funny',
+    ].includes(w));
+    const hasNumbers = /\$[\d,.]+|\d+%|\d{3,}/.test(text);
+    const isQuestion = text.includes('?');
+    const textLen = text.length;
 
-    switch (slot) {
-        case 0:
-        case 2:
-        case 5:
-        case 8: {
-            // UNIQUE AI-generated image for this segment using Ernie API
+    // Use content hash to add variety (so same-type segments don't all pick the same)
+    const contentHash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+
+    // Choose overlay type based on content characteristics + variety mixing
+    let overlayType: 'ai-generated-image' | 'visual-illustration' | 'gif-reaction' | 'emoji-reaction';
+
+    if (hasStrongSceneKeyword && (contentHash % 3 !== 0)) {
+        // Text has a keyword that maps well to an animated SVG scene
+        overlayType = 'visual-illustration';
+    } else if (textLen > 40 && !hasEmotionWord && (contentHash % 4 !== 0)) {
+        // Longer descriptive text → AI-generated image (rich visual)
+        overlayType = 'ai-generated-image';
+    } else if (hasEmotionWord && !hasNumbers) {
+        // Emotional/reaction moment → alternate between gif and emoji
+        overlayType = (contentHash % 2 === 0) ? 'gif-reaction' : 'emoji-reaction';
+    } else if (hasNumbers || hasVisualNoun) {
+        // Stats or concrete visual nouns → image or illustration
+        overlayType = (contentHash % 2 === 0) ? 'ai-generated-image' : 'visual-illustration';
+    } else if (isQuestion) {
+        overlayType = 'visual-illustration';
+    } else {
+        // Fallback: rotate based on content hash (NOT count) for variety
+        const pick = contentHash % 10;
+        if (pick < 4) overlayType = 'visual-illustration';
+        else if (pick < 7) overlayType = 'ai-generated-image';
+        else if (pick < 9) overlayType = 'gif-reaction';
+        else overlayType = 'emoji-reaction';
+    }
+
+    // ── Build the overlay ──
+    switch (overlayType) {
+        case 'ai-generated-image': {
             const dynamicPrompt = generateDynamicPrompt(text);
             const imagePrompt = dynamicPrompt?.prompt || `${text.substring(0, 100)}, cinematic, professional`;
-            
-            // Call the Ernie API to get a real generated image
             const imageUrl = await generateErnieImageUrl(imagePrompt, uniqueSeed);
-            
             return {
                 type: 'ai-generated-image',
                 props: {
@@ -680,48 +743,45 @@ async function selectProOverlayWithErnieImage(text: string, count: number, uniqu
             };
         }
 
-        case 1:
-        case 4:
-        case 7: {
-            const kineticStyles = ['pop', 'slide', 'bounce'] as const;
-            const positions = ['center', 'top', 'bottom'] as const;
+        case 'visual-illustration': {
+            const scene = pickSceneForText(text, count);
+            const finalScene = scene === lastUsedScene
+                ? ALL_SCENES[(ALL_SCENES.indexOf(scene) + 1) % ALL_SCENES.length]
+                : scene;
+            lastUsedScene = finalScene;
+            const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
             return {
-                type: 'kinetic-text',
+                type: 'visual-illustration',
                 props: {
-                    text: label || text.substring(0, 30),
+                    scene: finalScene,
+                    label: label || text.substring(0, 30),
                     color,
-                    style: kineticStyles[uniqueSeed % kineticStyles.length],
-                    position: positions[uniqueSeed % positions.length],
-                    fontSize: 42,
+                    transition: transitions[contentHash % transitions.length],
                 },
             };
         }
 
-        case 3:
-        case 6: {
-            // Contextual GIF reaction based on segment content
+        case 'gif-reaction': {
             const sizes = ['medium', 'large', 'fullscreen'] as const;
             const gifPositions = ['center', 'top-right', 'bottom-right'] as const;
             return {
                 type: 'gif-reaction',
                 props: {
                     keyword: text.substring(0, 80),
-                    size: sizes[uniqueSeed % sizes.length],
-                    position: gifPositions[uniqueSeed % gifPositions.length],
+                    size: sizes[contentHash % sizes.length],
+                    position: gifPositions[contentHash % gifPositions.length],
                 },
             };
         }
 
-
-
-        case 9:
+        case 'emoji-reaction':
         default: {
             const emojiMatch = pickEmoji(lower);
             const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎', '✨', '💪', '🎉', '📈'];
             return {
                 type: 'emoji-reaction',
                 props: {
-                    emoji: emojiMatch || fallbackEmojis[uniqueSeed % fallbackEmojis.length],
+                    emoji: emojiMatch || fallbackEmojis[contentHash % fallbackEmojis.length],
                     size: 70,
                 },
             };
@@ -743,28 +803,56 @@ function hashStringLocal(str: string): number {
 }
 
 /**
- * Select overlay with a unique seed for THIS specific segment
- * Generates UNIQUE B-roll images based on segment content
+ * Select overlay with a unique seed for THIS specific segment.
+ * Overlay TYPE is chosen based on content analysis, not a fixed pattern.
  */
 function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed: number): OverlayConfig {
     const lower = text.toLowerCase();
     const color = getProColor(uniqueSeed);
     const label = extractLabelFromText(text);
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
 
-    // Mix overlay types - use AI-generated images for visual B-roll
-    // 0,2,5,8 = ai-generated-image, 1,4,7 = kinetic-text, 3,6 = gif-reaction, 9 = emoji
-    const slot = count % 10;
+    // ── Decide overlay type based on CONTENT ──
+    const hasStrongSceneKeyword = words.some(w => CONTENT_SCENE_MAP[w]);
+    const hasVisualNoun = words.some(w => [
+        'money', 'rocket', 'brain', 'fire', 'ocean', 'mountain', 'city',
+        'star', 'earth', 'code', 'heart', 'clock', 'tree', 'food',
+    ].includes(w));
+    const hasEmotionWord = words.some(w => [
+        'love', 'happy', 'amazing', 'incredible', 'awesome', 'fire', 'lit',
+        'crazy', 'insane', 'wow', 'excited', 'cool', 'funny',
+    ].includes(w));
+    const hasNumbers = /\$[\d,.]+|\d+%|\d{3,}/.test(text);
+    const isQuestion = text.includes('?');
+    const textLen = text.length;
 
-    switch (slot) {
-        case 0:
-        case 2:
-        case 5:
-        case 8: {
-            // UNIQUE AI-generated image for this segment
+    const contentHash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+
+    let overlayType: 'ai-generated-image' | 'visual-illustration' | 'gif-reaction' | 'emoji-reaction';
+
+    if (hasStrongSceneKeyword && (contentHash % 3 !== 0)) {
+        overlayType = 'visual-illustration';
+    } else if (textLen > 40 && !hasEmotionWord && (contentHash % 4 !== 0)) {
+        overlayType = 'ai-generated-image';
+    } else if (hasEmotionWord && !hasNumbers) {
+        overlayType = (contentHash % 2 === 0) ? 'gif-reaction' : 'emoji-reaction';
+    } else if (hasNumbers || hasVisualNoun) {
+        overlayType = (contentHash % 2 === 0) ? 'ai-generated-image' : 'visual-illustration';
+    } else if (isQuestion) {
+        overlayType = 'visual-illustration';
+    } else {
+        const pick = contentHash % 10;
+        if (pick < 4) overlayType = 'visual-illustration';
+        else if (pick < 7) overlayType = 'ai-generated-image';
+        else if (pick < 9) overlayType = 'gif-reaction';
+        else overlayType = 'emoji-reaction';
+    }
+
+    switch (overlayType) {
+        case 'ai-generated-image': {
             const dynamicPrompt = generateDynamicPrompt(text);
             const imagePrompt = dynamicPrompt?.prompt || `${text.substring(0, 100)}, cinematic, professional`;
             const imageUrl = generateAIImageUrl(imagePrompt, uniqueSeed);
-            
             return {
                 type: 'ai-generated-image',
                 props: {
@@ -775,46 +863,45 @@ function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed:
             };
         }
 
-        case 1:
-        case 4:
-        case 7: {
-            const kineticStyles = ['pop', 'slide', 'bounce'] as const;
-            const positions = ['center', 'top', 'bottom'] as const;
+        case 'visual-illustration': {
+            const scene = pickSceneForText(text, count);
+            const finalScene = scene === lastUsedScene
+                ? ALL_SCENES[(ALL_SCENES.indexOf(scene) + 1) % ALL_SCENES.length]
+                : scene;
+            lastUsedScene = finalScene;
+            const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
             return {
-                type: 'kinetic-text',
+                type: 'visual-illustration',
                 props: {
-                    text: label || text.substring(0, 30),
+                    scene: finalScene,
+                    label: label || text.substring(0, 30),
                     color,
-                    style: kineticStyles[uniqueSeed % kineticStyles.length],
-                    position: positions[uniqueSeed % positions.length],
-                    fontSize: 42,
+                    transition: transitions[contentHash % transitions.length],
                 },
             };
         }
 
-        case 3:
-        case 6: {
-            // Contextual GIF reaction based on segment content
+        case 'gif-reaction': {
             const sizes = ['medium', 'large', 'fullscreen'] as const;
             const gifPositions = ['center', 'top-right', 'bottom-right'] as const;
             return {
                 type: 'gif-reaction',
                 props: {
                     keyword: text.substring(0, 80),
-                    size: sizes[uniqueSeed % sizes.length],
-                    position: gifPositions[uniqueSeed % gifPositions.length],
+                    size: sizes[contentHash % sizes.length],
+                    position: gifPositions[contentHash % gifPositions.length],
                 },
             };
         }
 
-        case 9:
+        case 'emoji-reaction':
         default: {
             const emojiMatch = pickEmoji(lower);
             const fallbackEmojis = ['🔥', '⚡', '🎯', '💡', '🚀', '💎', '✨', '💪', '🎉', '📈'];
             return {
                 type: 'emoji-reaction',
                 props: {
-                    emoji: emojiMatch || fallbackEmojis[uniqueSeed % fallbackEmojis.length],
+                    emoji: emojiMatch || fallbackEmojis[contentHash % fallbackEmojis.length],
                     size: 70,
                 },
             };
@@ -1060,16 +1147,20 @@ function selectProOverlay(text: string, count: number): OverlayConfig {
         case 1:
         case 4:
         case 7: {
-            const kineticStyles = ['pop', 'slide', 'bounce'] as const;
-            const positions = ['center', 'top', 'bottom'] as const;
+            // Professional animated SVG scene matched to transcript content
+            const scene = pickSceneForText(text, count);
+            const finalScene = scene === lastUsedScene
+                ? ALL_SCENES[(ALL_SCENES.indexOf(scene) + 1) % ALL_SCENES.length]
+                : scene;
+            lastUsedScene = finalScene;
+            const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
             return {
-                type: 'kinetic-text',
+                type: 'visual-illustration',
                 props: {
-                    text: label || text.substring(0, 30),
+                    scene: finalScene,
+                    label: label || text.substring(0, 30),
                     color,
-                    style: kineticStyles[count % kineticStyles.length],
-                    position: positions[count % positions.length],
-                    fontSize: 42,
+                    transition: transitions[count % transitions.length],
                 },
             };
         }
@@ -1291,5 +1382,135 @@ function generateSingleDynamicOverlay(
     const combined = `${segmentText} ${userPrompt}`;
     const count = Math.floor(Math.random() * 100);
     return selectProOverlay(combined, count);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AGENTIC EDITING — request full editing plan and apply it
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Request a full AI editing plan from the /api/agent-edit endpoint.
+ * Returns the raw EditingPlan or null on failure.
+ */
+export async function requestAgentEditPlan(
+    subtitles: SubtitleSegment[],
+    videoDuration: number,
+    videoWidth?: number,
+    videoHeight?: number,
+    editingStyle?: string,
+    model?: string,
+): Promise<EditingPlan | null> {
+    try {
+        const response = await fetch('/api/agent-edit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subtitles: subtitles.map(s => ({
+                    id: s.id,
+                    startTime: s.startTime,
+                    endTime: s.endTime,
+                    text: s.text,
+                })),
+                videoDuration,
+                videoWidth: videoWidth || 1920,
+                videoHeight: videoHeight || 1080,
+                editingStyle: editingStyle || 'auto',
+                model,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (data.ok && data.editingPlan) {
+            console.log('[AgentEdit] Received editing plan, source:', data.source);
+            return data.editingPlan as EditingPlan;
+        }
+
+        console.warn('[AgentEdit] API returned error:', data.error);
+        return null;
+    } catch (error) {
+        console.error('[AgentEdit] Request failed:', error);
+        return null;
+    }
+}
+
+/**
+ * Apply an AI editing plan to subtitle segments.
+ * Returns updated segments with overlays, effects, transitions, and speed changes,
+ * plus suggested VideoFilters from the plan's colorGrade.
+ */
+export function applyEditingPlan(
+    subtitles: SubtitleSegment[],
+    plan: EditingPlan,
+): { subtitles: SubtitleSegment[]; filters: Partial<VideoFilters> } {
+    // Build a lookup map for the plan segments
+    const planMap = new Map<string, (typeof plan.segments)[0]>();
+    for (const seg of plan.segments) {
+        planMap.set(seg.segmentId, seg);
+    }
+
+    // Apply the plan to each subtitle segment
+    const updatedSubtitles = subtitles.map(seg => {
+        const planSeg = planMap.get(seg.id);
+        if (!planSeg) return { ...seg };
+
+        const updated: SubtitleSegment = { ...seg };
+
+        // Apply overlay (only if the plan specifies one)
+        if (planSeg.overlay && planSeg.overlay.type) {
+            updated.overlay = {
+                type: planSeg.overlay.type as OverlayConfig['type'],
+                props: planSeg.overlay.props || {},
+            };
+
+            // For ai-generated-image overlays, generate a Pollinations URL if no imageUrl provided
+            if (planSeg.overlay.type === 'ai-generated-image' && !planSeg.overlay.props?.imageUrl) {
+                const prompt = String(planSeg.overlay.props?.imagePrompt || seg.text);
+                const seed = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 1000000;
+                updated.overlay.props = {
+                    ...updated.overlay.props,
+                    imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt}, cinematic, professional`)}?width=1280&height=720&nologo=true&seed=${seed}`,
+                    caption: planSeg.overlay.props?.caption || extractLabelFromText(seg.text),
+                    seed,
+                    imagePrompt: prompt,
+                };
+            }
+        }
+
+        // Apply effect
+        if (planSeg.effect) {
+            updated.effect = {
+                type: planSeg.effect.type as SubtitleSegment['effect'] extends undefined ? never : NonNullable<SubtitleSegment['effect']>['type'],
+                intensity: planSeg.effect.intensity,
+                direction: planSeg.effect.direction,
+            };
+        }
+
+        // Apply transition
+        if (planSeg.transition) {
+            updated.transition = {
+                type: planSeg.transition.type as NonNullable<SubtitleSegment['transition']>['type'],
+                duration: planSeg.transition.duration || 0.4,
+            };
+        }
+
+        // Apply speed factor
+        if (planSeg.speedFactor && planSeg.speedFactor !== 1) {
+            updated.speedFactor = planSeg.speedFactor;
+        }
+
+        return updated;
+    });
+
+    // Extract color grading from the plan
+    const filters: Partial<VideoFilters> = {};
+    if (plan.colorGrade) {
+        if (plan.colorGrade.brightness !== undefined) filters.brightness = plan.colorGrade.brightness;
+        if (plan.colorGrade.contrast !== undefined) filters.contrast = plan.colorGrade.contrast;
+        if (plan.colorGrade.saturation !== undefined) filters.saturation = plan.colorGrade.saturation;
+        if (plan.colorGrade.temperature !== undefined) filters.temperature = plan.colorGrade.temperature;
+    }
+
+    return { subtitles: updatedSubtitles, filters };
 }
 
