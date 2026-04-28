@@ -4,17 +4,17 @@ import { CUSTOM_APIS } from './apiKeys';
 export type ModelTier = 'free' | 'creator' | 'studio';
 
 export interface AIModel {
-    id: string;        // model ID sent to Lightning AI API
-    label: string;     // display name
-    provider: string;  // provider badge (DeepSeek, OpenAI, etc.)
-    tier: ModelTier;   // minimum tier required
-    badge?: string;    // optional badge like "Fast", "Best"
+    id: string;       // model ID sent to Lightning AI API
+    label: string;    // display name
+    provider: string; // provider badge (DeepSeek, OpenAI, etc.)
+    tier: ModelTier;  // minimum tier required
+    badge?: string;   // optional badge like "Fast", "Best"
 }
 
 export interface TierInfo {
     name: string;
-    price: number;       // $/month
-    color: string;       // accent color
+    price: number;    // $/month
+    color: string;    // accent color
     description: string;
 }
 
@@ -65,7 +65,7 @@ const hardcodedModels: AIModel[] = ([
     { id: 'lightning-ai/llama-3.3-70b', label: 'Llama 3.3 70B', provider: 'Meta', tier: 'free' as ModelTier },
     { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', provider: 'OpenAI', tier: 'free' as ModelTier, badge: 'Fast' },
     { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', provider: 'Google', tier: 'free' as ModelTier },
-
+    
     // ── Creator Tier ($12/mo) ──
     { id: 'lightning-ai/kimi-k2.5', label: 'Kimi K2.5', provider: 'Moonshot', tier: 'creator' as ModelTier },
     { id: 'anthropic/claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'Anthropic', tier: 'creator' as ModelTier, badge: 'Fast' },
@@ -74,7 +74,8 @@ const hardcodedModels: AIModel[] = ([
     { id: 'openai/gpt-5', label: 'GPT-5', provider: 'OpenAI', tier: 'creator' as ModelTier, badge: 'Popular' },
     { id: 'glm-5-nvidia', label: 'GLM-5 NVIDIA', provider: 'Z-AI', tier: 'free' as ModelTier, badge: 'Motion' },
     { id: 'minimax-m2.7', label: 'MiniMax M2.7', provider: 'MiniMax', tier: 'free' as ModelTier, badge: 'Motion' },
-
+    { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'NVIDIA', tier: 'free' as ModelTier, badge: 'Motion' },
+    
     // ── Studio Tier ($29/mo) ──
     { id: 'anthropic/claude-sonnet-4-6', label: 'Claude Sonnet 4.6', provider: 'Anthropic', tier: 'studio' as ModelTier },
     { id: 'openai/gpt-5.2-2025-12-11', label: 'GPT-5.2', provider: 'OpenAI', tier: 'studio' as ModelTier, badge: 'Best' },
@@ -86,7 +87,7 @@ export const AI_MODELS: AIModel[] = [
     ...hardcodedModels,
 ];
 
-export const DEFAULT_MODEL = 'lightning-ai/DeepSeek-V3.1';
+export const DEFAULT_MODEL = 'deepseekpro';
 
 const TIER_ORDER: ModelTier[] = ['free', 'creator', 'studio'];
 

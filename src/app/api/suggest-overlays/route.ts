@@ -180,9 +180,11 @@ AVAILABLE PROFESSIONAL OVERLAY TYPES:
    - Explosion/impact/massive → "explosion-burst"
    - Mountain/climb/challenge → "mountain-peak"
 
-2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE (Use 60% of the time)
+2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE (Use 70% of the time — MOST IMPACTFUL TYPE)
    Creates a cinematic AI-generated image as B-roll. Provide a RICH, DETAILED, CINEMATIC image prompt that captures the MOOD and TONE of the segment.
-   Props: { "caption": "Short label", "imagePrompt": "the detailed prompt" }
+   Props: { "caption": "Short label", "imagePrompt": "the detailed prompt", "displayMode": "fullscreen" }
+   
+   ⚠️ ALWAYS set "displayMode": "fullscreen" — this makes the AI image cover the entire video frame for maximum visual impact (like a professional B-roll cut). Only use "card" if it's a minor supporting visual.
    
    ⚠️ IMAGE PROMPT RULES:
    - Write prompts that evoke the EMOTIONAL MOOD of the segment (dramatic, triumphant, calm, energetic, mysterious, warm, etc.)
@@ -565,7 +567,7 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
         score: scoreSegmentRelevanceServer(seg.text),
     }));
 
-    const maxOverlays = Math.max(2, Math.floor(subtitles.length * 0.30));
+    const maxOverlays = Math.max(3, Math.floor(subtitles.length * 0.45));
     const topSegments = scored
         .filter(s => s.score > 0)
         .sort((a, b) => b.score - a.score)
@@ -573,9 +575,9 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
 
     const overlayIndices = new Set<number>();
     const sortedByIndex = topSegments.sort((a, b) => a.index - b.index);
-    let lastIdx = -3;
+    let lastIdx = -2;
     for (const entry of sortedByIndex) {
-        if (entry.index - lastIdx >= 2) {
+        if (entry.index - lastIdx >= 1) {
             overlayIndices.add(entry.index);
             lastIdx = entry.index;
         }
@@ -645,25 +647,29 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
         const isQuestion = seg.text.includes('?');
         const textLen = seg.text.length;
 
+        // ── Content-driven type selection — HEAVILY favor AI-generated images (most eye-catching) ──
         let chosenType: 'ai-generated-image' | 'visual-illustration' | 'gif-reaction' | 'emoji-reaction';
 
-        if (hasStrongSceneKeyword && (contentHash % 3 !== 0)) {
-            chosenType = 'visual-illustration';
-        } else if (textLen > 40 && !hasEmotionWord && (contentHash % 4 !== 0)) {
+        // 70% AI-generated images, 20% visual-illustrations, 10% other
+        if (hasNumbers || hasVisualNoun || textLen > 30 || hasStrongSceneKeyword) {
+            // Any segment with visual content → AI-generated image (cinematic B-roll)
             chosenType = 'ai-generated-image';
         } else if (hasEmotionWord && !hasNumbers) {
-            chosenType = (contentHash % 2 === 0) ? 'gif-reaction' : 'emoji-reaction';
-        } else if (hasNumbers || hasVisualNoun) {
-            chosenType = (contentHash % 2 === 0) ? 'ai-generated-image' : 'visual-illustration';
+            // Pure emotion segments → gif or visual (but still prefer visual for impact)
+            chosenType = (contentHash % 3 === 0) ? 'gif-reaction' : 'ai-generated-image';
         } else if (isQuestion) {
-            chosenType = 'visual-illustration';
+            chosenType = 'ai-generated-image';
         } else {
-            const pick = contentHash % 10;
-            if (pick < 4) chosenType = 'visual-illustration';
-            else if (pick < 7) chosenType = 'ai-generated-image';
-            else if (pick < 9) chosenType = 'gif-reaction';
+            // Default: 70% AI image, 15% visual-illustration, 10% gif, 5% emoji
+            const pick = contentHash % 20;
+            if (pick < 14) chosenType = 'ai-generated-image';
+            else if (pick < 17) chosenType = 'visual-illustration';
+            else if (pick < 19) chosenType = 'gif-reaction';
             else chosenType = 'emoji-reaction';
         }
+
+        // Determine display mode: fullscreen for maximum impact on most segments
+        const displayMode = (contentHash % 5 === 0) ? 'card' : 'fullscreen';
 
         let overlay: OverlaySuggestion;
 
@@ -678,6 +684,7 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
                         caption: label || seg.text.substring(0, 40),
                         seed: uniqueSeed,
                         imagePrompt: deriveImagePromptFromText(seg.text, topicInfo),
+                        displayMode, // fullscreen for max visual impact
                     },
                 };
                 lastUsedSceneType = 'ai-generated-image';
@@ -743,36 +750,49 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
 
 function scoreSegmentRelevanceServer(text: string): number {
     const lower = text.toLowerCase();
-    if (lower.length < 8) return 0;
+    if (lower.length < 6) return 0;
 
     const fillerPatterns = [
         'thank you for watching', 'like and subscribe', 'please subscribe',
         'see you in the next', 'don\'t forget', 'comment below', 'let me know',
         'that\'s it for', 'alright guys', 'anyway', 'moving on', 'so basically',
+        'um', 'uh', 'like yeah', 'okay so', 'you know',
     ];
     if (fillerPatterns.some(p => lower.includes(p))) return 0;
 
     let score = 0;
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
 
+    // Strong keywords get high scores — these make the BEST motion graphics
     const strongKeywords = new Set([
         'money', 'revenue', 'profit', 'income', 'growth', 'success', 'rocket',
         'brain', 'technology', 'code', 'science', 'power', 'energy', 'fire',
         'earth', 'world', 'mountain', 'ocean', 'celebrate', 'love', 'protect',
         'invest', 'market', 'stock', 'launch', 'explode', 'scale', 'secret',
         'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
+        'business', 'startup', 'company', 'income', 'wealth', 'hustle',
+        'future', 'change', 'revolution', 'breakthrough', 'innovation',
+        'challenge', 'risk', 'opportunity', 'strategy', 'vision', 'impact',
     ]);
     for (const w of words) {
-        if (strongKeywords.has(w)) score += 3;
-        else if (CONTENT_SCENE_MAP[w]) score += 1;
+        if (strongKeywords.has(w)) score += 4;
+        else if (CONTENT_SCENE_MAP[w]) score += 2;
     }
 
-    if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 4;
-    if (text.includes('?')) score += 2;
-    if (text.includes('!')) score += 1;
+    // Numbers/stats = very visual, great for motion graphics
+    if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 5;
+    if (text.includes('?')) score += 3;  // Questions create engagement
+    if (text.includes('!')) score += 2;  // Exclamations = excitement
 
+    // Longer, more meaningful sentences get boosted
     const nonStopWords = words.filter(w => !STOP_WORDS.has(w));
+    if (nonStopWords.length >= 4) score += 2;  // Rich content = better graphics
     if (nonStopWords.length < 2) score -= 2;
+
+    // Boost segments that mention specific topics (great for AI images)
+    if (TOPIC_KEYWORDS['FINANCE/BUSINESS'].some(kw => lower.includes(kw))) score += 2;
+    if (TOPIC_KEYWORDS['TECHNOLOGY/CODING'].some(kw => lower.includes(kw))) score += 2;
+    if (TOPIC_KEYWORDS['GAMING/ENTERTAINMENT'].some(kw => lower.includes(kw))) score += 2;
 
     return Math.max(0, score);
 }
@@ -872,18 +892,25 @@ RULES FOR THE IMAGE PROMPT:
 
 Respond with ONLY the image prompt, nothing else. No quotes, no labels, no markdown.`;
 
-    // Try NVIDIA APIs first (GLM-5 or MiniMax), then fall back to any available LLM
+    // PRIMARY: DeepSeek V4 Pro via ModelScope — best for cinematic motion graphic prompts
+    // Then NVIDIA APIs as fallback, then keyword-based generation
     const llmConfigs = [
+        {
+            name: 'DeepSeek V4 Pro (ModelScope)',
+            baseUrl: 'https://api-inference.modelscope.ai/v1',
+            apiKey: process.env.MODELSCOPE_API_KEY || '',
+            model: 'deepseek-ai/DeepSeek-V4-Pro',
+        },
         { 
             name: 'MiniMax M2.7',
             baseUrl: 'https://integrate.api.nvidia.com/v1',
-            apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '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',
+            apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '',
             model: 'openai/minimaxai/minimax-m2.7',
         },
         {
             name: 'GLM-5',
-            baseUrl: 'https://integrate.api.nvidia.com/v1',
-            apiKey: process.env.NVIDIA_GLM5_API_KEY || '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',
+            baseUrl: 'https://integrate.api.nvidia.io/v1',
+            apiKey: process.env.NVIDIA_GLM5_API_KEY || '',
             model: 'openai/z-ai/glm-5.1',
         },
     ];

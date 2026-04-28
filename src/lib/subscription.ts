@@ -77,11 +77,11 @@ export function getModelForTier(tier: UserTier): string {
             // Best available model
             return 'anthropic/claude-sonnet-4-6';
         case 'pro':
-            // High-quality model
-            return 'lightning-ai/DeepSeek-V3.1';
+            // High-quality model — DeepSeek V4 Pro via ModelScope
+            return 'deepseekpro';
         case 'free':
         default:
-            // Fast, cheaper model for free tier
-            return 'meta-llama/Meta-Llama-3.1-8B-Instruct';
+            // Default: DeepSeek V4 Pro for motion graphics & all AI features
+            return 'deepseekpro';
     }
 }

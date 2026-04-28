@@ -16,9 +16,9 @@ export interface CustomAPIConfig {
 
 // Add your custom API configurations here
 export const CUSTOM_APIS: CustomAPIConfig[] = [
-    // ═══════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     // MODELSCOPE APIS - Added from your config
-    // ═══════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     
     // GLM-5 via ModelScope
     {
@@ -53,16 +53,27 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         authPrefix: 'Bearer',
     },
     
-    // ═══════════════════════════════════════════════════════════════════
+    // DeepSeek V4 Pro via ModelScope (Default for Motion Graphics & All AI Features)
+    {
+        id: 'deepseekpro',
+        name: 'DeepSeek V4 Pro',
+        baseUrl: 'https://api-inference.modelscope.ai/v1',
+        apiKey: process.env.MODELSCOPE_API_KEY || '',
+        model: 'deepseek-ai/DeepSeek-V4-Pro',
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer',
+    },
+    
+    // ═══════════════════════════════════════════════════════════════════════
     // NVIDIA API MODELS — via integrate.api.nvidia.com
-    // ═══════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     
     // GLM-5 via NVIDIA API
     {
         id: 'glm-5-nvidia',
         name: 'GLM-5 NVIDIA',
         baseUrl: 'https://integrate.api.nvidia.com/v1',
-        apiKey: process.env.NVIDIA_GLM5_API_KEY || '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',
+        apiKey: process.env.NVIDIA_GLM5_API_KEY || '',
         model: 'openai/z-ai/glm-5.1',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
@@ -73,15 +84,26 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         id: 'minimax-m2.7',
         name: 'MiniMax M2.7 NVIDIA',
         baseUrl: 'https://integrate.api.nvidia.com/v1',
-        apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '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',
+        apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '',
         model: 'openai/minimaxai/minimax-m2.7',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
     
-    // ═══════════════════════════════════════════════════════════════════
+    // DeepSeek V4 Pro via NVIDIA API (Default for Motion Graphics)
+    {
+        id: 'deepseek-v4-pro',
+        name: 'DeepSeek V4 Pro (NVIDIA)',
+        baseUrl: 'https://integrate.api.nvidia.com/v1',
+        apiKey: process.env.NVIDIA_DEEPSEEK_API_KEY || '',
+        model: 'openai/deepseek-ai/deepseek-v4-pro',
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer',
+    },
+    
+    // ═══════════════════════════════════════════════════════════════════════
     // EXAMPLES - Add more custom APIs below:
-    // ═══════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════
     
     // Example: OpenAI compatible API (like OpenRouter, Together AI, etc.)
     // {
@@ -206,6 +228,7 @@ export const MODEL_PROVIDER_MAP: Record<string, string> = {
     // DeepSeek models
     'lightning-ai/DeepSeek-V3.1': 'deepseek',
     'deepseek/deepseek-v3': 'deepseek',
+    'deepseek-v4-pro': 'custom',
     
     // Lightning AI models
     'lightning-ai/llama-3.3-70b': 'lightning',

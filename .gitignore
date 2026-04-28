@@ -47,6 +47,13 @@ config.yaml
 tmp/
 *.log
 
-
 nul
 .aider*
+
+# Test & debug scripts (may contain hardcoded keys)
+test_modelscope.py
+test-gui-api.mjs
+debug-rogue.ps1
+debug-rogue-v2.ps1
+temp_diff.txt
+scripts/

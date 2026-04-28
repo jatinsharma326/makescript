@@ -474,50 +474,46 @@ function generateLocalEditingPlan(
       const hasNumbers = /\$[\d,.]+|\d+%|\d{3,}/.test(seg.text);
       const isQuestion = seg.text.includes('?');
       const textLen = seg.text.length;
+      const hasStrongSceneKeyword = words.some(w => {
+          const SCENE_KEYWORDS = new Set([
+              'money', 'revenue', 'profit', 'growth', 'success', 'rocket', 'brain',
+              'code', 'science', 'power', 'energy', 'fire', 'earth', 'world',
+              'mountain', 'ocean', 'celebrate', 'love', 'protect', 'invest',
+              'market', 'stock', 'launch', 'explode', 'scale', 'secret',
+              'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
+          ]);
+          return SCENE_KEYWORDS.has(w);
+      });
+
+      // Determine display mode: fullscreen for maximum impact
+      const displayMode = (contentHash % 5 === 0) ? 'card' : 'fullscreen';
 
       let chosenType: 'ai-generated-image' | 'kinetic-text' | 'gif-reaction' | 'emoji-reaction' | 'visual-illustration';
 
-      if (hasStrongSceneKeyword && (contentHash % 3 !== 0)) {
-          chosenType = 'visual-illustration';
-      } else if (textLen > 40 && !hasEmotionWord && (contentHash % 4 !== 0)) {
+      // HEAVILY favor AI-generated images (most eye-catching type)
+      if (hasNumbers || hasVisualNoun || textLen > 30 || hasStrongSceneKeyword) {
           chosenType = 'ai-generated-image';
       } else if (hasEmotionWord && !hasNumbers) {
-          chosenType = (contentHash % 2 === 0) ? 'gif-reaction' : 'emoji-reaction';
-      } else if (hasNumbers || hasVisualNoun) {
-          chosenType = (contentHash % 2 === 0) ? 'ai-generated-image' : 'visual-illustration';
+          chosenType = (contentHash % 3 === 0) ? 'gif-reaction' : 'ai-generated-image';
       } else if (isQuestion) {
-          chosenType = 'kinetic-text';
+          chosenType = 'ai-generated-image';
       } else {
-          const pick = contentHash % 10;
-          if (pick < 3) chosenType = 'visual-illustration';
-          else if (pick < 5) chosenType = 'kinetic-text';
-          else if (pick < 7) chosenType = 'ai-generated-image';
-          else if (pick < 9) chosenType = 'gif-reaction';
+          const pick = contentHash % 20;
+          if (pick < 14) chosenType = 'ai-generated-image';
+          else if (pick < 17) chosenType = 'visual-illustration';
+          else if (pick < 19) chosenType = 'gif-reaction';
           else chosenType = 'emoji-reaction';
       }
 
       if (chosenType === 'ai-generated-image') {
-        // AI-generated image
+        // AI-generated image — most impactful, fullscreen B-roll
         const keyPhrase = extractKeyPhrase(seg.text);
         segment.overlay = {
           type: 'ai-generated-image',
           props: {
-            imagePrompt: `${seg.text.substring(0, 120)}, cinematic, professional, high quality`,
+            imagePrompt: `${seg.text.substring(0, 120)}, cinematic lighting, hyperrealistic, professional color grading, 8k, high detail`,
             caption: keyPhrase,
-          },
-        };
-      } else if (chosenType === 'kinetic-text') {
-        // Kinetic text
-        const styles = ['pop', 'slide', 'bounce'];
-        const positions = ['center', 'top', 'bottom'];
-        segment.overlay = {
-          type: 'kinetic-text',
-          props: {
-            text: extractKeyPhrase(seg.text),
-            color,
-            style: styles[contentHash % styles.length],
-            position: positions[contentHash % positions.length],
-            fontSize: 42,
+            displayMode,
           },
         };
       } else if (chosenType === 'gif-reaction') {
