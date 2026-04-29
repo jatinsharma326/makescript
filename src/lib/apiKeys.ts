@@ -26,7 +26,7 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         name: 'GLM-5 (ModelScope)',
         baseUrl: 'https://api-inference.modelscope.ai/v1',
         apiKey: process.env.MODELSCOPE_API_KEY || '',
-        model: 'zai-org/GLM-5',
+        model: 'zai-org/GLM-5.1',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },

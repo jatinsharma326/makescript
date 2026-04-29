@@ -1026,7 +1026,7 @@ Respond with ONLY the image prompt, nothing else. No quotes, no labels, no markd
         },
         {
             name: 'GLM-5',
-            baseUrl: 'https://integrate.api.nvidia.io/v1',
+            baseUrl: 'https://integrate.api.nvidia.com/v1',
             apiKey: process.env.NVIDIA_GLM5_API_KEY || '',
             model: 'openai/z-ai/glm-5.1',
         },
