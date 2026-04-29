@@ -467,7 +467,7 @@ export default function EditorPage() {
 
         try {
             // ═══ TRY AGENTIC PIPELINE FIRST ═══
-            console.log('[handleGenerateOverlays] Trying agentic editing plan...');
+            console.log('[handleGenerateOverlays] Trying agentic editing plan... model:', selectedModel, 'duration:', state.videoDuration, 'dims:', state.videoWidth, 'x', state.videoHeight, 'analysis:', !!analysis);
             const plan = await requestAgentEditPlan(
                 currentSubtitles,
                 state.videoDuration,

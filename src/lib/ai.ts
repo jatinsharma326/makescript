@@ -555,6 +555,7 @@ export async function suggestOverlaysWithAI(
             console.error('[suggestOverlaysWithAI] Analysis serialization failed, sending request without it:', e);
         }
 
+        console.log('[suggestOverlaysWithAI] >>> Sending request to /api/suggest-overlays, model:', model, 'subtitles:', subtitles.length);
         const response = await fetch('/api/suggest-overlays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -570,6 +571,7 @@ export async function suggestOverlaysWithAI(
             }),
         });
 
+        console.log('[suggestOverlaysWithAI] <<< Response status:', response.status);
         const data = await response.json();
 
         if (data.suggestions && data.suggestions.length > 0) {
@@ -1463,6 +1465,7 @@ export async function requestAgentEditPlan(
             console.error('[AgentEdit] Analysis serialization failed, sending request without it:', e);
         }
 
+        console.log('[AgentEdit] >>> Sending request to /api/agent-edit, model:', model, 'subtitles:', subtitles.length, 'duration:', videoDuration);
         const response = await fetch('/api/agent-edit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1482,17 +1485,18 @@ export async function requestAgentEditPlan(
             }),
         });
 
+        console.log('[AgentEdit] <<< Response status:', response.status);
         const data = await response.json();
 
         if (data.ok && data.editingPlan) {
-            console.log('[AgentEdit] Received editing plan, source:', data.source);
+            console.log('[AgentEdit] Received editing plan, source:', data.source, 'segments:', data.editingPlan?.segments?.length);
             return data.editingPlan as EditingPlan;
         }
 
-        console.warn('[AgentEdit] API returned error:', data.error);
+        console.warn('[AgentEdit] API returned error:', data.error, 'full response:', JSON.stringify(data).substring(0, 300));
         return null;
     } catch (error) {
-        console.error('[AgentEdit] Request failed:', error);
+        console.error('[AgentEdit] Request FAILED with exception:', error);
         return null;
     }
 }
