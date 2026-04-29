@@ -7,6 +7,66 @@ import { getUserSubscription, getModelForTier } from '@/lib/subscription';
 //  Single LLM call → complete editing plan like a pro video editor
 // ═══════════════════════════════════════════════════════════════
 
+const ERNIE_API_BASE = 'https://paddlepaddle-ernie-image.ms.fun';
+
+async function generateErnieImage(prompt: string, seed: number): Promise<string | null> {
+  try {
+    const initiateResponse = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [prompt, '', 1024, 768, seed, 8, 1] }),
+    });
+    if (!initiateResponse.ok) return null;
+
+    const initiateText = await initiateResponse.text();
+    let eventId: string;
+    try {
+      eventId = JSON.parse(initiateText).event_id;
+    } catch {
+      const match = initiateText.match(/"event_id"\s*:\s*"([^"]+)"/);
+      if (!match) return null;
+      eventId = match[1];
+    }
+    if (!eventId) return null;
+
+    await new Promise(r => setTimeout(r, 1200));
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image/${eventId}`, {
+          headers: { Accept: 'text/event-stream' },
+        });
+        if (!res.ok) { await new Promise(r => setTimeout(r, 500)); continue; }
+
+        const text = await res.text();
+        if (text.includes('event: complete')) {
+          const dataMatch = text.match(/data:\s*(\[.*\])/);
+          if (dataMatch) {
+            try {
+              const arr = JSON.parse(dataMatch[1]);
+              if (arr[0]?.url) {
+                const imgRes = await fetch(arr[0].url);
+                if (imgRes.ok) {
+                  const buf = await imgRes.arrayBuffer();
+                  const mime = imgRes.headers.get('content-type') || 'image/webp';
+                  return `data:${mime};base64,${Buffer.from(buf).toString('base64')}`;
+                }
+                return arr[0].url;
+              }
+            } catch { /* ignore */ }
+          }
+        }
+        await new Promise(r => setTimeout(r, 800));
+      } catch { await new Promise(r => setTimeout(r, 500)); }
+    }
+    return null;
+  } catch { return null; }
+}
+
+function generatePollinationsUrl(prompt: string, seed: number): string {
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt}, high quality, professional`)}?width=1024&height=768&nologo=true&seed=${seed}`;
+}
+
 interface VideoAnalysisData {
   overallSentiment: string;
   averageEngagement: number;
@@ -60,8 +120,10 @@ AVAILABLE OVERLAY TYPES (use these exact type names):
 - "ai-generated-image" — AI-generated B-roll image. Props: { "imagePrompt": "detailed visual description for image generation", "caption": "short label" }
 - "gif-reaction" — contextual animated GIF. Props: { "keyword": "search term for GIF", "size": "medium"|"large"|"fullscreen", "position": "center"|"top-right"|"bottom-right" }
 - "emoji-reaction" — pop-up emoji. Props: { "emoji": "🔥", "size": 70 }
-- "visual-illustration" — animated SVG scene. Props: { "scene": "SCENE_NAME", "label": "optional label", "color": "#hex" }
+- "visual-illustration" — animated SVG scene (use SPARINGLY, max 1-2 per video). Props: { "scene": "SCENE_NAME", "label": "optional label", "color": "#hex" }
   Available scenes: solar-system, growth-chart, globe, rocket-launch, brain-idea, connections, clock-time, heartbeat, money-flow, lightning, shopping-cart, celebration, music-notes, book-reading, camera, code-terminal, fire-blaze, water-wave, shield-protect, target-bullseye, explosion-burst, gear-system, energy-pulse, eye-vision, arrow-growth, checkmark-success, diamond-gem, crown-royal, atom-science, mountain-peak
+
+OVERLAY DISTRIBUTION: Use ai-generated-image for 80-90% of overlays. It creates unique, cinematic B-roll that matches the video content. Use kinetic-text for key stats/phrases. Use visual-illustration only when a specific animated diagram truly fits (charts, data). Use gif-reaction and emoji-reaction sparingly for humor.
 
 AVAILABLE EFFECTS (applied to the base video layer):
 - "zoom-in" — gradual scale up (1.0 → intensity). Good for emphasis.
@@ -212,15 +274,52 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
       plan.segments = plan.segments.filter(
         (seg: { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }) => {
           if (!validSegmentIds.has(seg.segmentId)) return false;
-          
           if (seg.overlay?.type === 'ai-generated-image' && seg.overlay.props) {
             delete seg.overlay.props.imageUrl;
             delete seg.overlay.props.seed;
           }
-          
           return true;
         }
       );
+
+      // ═══ PRE-GENERATE AI IMAGES ═══
+      const imageTasks: { idx: number; prompt: string; seed: number }[] = [];
+      for (let i = 0; i < plan.segments.length; i++) {
+        const seg = plan.segments[i] as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } };
+        if (seg.overlay?.type === 'ai-generated-image') {
+          const prompt = String(seg.overlay.props?.imagePrompt || '');
+          const hash = Math.abs(seg.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
+          imageTasks.push({ idx: i, prompt, seed: hash % 1000000 });
+        }
+      }
+
+      if (imageTasks.length > 0) {
+        console.log(`[AgentEdit] Pre-generating ${imageTasks.length} AI images...`);
+        const results = await Promise.allSettled(
+          imageTasks.map(async (task) => {
+            try {
+              const url = await Promise.race([
+                generateErnieImage(task.prompt, task.seed),
+                new Promise<string | null>((_, rej) => setTimeout(() => rej(new Error('Timeout')), 8000)),
+              ]);
+              if (url) return { idx: task.idx, imageUrl: url };
+            } catch { /* fallback */ }
+            return { idx: task.idx, imageUrl: generatePollinationsUrl(task.prompt, task.seed) };
+          })
+        );
+
+        for (const r of results) {
+          if (r.status === 'fulfilled' && r.value.imageUrl) {
+            const seg = plan.segments[r.value.idx] as { overlay?: { props?: Record<string, unknown> } };
+            if (seg.overlay) {
+              seg.overlay.props = { ...seg.overlay.props, imageUrl: r.value.imageUrl };
+            }
+          }
+        }
+
+        const base64Count = results.filter(r => r.status === 'fulfilled' && r.value.imageUrl?.startsWith('data:')).length;
+        console.log(`[AgentEdit] Images: ${base64Count}/${imageTasks.length} as base64, rest as Pollinations URLs`);
+      }
 
       console.log('[AgentEdit] Success! Plan has', plan.segments.length, 'segment edits, mood:', plan.mood);
       return NextResponse.json({ ok: true, editingPlan: plan, source: 'ai' });

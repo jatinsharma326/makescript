@@ -43,6 +43,63 @@ interface OverlaySuggestion {
     props: Record<string, unknown>;
 }
 
+const ERNIE_API_BASE = 'https://paddlepaddle-ernie-image.ms.fun';
+
+async function generateErnieImage(prompt: string, seed: number): Promise<string | null> {
+    try {
+        const initRes = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: [prompt, '', 1024, 768, seed, 8, 1] }),
+        });
+        if (!initRes.ok) return null;
+
+        const initText = await initRes.text();
+        let eventId: string;
+        try { eventId = JSON.parse(initText).event_id; } catch {
+            const m = initText.match(/"event_id"\s*:\s*"([^"]+)"/);
+            if (!m) return null;
+            eventId = m[1];
+        }
+        if (!eventId) return null;
+
+        await new Promise(r => setTimeout(r, 1200));
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const res = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image/${eventId}`, {
+                    headers: { Accept: 'text/event-stream' },
+                });
+                if (!res.ok) { await new Promise(r => setTimeout(r, 500)); continue; }
+                const text = await res.text();
+                if (text.includes('event: complete')) {
+                    const dm = text.match(/data:\s*(\[.*\])/);
+                    if (dm) {
+                        try {
+                            const arr = JSON.parse(dm[1]);
+                            if (arr[0]?.url) {
+                                const imgRes = await fetch(arr[0].url);
+                                if (imgRes.ok) {
+                                    const buf = await imgRes.arrayBuffer();
+                                    const mime = imgRes.headers.get('content-type') || 'image/webp';
+                                    return `data:${mime};base64,${Buffer.from(buf).toString('base64')}`;
+                                }
+                                return arr[0].url;
+                            }
+                        } catch { /* ignore */ }
+                    }
+                }
+                await new Promise(r => setTimeout(r, 800));
+            } catch { await new Promise(r => setTimeout(r, 500)); }
+        }
+        return null;
+    } catch { return null; }
+}
+
+function generatePollinationsUrlForSuggestion(prompt: string, seed: number): string {
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt}, high quality, professional`)}?width=1024&height=768&nologo=true&seed=${seed}`;
+}
+
 // Detect overall video topic from full transcript for context-aware matching
 const TOPIC_KEYWORDS: Record<string, string[]> = {
     'GAMING/ENTERTAINMENT': ['game', 'play', 'player', 'nintendo', 'pokemon', 'xbox', 'playstation', 'level', 'boss', 'quest', 'character', 'multiplayer', 'console', 'controller', 'gamer', 'stream', 'twitch', 'esport', 'mod', 'cheat', 'glitch', 'speedrun', 'lore', 'dex', 'generation', 'roblox', 'minecraft', 'fortnite', 'blox', 'obby', 'simulator', 'tycoon', 'raid', 'skin', 'avatar', 'npc', 'mob', 'spawn', 'lobby', 'server', 'craft', 'build', 'survival', 'creative', 'battle', 'royale', 'shoot', 'fps', 'mmorpg', 'rpg', 'adventure', 'sandbox', 'pixel', 'block', 'cube', 'virtual', 'world', 'gameplay', 'gaming'],
@@ -190,7 +247,7 @@ ${moodSection}
 
 AVAILABLE PROFESSIONAL OVERLAY TYPES:
 
-1. "visual-illustration" — PRE-BUILT PROFESSIONAL ANIMATED SCENE (Use 20% of the time)
+1. "visual-illustration" — PRE-BUILT ANIMATED SCENE (Use SPARINGLY — max 1-2 per video, only when a specific diagram truly fits like charts or data)
    This renders a stunning pre-built animated SVG scene. You just pick the right scene name.
    Available scenes: solar-system, growth-chart, globe, rocket-launch, brain-idea, connections, clock-time, heartbeat, money-flow, lightning, shopping-cart, cooking, nature-tree, city-skyline, person-walking, celebration, music-notes, book-reading, camera, code-terminal, fire-blaze, water-wave, shield-protect, target-bullseye, explosion-burst, magnet-attract, gear-system, energy-pulse, eye-vision, arrow-growth, checkmark-success, diamond-gem, crown-royal, atom-science, mountain-peak
    Props: { "scene": "scene-name-from-list", "label": "Key phrase from segment", "color": "#6366f1", "transition": "fade-in" }
@@ -215,7 +272,7 @@ AVAILABLE PROFESSIONAL OVERLAY TYPES:
    - Explosion/impact/massive → "explosion-burst"
    - Mountain/climb/challenge → "mountain-peak"
 
-2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE (Use 70% of the time — MOST IMPACTFUL TYPE)
+2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE (Use 85-90% of the time — THIS IS YOUR PRIMARY TOOL. Creates unique cinematic images matching the video content)
    Creates a cinematic AI-generated image as B-roll. Provide a RICH, DETAILED, CINEMATIC image prompt that captures the MOOD and TONE of the segment.
    Props: { "caption": "Short label", "imagePrompt": "the detailed prompt", "displayMode": "fullscreen" }
    
@@ -238,10 +295,10 @@ AVAILABLE PROFESSIONAL OVERLAY TYPES:
    - "Close-up of weathered hands typing code on a backlit mechanical keyboard, neon blue reflections dancing on the keys, shallow depth of field, cyberpunk atmosphere, volumetric fog, moody lighting"
    - "A lone explorer standing atop a mountain peak at sunrise, arms raised in triumph, golden sun rays bursting through dramatic clouds, inspirational adventure photography, 8k, National Geographic style"
 
-3. "gif-reaction" — CONTEXTUAL GIF REACTION (Use 10% of the time)
+3. "gif-reaction" — CONTEXTUAL GIF REACTION (Use 5% of the time, for humor only)
    Props: { "keyword": "search term from segment", "size": "large", "position": "center" }
 
-4. "emoji-reaction" — SUBTLE EMOJI (Use 5% of the time, only for casual moments)
+4. "emoji-reaction" — SUBTLE EMOJI (Use max 1 per video, only for very casual moments)
    Props: { "emoji": "🔥", "size": 70 }
 
 ⚠️ MANDATORY RULES FOR PROFESSIONAL RESULTS:
@@ -374,19 +431,44 @@ Return ONLY a JSON array. No markdown, no explanation:
                             s.props.text = extractLabelFromText(origSeg.text);
                         }
                         if (s.type === 'ai-generated-image') {
-                            if (s.props.imageUrl) {
-                                // Strip out hallucinated imageUrls so the client generates a fresh one
-                                // based on the imagePrompt or segment text.
-                                delete s.props.imageUrl;
-                            }
-                            if (s.props.seed !== undefined) {
-                                // Strip out hallucinated seeds to ensure we generate a truly unique seed
-                                // per segment based on the segment ID.
-                                delete s.props.seed;
-                            }
+                            delete s.props.imageUrl;
+                            delete s.props.seed;
                         }
                         return s;
                     });
+
+                // ═══ PRE-GENERATE AI IMAGES ═══
+                const imgTasks = validatedSuggestions
+                    .map((s, i) => ({ s, i }))
+                    .filter(({ s }) => s.type === 'ai-generated-image');
+
+                if (imgTasks.length > 0) {
+                    console.log(`[AI Suggest] Pre-generating ${imgTasks.length} AI images...`);
+                    const imgResults = await Promise.allSettled(
+                        imgTasks.map(async ({ s, i }) => {
+                            const prompt = String(s.props.imagePrompt || '');
+                            const hash = Math.abs(s.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
+                            const seed = hash % 1000000;
+                            try {
+                                const url = await Promise.race([
+                                    generateErnieImage(prompt, seed),
+                                    new Promise<string | null>((_, rej) => setTimeout(() => rej(new Error('Timeout')), 8000)),
+                                ]);
+                                if (url) return { idx: i, imageUrl: url };
+                            } catch { /* fallback */ }
+                            return { idx: i, imageUrl: generatePollinationsUrlForSuggestion(prompt, seed) };
+                        })
+                    );
+
+                    for (const r of imgResults) {
+                        if (r.status === 'fulfilled' && r.value.imageUrl) {
+                            validatedSuggestions[r.value.idx].props.imageUrl = r.value.imageUrl;
+                        }
+                    }
+
+                    const b64 = imgResults.filter(r => r.status === 'fulfilled' && r.value.imageUrl?.startsWith('data:')).length;
+                    console.log(`[AI Suggest] Images: ${b64}/${imgTasks.length} as base64`);
+                }
 
                 console.log(`[AI Suggest] Success with ${modelInfo.name} - ${validatedSuggestions.length} motion graphics`);
                 return validatedSuggestions;
