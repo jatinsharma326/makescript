@@ -4,6 +4,8 @@
 // Now supports AI-generated images based on script content analysis
 
 import { SubtitleSegment, OverlayConfig, EditingPlan, VideoFilters } from './types';
+import type { VideoAnalysisResult } from './aiAnalysis';
+import { analyzeAllSentiments, calculateAllEngagementScores } from './aiAnalysis';
 
 // Enhanced scene descriptors for generating dynamic prompts
 const SCENE_DESCRIPTORS: { concept: string; promptTemplate: string; style: string }[] = [
@@ -492,6 +494,49 @@ function generateAIImageUrl(prompt: string, seed: number): string {
     return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true&seed=${seed}`;
 }
 
+function serializeAnalysis(analysis: VideoAnalysisResult) {
+    return {
+        overallSentiment: analysis.overallSentiment,
+        averageEngagement: analysis.averageEngagement,
+        moodProfile: {
+            primary: analysis.moodProfile.primary,
+            secondary: analysis.moodProfile.secondary,
+            energyLevel: analysis.moodProfile.energyLevel,
+            tempo: analysis.moodProfile.tempo,
+            colorPalette: analysis.moodProfile.colorPalette,
+        },
+        peakMomentIds: analysis.peakMoments.map(s => s.id),
+        hookSegmentIds: analysis.hookSegments.map(s => s.id),
+        segmentAnalysis: [] as { id: string; sentiment: string; engagement: number; isPeak: boolean }[],
+        suggestedCuts: analysis.suggestedCuts.map(c => ({
+            segmentId: c.segmentId,
+            type: c.type,
+            reason: c.reason,
+        })),
+    };
+}
+
+export function buildAnalysisPayload(analysis: VideoAnalysisResult, subtitles: SubtitleSegment[]) {
+    const base = serializeAnalysis(analysis);
+    const peakSet = new Set(base.peakMomentIds);
+
+    const sentiments = analyzeAllSentiments(subtitles);
+    const engagements = calculateAllEngagementScores(subtitles);
+
+    base.segmentAnalysis = subtitles.map(s => {
+        const sent = sentiments.find(r => r.segmentId === s.id);
+        const eng = engagements.find(r => r.segmentId === s.id);
+        return {
+            id: s.id,
+            sentiment: sent?.sentiment || 'neutral',
+            engagement: eng?.score ? Math.round(eng.score) : Math.round(base.averageEngagement),
+            isPeak: peakSet.has(s.id),
+        };
+    });
+
+    return base;
+}
+
 /**
  * Suggest overlays using DeepSeek V3.1 AI via the server-side API route.
  * Falls back to local dynamic prompt generation if the API is unavailable.
@@ -499,7 +544,8 @@ function generateAIImageUrl(prompt: string, seed: number): string {
  */
 export async function suggestOverlaysWithAI(
     subtitles: SubtitleSegment[],
-    model?: string
+    model?: string,
+    analysis?: VideoAnalysisResult,
 ): Promise<SubtitleSegment[]> {
     try {
         const response = await fetch('/api/suggest-overlays', {
@@ -513,6 +559,7 @@ export async function suggestOverlaysWithAI(
                     text: s.text,
                 })),
                 model,
+                videoAnalysis: analysis ? buildAnalysisPayload(analysis, subtitles) : undefined,
             }),
         });
 
@@ -1399,6 +1446,7 @@ export async function requestAgentEditPlan(
     videoHeight?: number,
     editingStyle?: string,
     model?: string,
+    analysis?: VideoAnalysisResult,
 ): Promise<EditingPlan | null> {
     try {
         const response = await fetch('/api/agent-edit', {
@@ -1416,6 +1464,7 @@ export async function requestAgentEditPlan(
                 videoHeight: videoHeight || 1080,
                 editingStyle: editingStyle || 'auto',
                 model,
+                videoAnalysis: analysis ? buildAnalysisPayload(analysis, subtitles) : undefined,
             }),
         });
 

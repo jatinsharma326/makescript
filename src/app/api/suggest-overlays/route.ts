@@ -113,9 +113,26 @@ function detectVideoTopicDetailed(fullText: string): { primaryTopic: string; mat
     };
 }
 
+interface VideoAnalysisInput {
+    overallSentiment?: string;
+    averageEngagement?: number;
+    moodProfile?: {
+        primary: string;
+        energyLevel: number;
+        tempo: string;
+        colorPalette: string[];
+    };
+    peakMomentIds?: string[];
+    segmentAnalysis?: { id: string; sentiment: string; engagement: number; isPeak: boolean }[];
+}
+
 export async function POST(request: NextRequest) {
     try {
-        const { subtitles, model } = (await request.json()) as { subtitles: SubtitleInput[]; model?: string };
+        const { subtitles, model, videoAnalysis } = (await request.json()) as {
+            subtitles: SubtitleInput[];
+            model?: string;
+            videoAnalysis?: VideoAnalysisInput;
+        };
 
         if (!subtitles || subtitles.length === 0) {
             return NextResponse.json({ suggestions: [] });
@@ -124,7 +141,7 @@ export async function POST(request: NextRequest) {
         const sub = await getUserSubscription();
         const activeModel = model || getModelForTier(sub.tier);
 
-        const suggestions = await suggestWithAI(subtitles, activeModel);
+        const suggestions = await suggestWithAI(subtitles, activeModel, videoAnalysis);
         return NextResponse.json({ suggestions });
     } catch (error) {
         console.error('Overlay suggestion error:', error);
@@ -132,16 +149,33 @@ export async function POST(request: NextRequest) {
     }
 }
 
-async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string): Promise<OverlaySuggestion[]> {
+async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string, videoAnalysis?: VideoAnalysisInput): Promise<OverlaySuggestion[]> {
     const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    
+
     const subtitleList = subtitles
-        .map((s) => `[${s.id}] "${s.text}" (${s.startTime}s - ${s.endTime}s)`)
+        .map((s) => {
+            const sa = videoAnalysis?.segmentAnalysis?.find(a => a.id === s.id);
+            const annotation = sa ? ` [${sa.sentiment}, eng:${sa.engagement}${sa.isPeak ? ', PEAK' : ''}]` : '';
+            return `[${s.id}] "${s.text}" (${s.startTime}s - ${s.endTime}s)${annotation}`;
+        })
         .join('\n');
 
     const fullTranscript = subtitles.map(s => s.text).join(' ').toLowerCase();
     const videoTopic = detectVideoTopic(fullTranscript);
-    
+
+    let moodSection = '';
+    if (videoAnalysis?.moodProfile) {
+        const mp = videoAnalysis.moodProfile;
+        moodSection = `
+VIDEO MOOD & ANALYSIS:
+- Mood: ${mp.primary} | Energy: ${mp.energyLevel}/10 | Tempo: ${mp.tempo}
+- Sentiment: ${videoAnalysis.overallSentiment} | Avg engagement: ${Math.round(videoAnalysis.averageEngagement || 0)}%
+- Color palette (USE THESE for overlay colors): ${mp.colorPalette.join(', ')}
+- Peak moments (give BEST overlays to these): ${videoAnalysis.peakMomentIds?.join(', ') || 'none'}
+- MATCH visual tone to mood: ${mp.primary === 'dramatic' || mp.primary === 'emotional' ? 'moody cinematic lighting, dark tones, dramatic shadows' : mp.primary === 'energetic' || mp.primary === 'entertaining' ? 'bright vibrant scenes, dynamic angles, bold colors' : mp.primary === 'calm' || mp.primary === 'informative' ? 'soft natural lighting, clean compositions, muted tones' : 'professional cinematic style'}
+`;
+    }
+
     const segmentContexts = subtitles.map(s => {
         const hash = Math.abs(s.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
         return `${s.id}:uniqueSeed=${hash}`;
@@ -152,6 +186,7 @@ async function suggestWithAI(subtitles: SubtitleInput[], requestedModel?: string
 ⚠️ CRITICAL: Session ID ${sessionId} — Generate FRESH content for THIS video only.
 
 VIDEO TOPIC CONTEXT: ${videoTopic}
+${moodSection}
 
 AVAILABLE PROFESSIONAL OVERLAY TYPES:
 

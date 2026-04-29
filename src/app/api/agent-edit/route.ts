@@ -7,6 +7,27 @@ import { getUserSubscription, getModelForTier } from '@/lib/subscription';
 //  Single LLM call → complete editing plan like a pro video editor
 // ═══════════════════════════════════════════════════════════════
 
+interface VideoAnalysisData {
+  overallSentiment: string;
+  averageEngagement: number;
+  moodProfile: {
+    primary: string;
+    secondary: string[];
+    energyLevel: number;
+    tempo: string;
+    colorPalette: string[];
+  };
+  peakMomentIds: string[];
+  hookSegmentIds: string[];
+  segmentAnalysis: {
+    id: string;
+    sentiment: string;
+    engagement: number;
+    isPeak: boolean;
+  }[];
+  suggestedCuts: { segmentId: string; type: string; reason: string }[];
+}
+
 interface AgentEditRequest {
   subtitles: {
     id: string;
@@ -19,6 +40,7 @@ interface AgentEditRequest {
   videoHeight?: number;
   editingStyle?: 'youtube' | 'tiktok' | 'documentary' | 'cinematic' | 'auto';
   model?: string;
+  videoAnalysis?: VideoAnalysisData;
 }
 
 const SYSTEM_PROMPT = `You are a world-class professional video editor with 15 years of experience editing for top YouTube creators, Netflix documentaries, and TikTok viral content. You are given a video's full transcript with timestamps. Your job is to create a COMPLETE editing plan that turns a raw talking-head video into a polished, engaging final cut.
@@ -55,6 +77,15 @@ AVAILABLE TRANSITIONS (between segments at topic changes):
 - "wipe" — horizontal wipe
 - "zoom" — zoom transition
 
+USING VIDEO ANALYSIS DATA (when provided):
+- The VIDEO ANALYSIS section contains mood, energy level, color palette, per-segment sentiment/engagement, and peak moments
+- USE THE COLOR PALETTE from the mood profile for kinetic-text colors, overlay accents, and to inform the colorGrade
+- PUT YOUR BEST OVERLAYS on PEAK MOMENT segments — these are the highest-impact moments the audience will remember
+- MATCH THE ENERGY: high energy (7-10) = more zoom effects, dynamic overlays, faster pacing. Low energy (1-4) = subtle ken-burns, minimal overlays, calm visual-illustrations
+- SPEED UP segments flagged as filler/pause in suggested cuts
+- For HOOK segments, use attention-grabbing overlays (kinetic-text with bold style, zoom-in effects)
+- Match imagePrompt visual tone to the mood: dark/dramatic mood = moody cinematic lighting, energetic mood = bright vibrant scenes, calm mood = soft natural scenes
+
 RULES:
 1. Overlay 40-60% of segments — leave breathing room
 2. Never overlay consecutive segments — always have at least 1 gap
@@ -62,8 +93,8 @@ RULES:
 4. Effects should cover 20-30% of segments
 5. Speed up filler segments (ums, pauses, repetitive content) with speedFactor 1.3-2.0
 6. Do NOT cut segments unless they are completely empty/silence
-7. Use professional color palettes: #6366f1, #8b5cf6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899, #3b82f6
-8. imagePrompt should be vivid and specific — describe the EXACT scene you want generated
+7. PREFER colors from the mood palette when provided — fall back to: #6366f1, #8b5cf6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899, #3b82f6
+8. imagePrompt should be vivid and specific — describe the EXACT scene you want generated, matching the video's mood and visual tone
 
 Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
 {
@@ -92,15 +123,21 @@ Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
 export async function POST(request: NextRequest) {
   try {
     const body: AgentEditRequest = await request.json();
-    const { subtitles, videoDuration, videoWidth, videoHeight, editingStyle, model } = body;
+    const { subtitles, videoDuration, videoWidth, videoHeight, editingStyle, model, videoAnalysis } = body;
 
     if (!subtitles || subtitles.length === 0) {
       return NextResponse.json({ ok: false, error: 'No subtitles provided' }, { status: 400 });
     }
 
-    // Build the transcript for the LLM
+    // Build the transcript with per-segment analysis annotations
     const transcriptText = subtitles
-      .map(s => `[${s.id}] (${s.startTime.toFixed(1)}s - ${s.endTime.toFixed(1)}s) "${s.text}"`)
+      .map(s => {
+        const analysis = videoAnalysis?.segmentAnalysis?.find(a => a.id === s.id);
+        const annotations = analysis
+          ? ` [${analysis.sentiment}, engagement:${analysis.engagement}${analysis.isPeak ? ', PEAK' : ''}]`
+          : '';
+        return `[${s.id}] (${s.startTime.toFixed(1)}s - ${s.endTime.toFixed(1)}s) "${s.text}"${annotations}`;
+      })
       .join('\n');
 
     const videoInfo = [
@@ -110,11 +147,26 @@ export async function POST(request: NextRequest) {
       `Style preference: ${editingStyle || 'auto (pick the best style based on content)'}`,
     ].join('\n');
 
+    let analysisSection = '';
+    if (videoAnalysis) {
+      const mp = videoAnalysis.moodProfile;
+      analysisSection = `
+VIDEO ANALYSIS:
+Mood: ${mp.primary} (energy: ${mp.energyLevel}/10, tempo: ${mp.tempo})
+Overall sentiment: ${videoAnalysis.overallSentiment}
+Average engagement: ${Math.round(videoAnalysis.averageEngagement)}%
+Color palette (USE THESE): ${mp.colorPalette.join(', ')}
+Peak moments (give best overlays): ${videoAnalysis.peakMomentIds.join(', ') || 'none detected'}
+Hook segments (attention-grabbers): ${videoAnalysis.hookSegmentIds.join(', ') || 'none detected'}
+Filler to speed up: ${videoAnalysis.suggestedCuts.map(c => `${c.segmentId} (${c.type})`).join(', ') || 'none'}
+`;
+    }
+
     const userPrompt = `Here is the video's full transcript. Create a complete editing plan.
 
 VIDEO INFO:
 ${videoInfo}
-
+${analysisSection}
 FULL TRANSCRIPT:
 ${transcriptText}
 

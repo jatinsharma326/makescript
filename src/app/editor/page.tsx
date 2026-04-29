@@ -18,6 +18,7 @@ import {
 } from '../../lib/types';
 import { transcribeVideo, generateMockTranscript } from '../../lib/transcribe';
 import { suggestOverlaysWithAI, generateDynamicOverlays as autoSuggestOverlays, requestAgentEditPlan, applyEditingPlan } from '../../lib/ai';
+import { analyzeFullVideo } from '../../lib/aiAnalysis';
 import { AI_MODELS, DEFAULT_MODEL, TIERS, getModelsForTier, isModelAccessible, type ModelTier, type AIModel } from '../../lib/models';
 import {
     saveProject,
@@ -452,7 +453,12 @@ export default function EditorPage() {
 
         updateState({ isGenerating: true });
         setProcessingStep('generating');
-        toast('🤖 AI Agent creating full editing plan...', 'info');
+        toast('🤖 AI Agent analyzing video and creating editing plan...', 'info');
+
+        // Run video analysis first — local, fast, no API calls
+        const analysis = analyzeFullVideo(currentSubtitles);
+        console.log('[handleGenerateOverlays] Video analysis:', analysis.moodProfile.primary,
+            'energy:', analysis.moodProfile.energyLevel, 'palette:', analysis.moodProfile.colorPalette);
 
         try {
             // ═══ TRY AGENTIC PIPELINE FIRST ═══
@@ -464,6 +470,7 @@ export default function EditorPage() {
                 state.videoHeight,
                 'auto',
                 selectedModel,
+                analysis,
             );
 
             if (plan && plan.segments && plan.segments.length > 0) {
@@ -504,7 +511,7 @@ export default function EditorPage() {
             console.log('[handleGenerateOverlays] Agent plan failed, falling back to overlay-only pipeline');
             toast('Generating dynamic overlays...', 'info');
 
-            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel);
+            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel, analysis);
             const overlaysCount = newSubtitles.filter(s => s.overlay).length;
 
             if (overlaysCount === 0 && newSubtitles.length > 0) {
