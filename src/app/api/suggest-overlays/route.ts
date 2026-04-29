@@ -43,59 +43,6 @@ interface OverlaySuggestion {
     props: Record<string, unknown>;
 }
 
-const ERNIE_API_BASE = 'https://paddlepaddle-ernie-image.ms.fun';
-
-async function generateErnieImage(prompt: string, seed: number): Promise<string | null> {
-    try {
-        const initRes = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: [prompt, '', 1024, 768, seed, 8, 1] }),
-        });
-        if (!initRes.ok) return null;
-
-        const initText = await initRes.text();
-        let eventId: string;
-        try { eventId = JSON.parse(initText).event_id; } catch {
-            const m = initText.match(/"event_id"\s*:\s*"([^"]+)"/);
-            if (!m) return null;
-            eventId = m[1];
-        }
-        if (!eventId) return null;
-
-        await new Promise(r => setTimeout(r, 1200));
-
-        for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-                const res = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image/${eventId}`, {
-                    headers: { Accept: 'text/event-stream' },
-                });
-                if (!res.ok) { await new Promise(r => setTimeout(r, 500)); continue; }
-                const text = await res.text();
-                if (text.includes('event: complete')) {
-                    const dm = text.match(/data:\s*(\[.*\])/);
-                    if (dm) {
-                        try {
-                            const arr = JSON.parse(dm[1]);
-                            if (arr[0]?.url) {
-                                const imgRes = await fetch(arr[0].url);
-                                if (imgRes.ok) {
-                                    const buf = await imgRes.arrayBuffer();
-                                    const mime = imgRes.headers.get('content-type') || 'image/webp';
-                                    return `data:${mime};base64,${Buffer.from(buf).toString('base64')}`;
-                                }
-                                return arr[0].url;
-                            }
-                        } catch { /* ignore */ }
-                    }
-                }
-                await new Promise(r => setTimeout(r, 800));
-            } catch { await new Promise(r => setTimeout(r, 500)); }
-        }
-        return null;
-    } catch { return null; }
-}
-
 function generatePollinationsUrlForSuggestion(prompt: string, seed: number): string {
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt}, high quality, professional`)}?width=1024&height=768&nologo=true&seed=${seed}`;
 }
@@ -437,37 +384,15 @@ Return ONLY a JSON array. No markdown, no explanation:
                         return s;
                     });
 
-                // ═══ PRE-GENERATE AI IMAGES ═══
-                const imgTasks = validatedSuggestions
-                    .map((s, i) => ({ s, i }))
-                    .filter(({ s }) => s.type === 'ai-generated-image');
-
-                if (imgTasks.length > 0) {
-                    console.log(`[AI Suggest] Pre-generating ${imgTasks.length} AI images...`);
-                    const imgResults = await Promise.allSettled(
-                        imgTasks.map(async ({ s, i }) => {
-                            const prompt = String(s.props.imagePrompt || '');
-                            const hash = Math.abs(s.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
-                            const seed = hash % 1000000;
-                            try {
-                                const url = await Promise.race([
-                                    generateErnieImage(prompt, seed),
-                                    new Promise<string | null>((_, rej) => setTimeout(() => rej(new Error('Timeout')), 8000)),
-                                ]);
-                                if (url) return { idx: i, imageUrl: url };
-                            } catch { /* fallback */ }
-                            return { idx: i, imageUrl: generatePollinationsUrlForSuggestion(prompt, seed) };
-                        })
-                    );
-
-                    for (const r of imgResults) {
-                        if (r.status === 'fulfilled' && r.value.imageUrl) {
-                            validatedSuggestions[r.value.idx].props.imageUrl = r.value.imageUrl;
-                        }
+                // ═══ ASSIGN IMAGE URLs ═══
+                // Use Pollinations URLs (instant, keeps response small for Vercel).
+                // Images load when the player renders them.
+                for (const s of validatedSuggestions) {
+                    if (s.type === 'ai-generated-image') {
+                        const prompt = String(s.props.imagePrompt || '');
+                        const hash = Math.abs(s.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
+                        s.props.imageUrl = generatePollinationsUrlForSuggestion(prompt, hash % 1000000);
                     }
-
-                    const b64 = imgResults.filter(r => r.status === 'fulfilled' && r.value.imageUrl?.startsWith('data:')).length;
-                    console.log(`[AI Suggest] Images: ${b64}/${imgTasks.length} as base64`);
                 }
 
                 console.log(`[AI Suggest] Success with ${modelInfo.name} - ${validatedSuggestions.length} motion graphics`);

@@ -7,62 +7,6 @@ import { getUserSubscription, getModelForTier } from '@/lib/subscription';
 //  Single LLM call → complete editing plan like a pro video editor
 // ═══════════════════════════════════════════════════════════════
 
-const ERNIE_API_BASE = 'https://paddlepaddle-ernie-image.ms.fun';
-
-async function generateErnieImage(prompt: string, seed: number): Promise<string | null> {
-  try {
-    const initiateResponse = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: [prompt, '', 1024, 768, seed, 8, 1] }),
-    });
-    if (!initiateResponse.ok) return null;
-
-    const initiateText = await initiateResponse.text();
-    let eventId: string;
-    try {
-      eventId = JSON.parse(initiateText).event_id;
-    } catch {
-      const match = initiateText.match(/"event_id"\s*:\s*"([^"]+)"/);
-      if (!match) return null;
-      eventId = match[1];
-    }
-    if (!eventId) return null;
-
-    await new Promise(r => setTimeout(r, 1200));
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const res = await fetch(`${ERNIE_API_BASE}/gradio_api/call/generate_image/${eventId}`, {
-          headers: { Accept: 'text/event-stream' },
-        });
-        if (!res.ok) { await new Promise(r => setTimeout(r, 500)); continue; }
-
-        const text = await res.text();
-        if (text.includes('event: complete')) {
-          const dataMatch = text.match(/data:\s*(\[.*\])/);
-          if (dataMatch) {
-            try {
-              const arr = JSON.parse(dataMatch[1]);
-              if (arr[0]?.url) {
-                const imgRes = await fetch(arr[0].url);
-                if (imgRes.ok) {
-                  const buf = await imgRes.arrayBuffer();
-                  const mime = imgRes.headers.get('content-type') || 'image/webp';
-                  return `data:${mime};base64,${Buffer.from(buf).toString('base64')}`;
-                }
-                return arr[0].url;
-              }
-            } catch { /* ignore */ }
-          }
-        }
-        await new Promise(r => setTimeout(r, 800));
-      } catch { await new Promise(r => setTimeout(r, 500)); }
-    }
-    return null;
-  } catch { return null; }
-}
-
 function generatePollinationsUrl(prompt: string, seed: number): string {
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt}, high quality, professional`)}?width=1024&height=768&nologo=true&seed=${seed}`;
 }
@@ -282,43 +226,19 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
         }
       );
 
-      // ═══ PRE-GENERATE AI IMAGES ═══
-      const imageTasks: { idx: number; prompt: string; seed: number }[] = [];
-      for (let i = 0; i < plan.segments.length; i++) {
-        const seg = plan.segments[i] as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } };
+      // ═══ ASSIGN IMAGE URLs ═══
+      // Use Pollinations URLs (instant, no API call, small response) so the
+      // serverless function returns quickly. Images load when the player renders.
+      for (const seg of plan.segments as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }[]) {
         if (seg.overlay?.type === 'ai-generated-image') {
           const prompt = String(seg.overlay.props?.imagePrompt || '');
           const hash = Math.abs(seg.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
-          imageTasks.push({ idx: i, prompt, seed: hash % 1000000 });
+          const seed = hash % 1000000;
+          seg.overlay.props = {
+            ...seg.overlay.props,
+            imageUrl: generatePollinationsUrl(prompt, seed),
+          };
         }
-      }
-
-      if (imageTasks.length > 0) {
-        console.log(`[AgentEdit] Pre-generating ${imageTasks.length} AI images...`);
-        const results = await Promise.allSettled(
-          imageTasks.map(async (task) => {
-            try {
-              const url = await Promise.race([
-                generateErnieImage(task.prompt, task.seed),
-                new Promise<string | null>((_, rej) => setTimeout(() => rej(new Error('Timeout')), 8000)),
-              ]);
-              if (url) return { idx: task.idx, imageUrl: url };
-            } catch { /* fallback */ }
-            return { idx: task.idx, imageUrl: generatePollinationsUrl(task.prompt, task.seed) };
-          })
-        );
-
-        for (const r of results) {
-          if (r.status === 'fulfilled' && r.value.imageUrl) {
-            const seg = plan.segments[r.value.idx] as { overlay?: { props?: Record<string, unknown> } };
-            if (seg.overlay) {
-              seg.overlay.props = { ...seg.overlay.props, imageUrl: r.value.imageUrl };
-            }
-          }
-        }
-
-        const base64Count = results.filter(r => r.status === 'fulfilled' && r.value.imageUrl?.startsWith('data:')).length;
-        console.log(`[AgentEdit] Images: ${base64Count}/${imageTasks.length} as base64, rest as Pollinations URLs`);
       }
 
       console.log('[AgentEdit] Success! Plan has', plan.segments.length, 'segment edits, mood:', plan.mood);
