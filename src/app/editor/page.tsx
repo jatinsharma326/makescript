@@ -456,9 +456,14 @@ export default function EditorPage() {
         toast('🤖 AI Agent analyzing video and creating editing plan...', 'info');
 
         // Run video analysis first — local, fast, no API calls
-        const analysis = analyzeFullVideo(currentSubtitles);
-        console.log('[handleGenerateOverlays] Video analysis:', analysis.moodProfile.primary,
-            'energy:', analysis.moodProfile.energyLevel, 'palette:', analysis.moodProfile.colorPalette);
+        let analysis;
+        try {
+            analysis = analyzeFullVideo(currentSubtitles);
+            console.log('[handleGenerateOverlays] Video analysis:', analysis.moodProfile.primary,
+                'energy:', analysis.moodProfile.energyLevel, 'palette:', analysis.moodProfile.colorPalette);
+        } catch (analysisErr) {
+            console.warn('[handleGenerateOverlays] Video analysis failed, continuing without it:', analysisErr);
+        }
 
         try {
             // ═══ TRY AGENTIC PIPELINE FIRST ═══

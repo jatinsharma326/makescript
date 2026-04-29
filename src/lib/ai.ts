@@ -548,6 +548,13 @@ export async function suggestOverlaysWithAI(
     analysis?: VideoAnalysisResult,
 ): Promise<SubtitleSegment[]> {
     try {
+        let analysisPayload;
+        try {
+            analysisPayload = analysis ? buildAnalysisPayload(analysis, subtitles) : undefined;
+        } catch (e) {
+            console.error('[suggestOverlaysWithAI] Analysis serialization failed, sending request without it:', e);
+        }
+
         const response = await fetch('/api/suggest-overlays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -559,7 +566,7 @@ export async function suggestOverlaysWithAI(
                     text: s.text,
                 })),
                 model,
-                videoAnalysis: analysis ? buildAnalysisPayload(analysis, subtitles) : undefined,
+                videoAnalysis: analysisPayload,
             }),
         });
 
@@ -1449,6 +1456,13 @@ export async function requestAgentEditPlan(
     analysis?: VideoAnalysisResult,
 ): Promise<EditingPlan | null> {
     try {
+        let analysisPayload;
+        try {
+            analysisPayload = analysis ? buildAnalysisPayload(analysis, subtitles) : undefined;
+        } catch (e) {
+            console.error('[AgentEdit] Analysis serialization failed, sending request without it:', e);
+        }
+
         const response = await fetch('/api/agent-edit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1464,7 +1478,7 @@ export async function requestAgentEditPlan(
                 videoHeight: videoHeight || 1080,
                 editingStyle: editingStyle || 'auto',
                 model,
-                videoAnalysis: analysis ? buildAnalysisPayload(analysis, subtitles) : undefined,
+                videoAnalysis: analysisPayload,
             }),
         });
 
