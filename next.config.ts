@@ -1,16 +1,14 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  // Disable StrictMode to prevent Remotion Player from double-mounting
-  // video elements (which causes double audio playback)
+  turbopack: {
+    resolveAlias: {
+      tailwindcss: path.join(process.cwd(), "node_modules", "tailwindcss"),
+    },
+  },
   reactStrictMode: false,
 
-  // Explicitly set Turbopack root to avoid wrong workspace detection
-  // (Next.js was picking c:\Users\jatin from a stray package-lock.json)
-  turbopack: {
-    root: 'c:\\Users\\jatin\\OneDrive\\Documents\\myctproj',
-  },
-  
   // Allow larger request bodies for video file uploads (50MB)
   experimental: {
     serverActions: {
@@ -51,9 +49,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob:",
+              "img-src 'self' data: https: blob: http:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com",
+              "connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://api-inference.modelscope.ai https://integrate.api.nvidia.com https://image.pollinations.ai https://*.ms.fun https://*.ms.show https://lightning.ai https://api.deepseek.com https://api.moonshot.cn https://generativelanguage.googleapis.com https://api.x.ai https://api.groq.com https://openrouter.ai https://api.giphy.com",
               "media-src 'self' blob: https:",
               "frame-src 'self'",
             ].join('; '),

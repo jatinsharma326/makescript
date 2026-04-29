@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { renderMedia, selectComposition } from '@remotion/renderer';
-import { VideoWithOverlays } from '../../remotion/VideoWithOverlays';
 import { SubtitleSegment, VideoFilters, TextOverlay } from '../../lib/types';
 
 interface ExportModalProps {
