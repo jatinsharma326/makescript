@@ -72,9 +72,9 @@ const hardcodedModels: AIModel[] = ([
     { id: 'google/gemini-3-pro-preview', label: 'Gemini 3 Pro', provider: 'Google', tier: 'creator' as ModelTier },
     { id: 'anthropic/claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'Anthropic', tier: 'creator' as ModelTier },
     { id: 'openai/gpt-5', label: 'GPT-5', provider: 'OpenAI', tier: 'creator' as ModelTier, badge: 'Popular' },
+    { id: 'lightning-ai/deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'Lightning AI', tier: 'free' as ModelTier, badge: 'Motion' },
     { id: 'glm-5-nvidia', label: 'GLM-5 NVIDIA', provider: 'Z-AI', tier: 'free' as ModelTier, badge: 'Motion' },
     { id: 'minimax-m2.7', label: 'MiniMax M2.7', provider: 'MiniMax', tier: 'free' as ModelTier, badge: 'Motion' },
-    { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'NVIDIA', tier: 'free' as ModelTier, badge: 'Motion' },
     
     // ── Studio Tier ($29/mo) ──
     { id: 'anthropic/claude-sonnet-4-6', label: 'Claude Sonnet 4.6', provider: 'Anthropic', tier: 'studio' as ModelTier },
@@ -87,7 +87,7 @@ export const AI_MODELS: AIModel[] = [
     ...hardcodedModels,
 ];
 
-export const DEFAULT_MODEL = 'deepseekpro';
+export const DEFAULT_MODEL = 'modelscope-minimaxtwo';
 
 const TIER_ORDER: ModelTier[] = ['free', 'creator', 'studio'];
 

@@ -77,11 +77,11 @@ export function getModelForTier(tier: UserTier): string {
             // Best available model
             return 'anthropic/claude-sonnet-4-6';
         case 'pro':
-            // High-quality model — DeepSeek V4 Pro via ModelScope
-            return 'deepseekpro';
+            // High-quality model — MiniMax M2.5 via ModelScope (reliable, fast)
+            return 'modelscope-minimaxtwo';
         case 'free':
         default:
-            // Default: DeepSeek V4 Pro for motion graphics & all AI features
-            return 'deepseekpro';
+            // Default: MiniMax M2.5 for motion graphics & all AI features
+            return 'modelscope-minimaxtwo';
     }
 }

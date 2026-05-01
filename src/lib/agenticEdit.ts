@@ -590,80 +590,37 @@ function runVisualAgent(
     // Overlay
     if (overlayIds.has(a.segmentId)) {
       const color = OVERLAY_COLORS[overlayCount % OVERLAY_COLORS.length];
-      const slot = overlayCount % 10;
 
-      switch (slot) {
-        case 0:
-        case 3:
-        case 6: {
-          // AI-generated image B-roll
-          const keyPhrase = extractKeyPhrase(a.text);
-          decision.overlay = {
-            type: 'ai-generated-image',
-            props: {
-              imagePrompt: `${a.text.substring(0, 120)}, cinematic, professional, high quality`,
-              caption: keyPhrase,
-            },
-          };
-          break;
-        }
-        case 1:
-        case 4:
-        case 7: {
-          // Dynamic B-roll — animated motion graphic driven by transcript
-          decision.overlay = {
-            type: 'dynamic-broll',
-            props: {
-              keywords: a.text.substring(0, 60),
-              color,
-              style: 'abstract',
-            },
-          };
-          break;
-        }
-        case 2:
-        case 5: {
-          // Visual illustration (animated SVG scene)
-          const words = a.text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
-          let scene = 'globe';
-          for (const w of words) {
-            if (SCENE_MAP[w]) { scene = SCENE_MAP[w]; break; }
-          }
-          decision.overlay = {
-            type: 'visual-illustration',
-            props: {
-              scene,
-              label: extractKeyPhrase(a.text),
-              color,
-              transition: 'fade-in',
-            },
-          };
-          break;
-        }
-        case 8: {
-          // GIF reaction
-          decision.overlay = {
-            type: 'gif-reaction',
-            props: {
-              keyword: a.text.substring(0, 60),
-              size: 'large',
-              position: 'center',
-            },
-          };
-          break;
-        }
-        default: {
-          // Emoji
-          const words = a.text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
-          let emoji = '🔥';
-          for (const w of words) {
-            if (EMOJI_MAP[w]) { emoji = EMOJI_MAP[w]; break; }
-          }
-          decision.overlay = {
-            type: 'emoji-reaction',
-            props: { emoji, size: 70 },
-          };
-        }
+      // Content-driven type selection: visual-illustration for strong keyword matches
+      const words = a.text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+      const SKIP_GENERIC = new Set(['guys', 'hello', 'welcome', 'right', 'true', 'real', 'tell', 'happen', 'finally', 'literally', 'actually', 'basically', 'definitely', 'probably', 'going', 'different', 'new', 'old', 'next', 'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why', 'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free']);
+      let matchedScene: string | null = null;
+      for (const w of words) {
+        if (SKIP_GENERIC.has(w)) continue;
+        if (SCENE_MAP[w]) { matchedScene = SCENE_MAP[w]; break; }
+      }
+
+      if (matchedScene) {
+        // Strong keyword match → animated SVG scene (instant, premium look)
+        decision.overlay = {
+          type: 'visual-illustration',
+          props: {
+            scene: matchedScene,
+            label: extractKeyPhrase(a.text),
+            color,
+            transition: 'fade-in',
+          },
+        };
+      } else {
+        // No strong scene match → AI-generated image B-roll
+        const keyPhrase = extractKeyPhrase(a.text);
+        decision.overlay = {
+          type: 'ai-generated-image',
+          props: {
+            imagePrompt: `${a.text.substring(0, 120)}, cinematic, professional, high quality`,
+            caption: keyPhrase,
+          },
+        };
       }
 
       // Effect for peak moments (zoom/ken-burns/shake)

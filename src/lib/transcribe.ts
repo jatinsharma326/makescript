@@ -4,6 +4,37 @@ import { SubtitleSegment } from './types';
 
 const GRADIO_BASE_URL = 'https://ai-modelscope-cohere-transcribe-03-2026-demo.ms.show/gradio_api';
 
+async function wakeUpGradio(): Promise<boolean> {
+    try {
+        const resp = await fetchWithTimeout(`${GRADIO_BASE_URL}/info`, {}, 15000);
+        if (resp.ok) {
+            console.log('[Gradio] Space is awake');
+            return true;
+        }
+        console.warn('[Gradio] Wake-up ping returned', resp.status);
+        return false;
+    } catch (e) {
+        console.warn('[Gradio] Wake-up ping failed:', e);
+        return false;
+    }
+}
+
+async function retryAsync<T>(fn: () => Promise<T>, retries: number, delayMs: number, label: string): Promise<T> {
+    let lastError: Error | null = null;
+    for (let i = 0; i <= retries; i++) {
+        try {
+            return await fn();
+        } catch (e) {
+            lastError = e instanceof Error ? e : new Error(String(e));
+            if (i < retries) {
+                console.warn(`[${label}] Attempt ${i + 1} failed: ${lastError.message}. Retrying in ${delayMs}ms...`);
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+    }
+    throw lastError!;
+}
+
 /**
  * Extract audio from a video File using captureStream() + MediaRecorder.
  * Returns an audio/webm Blob.
@@ -227,7 +258,7 @@ async function uploadToGradio(wavBlob: Blob): Promise<string> {
     const response = await fetchWithTimeout(`${GRADIO_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
-    }, 120000);
+    }, 180000);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -250,7 +281,7 @@ async function submitToGradio(filePath: string): Promise<string> {
         body: JSON.stringify({
             data: [{ path: filePath, meta: { _type: 'gradio.FileData' } }, 'en'],
         }),
-    }, 30000);
+    }, 60000);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -345,6 +376,41 @@ function parseTranscriptionToSegments(rawText: string, durationSeconds: number):
  * 2. Convert audio from webm to WAV
  * 3. Upload WAV directly to Gradio and poll for transcription (bypasses Vercel timeout)
  */
+async function transcribeViaGradioDirect(wavBlob: Blob, duration: number): Promise<{ subtitles: SubtitleSegment[]; isReal: boolean }> {
+    const gradioPath = await retryAsync(() => uploadToGradio(wavBlob), 2, 2000, 'GradioUpload');
+    const eventId = await retryAsync(() => submitToGradio(gradioPath), 1, 1000, 'GradioSubmit');
+    const rawTranscription = await pollGradioResult(eventId);
+
+    const segments = parseTranscriptionToSegments(rawTranscription, duration);
+    if (segments.length > 0) {
+        return { subtitles: segments, isReal: true };
+    }
+    throw new Error('Gradio returned text but no segments could be parsed');
+}
+
+async function transcribeViaServerRoute(wavBlob: Blob, duration: number): Promise<{ subtitles: SubtitleSegment[]; isReal: boolean }> {
+    console.log('[transcribeVideo] Trying server-side /api/transcribe fallback...');
+    const formData = new FormData();
+    formData.append('file', new File([wavBlob], 'audio.wav', { type: 'audio/wav' }));
+    formData.append('duration', String(duration));
+
+    const resp = await fetchWithTimeout('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+    }, 300000);
+
+    if (!resp.ok) {
+        throw new Error(`Server transcribe failed: HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    if (data.subtitles && data.subtitles.length > 0 && !data.fallback) {
+        console.log('[transcribeVideo] Server route succeeded:', data.subtitles.length, 'segments');
+        return { subtitles: data.subtitles, isReal: true };
+    }
+    throw new Error(data.error || 'Server route returned no segments');
+}
+
 export async function transcribeVideo(
     file: File,
     duration: number
@@ -363,17 +429,28 @@ export async function transcribeVideo(
         const wavBlob = await convertBlobToWav(audioBlob);
         console.log('[transcribeVideo] WAV audio ready, size:', wavBlob.size);
 
-        const gradioPath = await uploadToGradio(wavBlob);
-        const eventId = await submitToGradio(gradioPath);
-        const rawTranscription = await pollGradioResult(eventId);
+        // Wake up the Gradio space (handles cold starts)
+        console.log('[transcribeVideo] Pinging Gradio space to ensure it is awake...');
+        await wakeUpGradio();
 
-        const segments = parseTranscriptionToSegments(rawTranscription, duration);
-        if (segments.length > 0) {
-            console.log('[transcribeVideo] Success! Segments:', segments.length);
-            return { subtitles: segments, isReal: true, lowConfidence: false };
+        // Try direct Gradio first, then server-side fallback
+        try {
+            const result = await transcribeViaGradioDirect(wavBlob, duration);
+            console.log('[transcribeVideo] Direct Gradio success! Segments:', result.subtitles.length);
+            return { ...result, lowConfidence: false };
+        } catch (directError) {
+            console.warn('[transcribeVideo] Direct Gradio failed:', directError instanceof Error ? directError.message : directError);
         }
 
-        console.warn('[transcribeVideo] No segments parsed from transcription');
+        try {
+            const result = await transcribeViaServerRoute(wavBlob, duration);
+            console.log('[transcribeVideo] Server route success! Segments:', result.subtitles.length);
+            return { ...result, lowConfidence: false };
+        } catch (serverError) {
+            console.warn('[transcribeVideo] Server route also failed:', serverError instanceof Error ? serverError.message : serverError);
+        }
+
+        console.error('[transcribeVideo] All transcription methods failed');
         return { subtitles: [], isReal: false };
     } catch (error) {
         console.error('[transcribeVideo] Failed:', error);

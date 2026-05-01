@@ -40,7 +40,7 @@ async function uploadToGradio(file: File): Promise<string> {
     const response = await fetchWithTimeout(`${GRADIO_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
-    }, 120000); // 2 min timeout for large files
+    }, 180000); // 3 min timeout (includes cold-start wake-up)
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -86,7 +86,7 @@ async function submitToGradio(filePath: string): Promise<string> {
                 'en',
             ],
         }),
-    }, 30000);
+    }, 60000);
 
     if (!response.ok) {
         const errorText = await response.text();

@@ -17,7 +17,7 @@ import {
     EditingPlan,
 } from '../../lib/types';
 import { transcribeVideo, generateMockTranscript } from '../../lib/transcribe';
-import { suggestOverlaysWithAI, generateDynamicOverlays as autoSuggestOverlays, requestAgentEditPlan, applyEditingPlan } from '../../lib/ai';
+import { suggestOverlaysWithAI, requestAgentEditPlan, applyEditingPlan } from '../../lib/ai';
 import { analyzeFullVideo } from '../../lib/aiAnalysis';
 import { AI_MODELS, DEFAULT_MODEL, TIERS, getModelsForTier, isModelAccessible, type ModelTier, type AIModel } from '../../lib/models';
 import {
@@ -131,6 +131,7 @@ export default function EditorPage() {
     const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
     const [userTier, setUserTier] = useState<ModelTier>('free');
     const [showModelPicker, setShowModelPicker] = useState(false);
+    const [genLogs, setGenLogs] = useState<{ time: string; msg: string }[]>([]);
     const { toast } = useToast();
     const { pushSnapshot, undo, redo, pushToFuture, resetHistory } = useUndoRedo();
 
@@ -437,6 +438,169 @@ export default function EditorPage() {
         }
     }, [saveCurrentProject, toast, updateState]); // Added updateState dependency implicitly via component scope
 
+    const addLog = useCallback((msg: string) => {
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setGenLogs(prev => [...prev, { time, msg }]);
+    }, []);
+
+    const logOverlaySummary = (subtitles: SubtitleSegment[]) => {
+        const images = subtitles.filter(s => s.overlay?.type === 'ai-generated-image');
+        const kinetic = subtitles.filter(s => s.overlay?.type === 'kinetic-text');
+        const gifs = subtitles.filter(s => s.overlay?.type === 'gif-reaction');
+        const illustrations = subtitles.filter(s => s.overlay?.type === 'visual-illustration');
+        const emojis = subtitles.filter(s => s.overlay?.type === 'emoji-reaction');
+        const effects = subtitles.filter(s => s.effect);
+        const transitions = subtitles.filter(s => s.transition);
+
+        if (images.length > 0) addLog(`${images.length} AI images (load when video plays)`);
+        if (kinetic.length > 0) addLog(`${kinetic.length} kinetic text overlays`);
+        if (illustrations.length > 0) addLog(`${illustrations.length} animated illustrations`);
+        if (gifs.length > 0) addLog(`${gifs.length} GIF reactions`);
+        if (emojis.length > 0) addLog(`${emojis.length} emoji reactions`);
+        if (effects.length > 0) addLog(`${effects.length} video effects`);
+        if (transitions.length > 0) addLog(`${transitions.length} transitions`);
+        addLog('Done!');
+    };
+
+    const preGenerateAIImages = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
+        const imageSegs = subs.filter(
+            s => s.overlay?.type === 'ai-generated-image' && s.overlay?.props?.imagePrompt
+        );
+        if (imageSegs.length === 0) return subs;
+
+        addLog(`Pre-generating ${imageSegs.length} AI images via Ernie (batched)...`);
+
+        const generateOne = async (seg: SubtitleSegment, i: number): Promise<{ id: string; imageUrl: string } | null> => {
+            const prompt = String(seg.overlay!.props.imagePrompt).substring(0, 120);
+            const seed = Number(seg.overlay!.props.seed) || (Date.now() + i) % 1000000;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
+            try {
+                const res = await fetch('/api/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, width: 768, height: 512, seed, steps: 8, guidanceScale: 1 }),
+                    signal: controller.signal,
+                });
+                clearTimeout(timer);
+                const data = await res.json();
+                if (data.success && data.imageUrl) {
+                    addLog(`Image ${i + 1}/${imageSegs.length} OK (${Math.round(data.imageUrl.length / 1024)}KB)`);
+                    return { id: seg.id, imageUrl: data.imageUrl as string };
+                }
+                return null;
+            } catch {
+                clearTimeout(timer);
+                return null;
+            }
+        };
+
+        const urlMap = new Map<string, string>();
+        const BATCH_SIZE = 3;
+
+        for (let b = 0; b < imageSegs.length; b += BATCH_SIZE) {
+            const batch = imageSegs.slice(b, b + BATCH_SIZE);
+            addLog(`Batch ${Math.floor(b / BATCH_SIZE) + 1}/${Math.ceil(imageSegs.length / BATCH_SIZE)}: generating ${batch.length} images...`);
+
+            const results = await Promise.allSettled(
+                batch.map((seg, j) => generateOne(seg, b + j))
+            );
+
+            const failed: { seg: SubtitleSegment; idx: number }[] = [];
+            for (let j = 0; j < results.length; j++) {
+                const r = results[j];
+                if (r.status === 'fulfilled' && r.value) {
+                    urlMap.set(r.value.id, r.value.imageUrl);
+                } else {
+                    failed.push({ seg: batch[j], idx: b + j });
+                }
+            }
+
+            if (failed.length > 0) {
+                addLog(`Retrying ${failed.length} failed image(s)...`);
+                const retryResults = await Promise.allSettled(
+                    failed.map(({ seg, idx }) => generateOne(seg, idx))
+                );
+                for (const r of retryResults) {
+                    if (r.status === 'fulfilled' && r.value) {
+                        urlMap.set(r.value.id, r.value.imageUrl);
+                    }
+                }
+            }
+        }
+
+        const failedCount = imageSegs.length - urlMap.size;
+        addLog(`Pre-generated ${urlMap.size}/${imageSegs.length} images${failedCount > 0 ? ` (${failedCount} removed)` : ''}`);
+
+        return subs.map(s => {
+            if (s.overlay?.type === 'ai-generated-image' && s.overlay?.props?.imagePrompt) {
+                const newUrl = urlMap.get(s.id);
+                if (newUrl) {
+                    return { ...s, overlay: { ...s.overlay, props: { ...s.overlay.props, imageUrl: newUrl } } };
+                }
+                addLog(`Keeping Pollinations URL for ${s.id} (will load lazily)`);
+                return s;
+            }
+            return s;
+        });
+    };
+
+    const preGenerateMotionSVGs = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
+        const motionSegs = subs.filter(
+            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.svgContent
+        );
+        if (motionSegs.length === 0) return subs;
+
+        addLog(`Pre-generating ${motionSegs.length} motion SVGs...`);
+
+        const results = await Promise.allSettled(
+            motionSegs.slice(0, 5).map(async (seg) => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 50000);
+                try {
+                    const res = await fetch('/api/generate-motion-svg', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: seg.text,
+                            mood: 'energetic',
+                            topic: String(seg.overlay!.props.topic || 'general'),
+                            color: String(seg.overlay!.props.color || '#6366f1'),
+                            label: String(seg.overlay!.props.label || ''),
+                        }),
+                        signal: controller.signal,
+                    });
+                    clearTimeout(timer);
+                    const data = await res.json();
+                    if (data.success && data.svgContent) {
+                        addLog(`Motion SVG ready for ${seg.id}`);
+                        return { id: seg.id, svgContent: data.svgContent as string };
+                    }
+                    return null;
+                } catch {
+                    clearTimeout(timer);
+                    return null;
+                }
+            })
+        );
+
+        const svgMap = new Map<string, string>();
+        for (const r of results) {
+            if (r.status === 'fulfilled' && r.value) {
+                svgMap.set(r.value.id, r.value.svgContent);
+            }
+        }
+
+        addLog(`Motion SVGs generated: ${svgMap.size}/${motionSegs.length}`);
+
+        return subs.map(seg => {
+            if (svgMap.has(seg.id) && seg.overlay) {
+                return { ...seg, overlay: { ...seg.overlay, props: { ...seg.overlay.props, svgContent: svgMap.get(seg.id) } } };
+            }
+            return seg;
+        });
+    };
+
     const handleGenerateOverlays = async (currentSubtitles = state.subtitles) => {
         console.log('[handleGenerateOverlays] Called with', currentSubtitles.length, 'subtitles');
 
@@ -445,7 +609,6 @@ export default function EditorPage() {
             return;
         }
 
-        // Prevent duplicate concurrent calls
         if (state.isGenerating) {
             console.log('[handleGenerateOverlays] Already generating, skipping');
             return;
@@ -453,21 +616,21 @@ export default function EditorPage() {
 
         updateState({ isGenerating: true });
         setProcessingStep('generating');
-        toast('🤖 AI Agent analyzing video and creating editing plan...', 'info');
+        setGenLogs([]);
+        addLog(`Starting AI generation for ${currentSubtitles.length} segments...`);
+        addLog(`Selected model: ${selectedModel}`);
 
-        // Run video analysis first — local, fast, no API calls
         let analysis;
         try {
             analysis = analyzeFullVideo(currentSubtitles);
-            console.log('[handleGenerateOverlays] Video analysis:', analysis.moodProfile.primary,
-                'energy:', analysis.moodProfile.energyLevel, 'palette:', analysis.moodProfile.colorPalette);
+            addLog(`Video analysis: mood=${analysis.moodProfile.primary}, energy=${analysis.moodProfile.energyLevel}/10`);
         } catch (analysisErr) {
-            console.warn('[handleGenerateOverlays] Video analysis failed, continuing without it:', analysisErr);
+            addLog('Video analysis failed — continuing without it');
         }
 
         try {
-            // ═══ TRY AGENTIC PIPELINE FIRST ═══
-            console.log('[handleGenerateOverlays] Trying agentic editing plan... model:', selectedModel, 'duration:', state.videoDuration, 'dims:', state.videoWidth, 'x', state.videoHeight, 'analysis:', !!analysis);
+            // ═══ STEP 1: Try agentic pipeline ═══
+            addLog('Step 1: Requesting AI editing plan...');
             const plan = await requestAgentEditPlan(
                 currentSubtitles,
                 state.videoDuration,
@@ -476,71 +639,84 @@ export default function EditorPage() {
                 'auto',
                 selectedModel,
                 analysis,
+                addLog,
             );
 
             if (plan && plan.segments && plan.segments.length > 0) {
-                console.log('[handleGenerateOverlays] Agent plan received! Mood:', plan.mood, 'Segments:', plan.segments.length);
+                addLog(`AI plan received! Mood: ${plan.mood}, segments: ${plan.segments.length}`);
 
-                // Apply the full editing plan
                 const { subtitles: editedSubtitles, filters: planFilters } = applyEditingPlan(currentSubtitles, plan);
 
                 const overlaysCount = editedSubtitles.filter(s => s.overlay).length;
                 const effectsCount = editedSubtitles.filter(s => s.effect).length;
                 const transitionsCount = editedSubtitles.filter(s => s.transition).length;
+                const imageCount = editedSubtitles.filter(s => s.overlay?.type === 'ai-generated-image').length;
+                const motionCount = editedSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic').length;
 
-                console.log(`[handleGenerateOverlays] Applied: ${overlaysCount} overlays, ${effectsCount} effects, ${transitionsCount} transitions`);
+                addLog(`Applied: ${overlaysCount} overlays (${imageCount} AI images, ${motionCount} live motion), ${effectsCount} effects, ${transitionsCount} transitions`);
 
-                // Apply filters from the plan's color grade
-                const updatedFilters = {
-                    ...state.filters,
-                    ...planFilters,
-                };
+                let finalSubtitles = imageCount > 0
+                    ? await preGenerateAIImages(editedSubtitles)
+                    : editedSubtitles;
+
+                const unfilledMotion = finalSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.svgContent).length;
+                if (unfilledMotion > 0) {
+                    finalSubtitles = await preGenerateMotionSVGs(finalSubtitles);
+                }
 
                 updateState({
-                    subtitles: editedSubtitles,
-                    filters: updatedFilters,
+                    subtitles: finalSubtitles,
+                    filters: { ...state.filters, ...planFilters },
                     isGenerating: false,
                     editingPlan: plan,
                 });
 
                 toast(
-                    `✨ AI Agent applied ${overlaysCount} overlays, ${effectsCount} effects, ${transitionsCount} transitions!`,
+                    `AI Agent applied ${overlaysCount} overlays (${imageCount} AI images), ${effectsCount} effects, ${transitionsCount} transitions!`,
                     'success'
                 );
                 setProcessingStep('done');
                 setTimeout(() => setProcessingStep('idle'), 2000);
+                logOverlaySummary(finalSubtitles);
                 return;
             }
 
-            // ═══ FALLBACK: Old overlay-only pipeline ═══
-            console.log('[handleGenerateOverlays] Agent plan failed, falling back to overlay-only pipeline');
-            toast('Generating dynamic overlays...', 'info');
+            // ═══ STEP 2: Agent failed, try suggest-overlays ═══
+            addLog('Step 1 failed — no plan returned. Trying Step 2...');
+            addLog('Step 2: Requesting overlay suggestions...');
 
-            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel, analysis);
+            const newSubtitles = await suggestOverlaysWithAI(currentSubtitles, selectedModel, analysis, addLog);
             const overlaysCount = newSubtitles.filter(s => s.overlay).length;
 
-            if (overlaysCount === 0 && newSubtitles.length > 0) {
-                const forced = autoSuggestOverlays(newSubtitles);
-                updateState({ subtitles: forced, isGenerating: false });
-                toast('Added motion graphics to your video!', 'success');
-            } else {
-                updateState({ subtitles: newSubtitles, isGenerating: false });
-                toast('AI overlays applied successfully!', 'success');
+            if (overlaysCount > 0) {
+                const imageCount = newSubtitles.filter(s => s.overlay?.type === 'ai-generated-image').length;
+                const motionCount2 = newSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic').length;
+                addLog(`Step 2 done: ${overlaysCount} overlays (${imageCount} AI images, ${motionCount2} live motion)`);
+                let finalSubs = imageCount > 0
+                    ? await preGenerateAIImages(newSubtitles)
+                    : newSubtitles;
+                const unfilledMotion2 = finalSubs.filter(s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.svgContent).length;
+                if (unfilledMotion2 > 0) {
+                    finalSubs = await preGenerateMotionSVGs(finalSubs);
+                }
+                updateState({ subtitles: finalSubs, isGenerating: false });
+                toast(`AI overlays applied — ${overlaysCount} motion graphics (${imageCount} AI images, ${motionCount2} live motion)!`, 'success');
+                setProcessingStep('done');
+                setTimeout(() => setProcessingStep('idle'), 2000);
+                logOverlaySummary(finalSubs);
+                return;
             }
+
+            addLog('ERROR: All AI pipelines returned nothing. Check API keys.');
+            updateState({ isGenerating: false });
+            toast('AI could not generate overlays — check the generation log below for details.', 'error');
             setProcessingStep('done');
             setTimeout(() => setProcessingStep('idle'), 2000);
 
         } catch (e) {
-            console.error('[handleGenerateOverlays] Error:', e);
-            const fallback = autoSuggestOverlays(currentSubtitles);
-            const fallbackCount = fallback.filter(s => s.overlay).length;
-
-            updateState({ subtitles: fallback, isGenerating: false });
-            toast(fallbackCount > 0
-                ? `AI unavailable — added ${fallbackCount} overlays using local rules.`
-                : 'AI unavailable — you can manually add overlays from the transcript panel.',
-                'warning'
-            );
+            addLog(`ERROR: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            updateState({ isGenerating: false });
+            toast(`Generation failed — check the log below for details.`, 'error');
             setProcessingStep('done');
             setTimeout(() => setProcessingStep('idle'), 2000);
         }
@@ -682,83 +858,57 @@ export default function EditorPage() {
 
     const handleAutoSuggest = useCallback(async () => {
         console.log('[handleAutoSuggest] Starting with', state.subtitles.length, 'subtitles, model:', selectedModel);
-        
-        // Prevent duplicate calls
+
         if (state.isGenerating) {
             console.log('[handleAutoSuggest] Already generating, skipping');
             return;
         }
-        
+
         if (state.subtitles.length === 0) {
-            console.log('[handleAutoSuggest] No subtitles to process');
             toast('No transcript available. Please wait for transcription to complete.', 'warning');
             return;
         }
 
-        // Set generating state immediately to prevent duplicate calls
         setState(prev => ({ ...prev, isGenerating: true }));
         setProcessingStep('generating');
-        toast('Generating AI overlays with ' + (AI_MODELS.find(m => m.id === selectedModel)?.label || selectedModel) + '...', 'info');
+        setGenLogs([]);
+        addLog(`Re-generating overlays for ${state.subtitles.length} segments...`);
+        addLog(`Model: ${selectedModel}`);
 
         try {
-            // Clear existing overlays and generate new ones
             const cleanedSubtitles = state.subtitles.map(s => ({ ...s, overlay: undefined }));
-            console.log('[handleAutoSuggest] Cleaned subtitles, calling AI...');
-            
-            const newSubtitles = await suggestOverlaysWithAI(cleanedSubtitles, selectedModel);
-            const overlaysCount = newSubtitles.filter(s => s.overlay).length;
-            console.log('[handleAutoSuggest] AI generated', overlaysCount, 'overlays');
-            
-            // Log what was generated
-            newSubtitles.forEach((s, i) => {
-                if (s.overlay) {
-                    console.log(`  [${i}] "${s.text.substring(0, 30)}..." -> ${s.overlay.type}`);
-                }
-            });
+            addLog('Requesting AI overlay suggestions...');
 
-            if (overlaysCount === 0 && newSubtitles.length > 0) {
-                // Force fallback if no overlays generated
-                console.log('[handleAutoSuggest] No AI overlays, using fallback...');
-                const forced = autoSuggestOverlays(newSubtitles);
-                const forcedCount = forced.filter(s => s.overlay).length;
-                console.log('[handleAutoSuggest] Fallback generated', forcedCount, 'overlays');
-                
-                setState(prev => ({
-                    ...prev,
-                    subtitles: forced,
-                    isGenerating: false,
-                }));
-                setProcessingStep('done');
-                setTimeout(() => setProcessingStep('idle'), 2000);
-                toast('Added motion graphics to your video!', 'success');
-            } else {
-                setState(prev => ({
-                    ...prev,
-                    subtitles: newSubtitles,
-                    isGenerating: false,
-                }));
-                setProcessingStep('done');
-                setTimeout(() => setProcessingStep('idle'), 2000);
-                toast(`AI applied ${overlaysCount} overlays successfully!`, 'success');
-            }
-        } catch (e) {
-            console.error('[handleAutoSuggest] Error:', e);
-            const fallback = autoSuggestOverlays(state.subtitles.map(s => ({ ...s, overlay: undefined })));
-            const fallbackCount = fallback.filter(s => s.overlay).length;
-            console.log('[handleAutoSuggest] Error fallback generated', fallbackCount, 'overlays');
-            
+            const newSubtitles = await suggestOverlaysWithAI(cleanedSubtitles, selectedModel, undefined, addLog);
+            const overlaysCount = newSubtitles.filter(s => s.overlay).length;
+            const imageCount = newSubtitles.filter(s => s.overlay?.type === 'ai-generated-image').length;
+
+            const finalSubs = imageCount > 0
+                ? await preGenerateAIImages(newSubtitles)
+                : newSubtitles;
+
             setState(prev => ({
                 ...prev,
-                subtitles: fallback,
+                subtitles: finalSubs,
                 isGenerating: false,
             }));
             setProcessingStep('done');
             setTimeout(() => setProcessingStep('idle'), 2000);
-            toast(fallbackCount > 0 
-                ? `AI unavailable — added ${fallbackCount} overlays using local rules.`
-                : 'AI unavailable — try again or manually add overlays.',
-                'warning'
-            );
+
+            if (overlaysCount > 0) {
+                addLog(`Done: ${overlaysCount} overlays (${imageCount} AI images)`);
+                toast(`AI applied ${overlaysCount} overlays (${imageCount} AI images)!`, 'success');
+                logOverlaySummary(finalSubs);
+            } else {
+                addLog('ERROR: No overlays returned. API keys may be rate-limited.');
+                toast('AI returned no overlays — check the generation log for details.', 'error');
+            }
+        } catch (e) {
+            addLog(`ERROR: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            setState(prev => ({ ...prev, isGenerating: false }));
+            setProcessingStep('done');
+            setTimeout(() => setProcessingStep('idle'), 2000);
+            toast('Generation failed — check the log for details.', 'error');
         }
     }, [state.subtitles, state.isGenerating, selectedModel, toast]);
 
@@ -1147,6 +1297,16 @@ export default function EditorPage() {
                                                             <p className="text-[11px] text-white/40 font-medium">
                                                                 {processingStep === 'transcribing' ? 'Analyzing audio with Whisper...' : 'Selecting motion graphics for each segment...'}
                                                             </p>
+                                                            {processingStep === 'generating' && genLogs.length > 0 && (
+                                                                <div className="mt-3 w-72 max-h-36 overflow-y-auto rounded-lg border border-white/10 bg-black/60 p-2 text-left">
+                                                                    {genLogs.map((log, i) => (
+                                                                        <div key={i} className={`text-[10px] leading-relaxed font-mono ${log.msg.startsWith('ERROR') ? 'text-red-400' : log.msg.startsWith('Done') || log.msg.startsWith('All images') || log.msg.includes('plan received') ? 'text-emerald-400' : log.msg.startsWith('Image') ? 'text-blue-300' : 'text-white/50'}`}>
+                                                                            <span className="text-white/20 mr-1">{log.time}</span>
+                                                                            {log.msg}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -1163,6 +1323,27 @@ export default function EditorPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Generation Log */}
+                                    {genLogs.length > 0 && processingStep !== 'generating' && (
+                                        <div className="mx-3 mb-2 rounded-lg border border-white/10 bg-black/40 overflow-hidden">
+                                            <button
+                                                onClick={() => setGenLogs([])}
+                                                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] text-white/40 hover:text-white/60 transition-colors"
+                                            >
+                                                <span className="font-semibold uppercase tracking-wider">Generation Log ({genLogs.length})</span>
+                                                <span>dismiss</span>
+                                            </button>
+                                            <div className="max-h-28 overflow-y-auto px-3 pb-2">
+                                                {genLogs.map((log, i) => (
+                                                    <div key={i} className={`text-[10px] leading-relaxed font-mono ${log.msg.startsWith('ERROR') ? 'text-red-400' : log.msg.startsWith('Done') || log.msg.startsWith('All images') || log.msg.includes('plan received') ? 'text-emerald-400' : log.msg.startsWith('Image') ? 'text-blue-300' : 'text-white/40'}`}>
+                                                        <span className="text-white/15 mr-1">{log.time}</span>
+                                                        {log.msg}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Timeline Area (Bottom of Stage) */}
                                     <Timeline

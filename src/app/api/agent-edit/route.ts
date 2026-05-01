@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getApiEndpoint, getApiKey, getCustomApiConfig, CUSTOM_APIS } from '@/lib/apiKeys';
-import { getUserSubscription, getModelForTier } from '@/lib/subscription';
 
 // ═══════════════════════════════════════════════════════════════
 //  /api/agent-edit — Agentic Editing Plan Generator
@@ -8,7 +6,8 @@ import { getUserSubscription, getModelForTier } from '@/lib/subscription';
 // ═══════════════════════════════════════════════════════════════
 
 function generatePollinationsUrl(prompt: string, seed: number): string {
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt}, high quality, professional`)}?width=1024&height=768&nologo=true&seed=${seed}`;
+  const shortPrompt = prompt.length > 120 ? prompt.substring(0, 120) : prompt;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(`${shortPrompt}, cinematic`)}?width=768&height=512&nologo=true&seed=${seed}`;
 }
 
 interface VideoAnalysisData {
@@ -47,27 +46,74 @@ interface AgentEditRequest {
   videoAnalysis?: VideoAnalysisData;
 }
 
-const SYSTEM_PROMPT = `You are a world-class professional video editor with 15 years of experience editing for top YouTube creators, Netflix documentaries, and TikTok viral content. You are given a video's full transcript with timestamps. Your job is to create a COMPLETE editing plan that turns a raw talking-head video into a polished, engaging final cut.
+const SYSTEM_PROMPT = `You are a world-class professional video editor. You are given a video transcript with timestamps. Create a COMPLETE editing plan that turns a raw talking-head video into a polished, engaging final cut.
 
 THINK LIKE A PROFESSIONAL EDITOR:
 - Watch the pacing — identify natural topic changes, emphasis points, and dead air
 - Add visual variety — don't let any 15-second stretch go without something interesting
 - Use overlays SELECTIVELY (40-60% of segments, NOT every one)
-- Vary overlay types across the video — mix kinetic-text, visual-illustration, ai-generated-image, gif-reaction, emoji-reaction
 - Add transitions ONLY at major topic shifts (not between every segment)
 - Use zoom effects sparingly for emphasis moments (stats, key claims, reveals)
 - Identify filler segments to speed up (ums, repeated phrases, dead air)
 - Choose a color grade that matches the video's overall mood
 
-AVAILABLE OVERLAY TYPES (use these exact type names):
-- "kinetic-text" — animated text pop-in. Props: { "text": "KEY PHRASE", "color": "#hex", "style": "pop"|"slide"|"bounce", "position": "center"|"top"|"bottom", "fontSize": 42 }
-- "ai-generated-image" — AI-generated B-roll image. Props: { "imagePrompt": "detailed visual description for image generation", "caption": "short label" }
-- "gif-reaction" — contextual animated GIF. Props: { "keyword": "search term for GIF", "size": "medium"|"large"|"fullscreen", "position": "center"|"top-right"|"bottom-right" }
-- "emoji-reaction" — pop-up emoji. Props: { "emoji": "🔥", "size": 70 }
-- "visual-illustration" — animated SVG scene (use SPARINGLY, max 1-2 per video). Props: { "scene": "SCENE_NAME", "label": "optional label", "color": "#hex" }
-  Available scenes: solar-system, growth-chart, globe, rocket-launch, brain-idea, connections, clock-time, heartbeat, money-flow, lightning, shopping-cart, celebration, music-notes, book-reading, camera, code-terminal, fire-blaze, water-wave, shield-protect, target-bullseye, explosion-burst, gear-system, energy-pulse, eye-vision, arrow-growth, checkmark-success, diamond-gem, crown-royal, atom-science, mountain-peak
+AVAILABLE OVERLAY TYPES (choose the BEST type for each segment):
 
-OVERLAY DISTRIBUTION: Use ai-generated-image for 80-90% of overlays. It creates unique, cinematic B-roll that matches the video content. Use kinetic-text for key stats/phrases. Use visual-illustration only when a specific animated diagram truly fits (charts, data). Use gif-reaction and emoji-reaction sparingly for humor.
+1. "visual-illustration" — ANIMATED SVG MOTION GRAPHIC. PREFER this when the transcript mentions a concrete concept. These render instantly and look premium.
+  Props: { "scene": "<scene-name>", "label": "2-4 word label", "color": "<hex>", "transition": "fade-in" }
+  AVAILABLE SCENES:
+  - "money-flow" (money, revenue, profit, income, cash, price, earn, pay)
+  - "growth-chart" (business, company, startup, stock, invest, market, growth)
+  - "arrow-growth" (grow, increase, rise, scale, expand, boost)
+  - "rocket-launch" (launch, start, begin, kick off, takeoff, moon, space)
+  - "brain-idea" (brain, think, idea, smart, learn, knowledge, secret, tip, hack, AI)
+  - "code-terminal" (code, programming, software, developer, app, website, tech)
+  - "connections" (connect, network, social, internet, community, together, people)
+  - "globe" (earth, world, global, country, international, travel)
+  - "fire-blaze" (fire, hot, burn, passion, intense, trending)
+  - "lightning" (electric, shock, fast, speed, quick, instant)
+  - "explosion-burst" (explode, massive, huge, incredible, impact, disrupt, crazy)
+  - "celebration" (win, champion, congratulations, celebrate, victory, awesome)
+  - "target-bullseye" (goal, target, aim, focus, precise, strategy)
+  - "crown-royal" (best, king, queen, top, leader, greatest)
+  - "heartbeat" (love, heart, feel, care, emotion, health, life)
+  - "shield-protect" (protect, safe, security, guard, defense, trust)
+  - "clock-time" (time, hour, minute, schedule, deadline, wait)
+  - "mountain-peak" (mountain, climb, challenge, overcome, journey, adventure)
+  - "water-wave" (ocean, water, sea, wave, flow, calm, beach)
+  - "diamond-gem" (luxury, premium, expensive, valuable, precious, rich)
+  - "atom-science" (science, research, experiment, physics, chemistry, quantum)
+  - "gear-system" (machine, system, engine, process, automate, mechanism, tool)
+  - "eye-vision" (watch, see, look, discover, reveal, vision, insight)
+  - "energy-pulse" (power, energy, force, strong, charge, activate)
+  - "checkmark-success" (success, achieve, accomplish, done, complete, results)
+  - "nature-tree" (tree, nature, forest, green, environment)
+  - "solar-system" (sun, star, universe, galaxy, cosmic, space)
+  - "city-skyline" (city, urban, downtown, building, skyline)
+  - "music-notes" (music, song, sound, listen, audio, podcast)
+  - "book-reading" (book, read, study, education, course, teach)
+  - "camera" (video, photo, film, record, content, create)
+  - "cooking" (food, eat, recipe, cook, meal, kitchen)
+  - "shopping-cart" (sales, buy, shop, purchase, store, product)
+
+2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE, fullscreen cinematic. Use for descriptive/narrative content without a clear scene match.
+  Props: { "imagePrompt": "detailed cinematic visual description", "caption": "short label" }
+  Write RICH, SPECIFIC prompts with cinematic language:
+  - Lighting: golden hour, chiaroscuro, volumetric, rim light, neon glow
+  - Quality: "cinematic lighting, 8k, hyperrealistic, professional color grading"
+  GOOD: "A dramatic upward-trending stock chart rendered as a glowing glass sculpture in a dark executive boardroom, golden hour, 8k"
+  BAD: "business growth" (too vague)
+
+3. "ai-motion-graphic" — LIVE AI-GENERATED ANIMATED SVG. Use for 2-3 PEAK MOMENTS per video — stats reveals, key claims, dramatic statements, or high-impact visuals that deserve a unique custom animation.
+  Props: { "label": "2-4 word label", "color": "<hex>", "topic": "1-2 word topic keyword" }
+  The system will auto-generate a custom animated SVG based on the segment content. Use sparingly for maximum impact.
+
+OVERLAY SELECTION STRATEGY:
+- PREFER "visual-illustration" (50-60% of overlays) — instant, animated, premium
+- Use "ai-motion-graphic" (10-20% of overlays) — for 2-3 peak moments that deserve unique custom animation
+- Use "ai-generated-image" (20-30% of overlays) — for narrative segments without a clear scene
+- Match scenes PRECISELY to transcript content
+- Use DIFFERENT scenes — never repeat the same scene twice in a row
 
 AVAILABLE EFFECTS (applied to the base video layer):
 - "zoom-in" — gradual scale up (1.0 → intensity). Good for emphasis.
@@ -84,23 +130,21 @@ AVAILABLE TRANSITIONS (between segments at topic changes):
 - "zoom" — zoom transition
 
 USING VIDEO ANALYSIS DATA (when provided):
-- The VIDEO ANALYSIS section contains mood, energy level, color palette, per-segment sentiment/engagement, and peak moments
-- USE THE COLOR PALETTE from the mood profile for kinetic-text colors, overlay accents, and to inform the colorGrade
-- PUT YOUR BEST OVERLAYS on PEAK MOMENT segments — these are the highest-impact moments the audience will remember
-- MATCH THE ENERGY: high energy (7-10) = more zoom effects, dynamic overlays, faster pacing. Low energy (1-4) = subtle ken-burns, minimal overlays, calm visual-illustrations
-- SPEED UP segments flagged as filler/pause in suggested cuts
-- For HOOK segments, use attention-grabbing overlays (kinetic-text with bold style, zoom-in effects)
-- Match imagePrompt visual tone to the mood: dark/dramatic mood = moody cinematic lighting, energetic mood = bright vibrant scenes, calm mood = soft natural scenes
+- USE THE COLOR PALETTE from the mood profile for overlay colors and colorGrade
+- PUT YOUR BEST OVERLAYS on PEAK MOMENT segments
+- MATCH THE ENERGY: high energy = more zoom effects, dynamic overlays. Low energy = subtle ken-burns, calm motion graphics
+- SPEED UP segments flagged as filler/pause
+- For HOOK segments, use attention-grabbing visuals and zoom-in effects
+- Match imagePrompt visual tone to the mood
 
 RULES:
 1. Overlay 40-60% of segments — leave breathing room
 2. Never overlay consecutive segments — always have at least 1 gap
 3. Use transitions only 3-6 times in a typical 2-minute video
 4. Effects should cover 20-30% of segments
-5. Speed up filler segments (ums, pauses, repetitive content) with speedFactor 1.3-2.0
+5. Speed up filler segments with speedFactor 1.3-2.0
 6. Do NOT cut segments unless they are completely empty/silence
-7. PREFER colors from the mood palette when provided — fall back to: #6366f1, #8b5cf6, #06b6d4, #10b981, #f59e0b, #ef4444, #ec4899, #3b82f6
-8. imagePrompt should be vivid and specific — describe the EXACT scene you want generated, matching the video's mood and visual tone
+7. imagePrompt should be vivid and specific
 
 Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
 {
@@ -111,7 +155,7 @@ Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
       {
         "segmentId": "seg_0",
         "action": "keep",
-        "overlay": { "type": "kinetic-text", "props": { "text": "WELCOME", "color": "#6366f1", "style": "pop", "position": "center", "fontSize": 42 } },
+        "overlay": { "type": "visual-illustration", "props": { "scene": "rocket-launch", "label": "GETTING STARTED", "color": "#ef4444", "transition": "fade-in" } },
         "effect": { "type": "zoom-in", "intensity": 1.2 },
         "transition": null
       },
@@ -178,20 +222,15 @@ ${transcriptText}
 
 Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The JSON must start with { and end with }.`;
 
-    // Determine which model/provider to use
-    const sub = await getUserSubscription();
-    const activeModel = model || getModelForTier(sub.tier);
-
-    console.log('[AgentEdit] Generating editing plan with model:', activeModel);
+    console.log('[AgentEdit] Generating editing plan via Lightning AI DeepSeek V4 Pro');
     console.log('[AgentEdit] Transcript has', subtitles.length, 'segments,', videoDuration.toFixed(1), 's');
 
-    // Try the AI call
-    const result = await callLLM(activeModel, SYSTEM_PROMPT, userPrompt);
+    const usedModel = 'lightning-ai/deepseek-v4-pro';
+    const result = await callLLM(usedModel, SYSTEM_PROMPT, userPrompt);
 
     if (!result) {
-      console.warn('[AgentEdit] LLM returned no result, using local fallback');
-      const fallbackPlan = generateLocalEditingPlan(subtitles, videoDuration);
-      return NextResponse.json({ ok: true, editingPlan: fallbackPlan, source: 'local' });
+      console.error('[AgentEdit] Lightning AI DeepSeek V4 Pro returned no result');
+      return NextResponse.json({ ok: false, error: 'AI model failed (Lightning AI DeepSeek V4 Pro). Check API key.' });
     }
 
     // Parse the JSON response
@@ -203,14 +242,16 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
         jsonStr = jsonMatch[0];
       }
 
+      // DeepSeek sometimes injects Chinese/non-ASCII chars that corrupt JSON structure
+      jsonStr = jsonStr.replace(/[^\x20-\x7E\n\r\t]/g, '');
+
       const parsed = JSON.parse(jsonStr);
       const plan = parsed.editingPlan || parsed;
 
       // Validate the plan structure
       if (!plan.segments || !Array.isArray(plan.segments)) {
-        console.warn('[AgentEdit] Invalid plan structure, using local fallback');
-        const fallbackPlan = generateLocalEditingPlan(subtitles, videoDuration);
-        return NextResponse.json({ ok: true, editingPlan: fallbackPlan, source: 'local' });
+        console.error('[AgentEdit] AI returned plan without segments array');
+        return NextResponse.json({ ok: false, error: 'AI returned invalid plan structure (no segments array)' });
       }
 
       // Validate segment IDs exist
@@ -226,9 +267,8 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
         }
       );
 
-      // ═══ ASSIGN IMAGE URLs ═══
-      // Use Pollinations URLs (instant, no API call, small response) so the
-      // serverless function returns quickly. Images load when the player renders.
+      // ═══ POST-PROCESS OVERLAYS ═══
+      const subtitleMap = new Map(subtitles.map(s => [s.id, s.text]));
       for (const seg of plan.segments as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }[]) {
         if (seg.overlay?.type === 'ai-generated-image') {
           const prompt = String(seg.overlay.props?.imagePrompt || '');
@@ -241,13 +281,83 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
         }
       }
 
-      console.log('[AgentEdit] Success! Plan has', plan.segments.length, 'segment edits, mood:', plan.mood);
-      return NextResponse.json({ ok: true, editingPlan: plan, source: 'ai' });
+      // ═══ GENERATE LIVE SVGs FOR AI MOTION GRAPHICS ═══
+      const motionSegs = (plan.segments as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }[])
+        .filter(seg => seg.overlay?.type === 'ai-motion-graphic')
+        .slice(0, 5);
+
+      if (motionSegs.length > 0) {
+        console.log(`[AgentEdit] Generating ${motionSegs.length} live motion SVGs...`);
+        const globalAbort = new AbortController();
+        const globalTimer = setTimeout(() => globalAbort.abort(), 90000);
+
+        const svgResults = await Promise.allSettled(
+          motionSegs.map(async (seg) => {
+            const text = subtitleMap.get(seg.segmentId) || '';
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 50000);
+            globalAbort.signal.addEventListener('abort', () => controller.abort());
+            try {
+              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+                || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+              const res = await fetch(`${baseUrl}/api/generate-motion-svg`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  text,
+                  mood: plan.mood || 'energetic',
+                  topic: String(seg.overlay?.props?.topic || 'general'),
+                  color: String(seg.overlay?.props?.color || '#6366f1'),
+                  label: String(seg.overlay?.props?.label || ''),
+                }),
+                signal: controller.signal,
+              });
+              clearTimeout(timer);
+              const data = await res.json();
+              return { segmentId: seg.segmentId, svgContent: data.svgContent || '', success: data.success };
+            } catch {
+              clearTimeout(timer);
+              return { segmentId: seg.segmentId, svgContent: '', success: false };
+            }
+          })
+        );
+
+        clearTimeout(globalTimer);
+
+        for (const result of svgResults) {
+          if (result.status === 'fulfilled' && result.value.success && result.value.svgContent) {
+            const seg = motionSegs.find(s => s.segmentId === result.value.segmentId);
+            if (seg?.overlay?.props) {
+              seg.overlay.props.svgContent = result.value.svgContent;
+              console.log(`[AgentEdit] Live SVG generated for ${result.value.segmentId}`);
+            }
+          } else {
+            // Downgrade to visual-illustration fallback
+            const failedId = result.status === 'fulfilled' ? result.value.segmentId : '';
+            const seg = motionSegs.find(s => s.segmentId === failedId);
+            if (seg?.overlay) {
+              const text = subtitleMap.get(seg.segmentId) || '';
+              const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+              const sceneMap: Record<string, string> = { money: 'money-flow', growth: 'growth-chart', brain: 'brain-idea', fire: 'fire-blaze', rocket: 'rocket-launch', power: 'energy-pulse', success: 'checkmark-success' };
+              let scene = 'energy-pulse';
+              for (const w of words) { if (sceneMap[w]) { scene = sceneMap[w]; break; } }
+              seg.overlay.type = 'visual-illustration';
+              seg.overlay.props = { scene, label: seg.overlay.props?.label || '', color: seg.overlay.props?.color || '#6366f1', transition: 'fade-in' };
+              console.log(`[AgentEdit] SVG generation failed for ${seg.segmentId}, downgraded to visual-illustration`);
+            }
+          }
+        }
+
+        const successCount = svgResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+        console.log(`[AgentEdit] Motion SVG generation: ${successCount}/${motionSegs.length} succeeded`);
+      }
+
+      console.log('[AgentEdit] Success! Plan has', plan.segments.length, 'segment edits, mood:', plan.mood, 'model:', usedModel);
+      return NextResponse.json({ ok: true, editingPlan: plan, source: `ai:${usedModel}` });
     } catch (parseError) {
       console.error('[AgentEdit] JSON parse error:', parseError);
-      console.error('[AgentEdit] Raw response:', result.substring(0, 500));
-      const fallbackPlan = generateLocalEditingPlan(subtitles, videoDuration);
-      return NextResponse.json({ ok: true, editingPlan: fallbackPlan, source: 'local' });
+      console.error('[AgentEdit] Raw response (first 500 chars):', result.substring(0, 500));
+      return NextResponse.json({ ok: false, error: `AI returned unparseable JSON: ${String(parseError).substring(0, 100)}` });
     }
   } catch (error) {
     console.error('[AgentEdit] Error:', error);
@@ -262,92 +372,39 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
 //  LLM Call — tries the requested model via Lightning AI gateway
 // ═══════════════════════════════════════════════════════════════
 
+const LIGHTNING_API_KEY = process.env.LIGHTNING_API_KEY || 'a136ad94-f05f-4431-b3ad-2148a0c72ac3/giggletales18/vision-model';
+
 async function callLLM(
   modelId: string,
   systemPrompt: string,
   userPrompt: string
 ): Promise<string | null> {
-  // Check for custom API first
-  const customApi = getCustomApiConfig(modelId) || CUSTOM_APIS.find(api => api.model === modelId);
-
-  let url: string;
-  let headers: Record<string, string>;
-  let body: Record<string, unknown>;
-
-  if (customApi) {
-    // Custom API (ModelScope, etc.)
-    url = customApi.baseUrl;
-    if (!url.includes('/chat/completions')) {
-      url = url.endsWith('/') ? `${url}chat/completions` : `${url}/chat/completions`;
-    }
-    headers = { 'Content-Type': 'application/json' };
-    if (customApi.authHeader && customApi.apiKey) {
-      const authValue = customApi.authPrefix ? `${customApi.authPrefix} ${customApi.apiKey}` : customApi.apiKey;
-      headers[customApi.authHeader] = authValue;
-    }
-    body = {
-      model: customApi.model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      max_tokens: 8192,
-      temperature: 0.7,
-    };
-  } else {
-    // Determine provider
-    let provider = 'lightning';
-    if (modelId.startsWith('anthropic/')) provider = 'anthropic';
-    else if (modelId.startsWith('openai/')) provider = 'openai';
-    else if (modelId.startsWith('google/')) provider = 'google';
-    else if (modelId.startsWith('deepseek/') || modelId === 'lightning-ai/DeepSeek-V3.1') provider = 'deepseek';
-
-    const apiEndpoint = getApiEndpoint(provider);
-    const apiKey = getApiKey(provider);
-
-    if (!apiKey) {
-      console.warn('[AgentEdit] No API key for provider:', provider);
-      return null;
-    }
-
-    if (provider === 'anthropic') {
-      const modelName = modelId.replace('anthropic/', '');
-      url = apiEndpoint;
-      headers = {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json',
-      };
-      body = {
-        model: modelName,
-        max_tokens: 8192,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      };
-    } else {
-      url = apiEndpoint;
-      headers = {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      };
-      body = {
-        model: modelId,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: [{ type: 'text', text: userPrompt }] },
-        ],
-        max_tokens: 8192,
-      };
-    }
-  }
+  const url = 'https://lightning.ai/api/v1/chat/completions';
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${LIGHTNING_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+  const body = {
+    model: 'lightning-ai/deepseek-v4-pro',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: 8192,
+    temperature: 0.7,
+  };
 
   try {
-    console.log('[AgentEdit] Calling LLM at:', url);
+    console.log('[AgentEdit] Calling Lightning AI DeepSeek V4 Pro');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -356,7 +413,11 @@ async function callLLM(
     }
 
     const data = await response.json();
-    return extractContent(data);
+    const content = extractContent(data);
+    if (!content) {
+      console.error('[AgentEdit] LLM returned 200 but no usable content. Raw:', JSON.stringify(data).substring(0, 300));
+    }
+    return content;
   } catch (error) {
     console.error('[AgentEdit] LLM fetch error:', error);
     return null;
@@ -534,100 +595,40 @@ function generateLocalEditingPlan(
       const contentHash = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
       const color = OVERLAY_COLORS[contentHash % OVERLAY_COLORS.length];
 
-      const hasVisualNoun = words.some(w => [
-          'money', 'rocket', 'brain', 'fire', 'ocean', 'mountain', 'city',
-          'star', 'earth', 'code', 'heart', 'clock', 'tree', 'food',
-      ].includes(w));
-      const hasEmotionWord = words.some(w => [
-          'love', 'happy', 'amazing', 'incredible', 'awesome', 'fire', 'lit',
-          'crazy', 'insane', 'wow', 'excited', 'cool', 'funny',
-      ].includes(w));
-      const hasNumbers = /\$[\d,.]+|\d+%|\d{3,}/.test(seg.text);
-      const isQuestion = seg.text.includes('?');
-      const textLen = seg.text.length;
-      const hasStrongSceneKeyword = words.some(w => {
-          const SCENE_KEYWORDS = new Set([
-              'money', 'revenue', 'profit', 'growth', 'success', 'rocket', 'brain',
-              'code', 'science', 'power', 'energy', 'fire', 'earth', 'world',
-              'mountain', 'ocean', 'celebrate', 'love', 'protect', 'invest',
-              'market', 'stock', 'launch', 'explode', 'scale', 'secret',
-              'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
-          ]);
-          return SCENE_KEYWORDS.has(w);
-      });
+      // Content-driven type selection: visual-illustration for strong keyword matches
+      const matchedScene = (() => {
+          // Skip generic conversational words
+          const SKIP = new Set(['guys', 'hello', 'welcome', 'right', 'true', 'real', 'tell', 'happen', 'finally', 'literally', 'actually', 'basically', 'definitely', 'probably', 'going', 'different', 'new', 'old', 'next', 'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why', 'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free']);
+          for (const w of words) {
+              if (SKIP.has(w)) continue;
+              if (SCENE_MAP[w]) return SCENE_MAP[w];
+          }
+          return null;
+      })();
 
-      // Determine display mode: fullscreen for maximum impact
-      const displayMode = (contentHash % 5 === 0) ? 'card' : 'fullscreen';
-
-      let chosenType: 'ai-generated-image' | 'kinetic-text' | 'gif-reaction' | 'emoji-reaction' | 'visual-illustration';
-
-      // HEAVILY favor AI-generated images (most eye-catching type)
-      if (hasNumbers || hasVisualNoun || textLen > 30 || hasStrongSceneKeyword) {
-          chosenType = 'ai-generated-image';
-      } else if (hasEmotionWord && !hasNumbers) {
-          chosenType = (contentHash % 3 === 0) ? 'gif-reaction' : 'ai-generated-image';
-      } else if (isQuestion) {
-          chosenType = 'ai-generated-image';
+      if (matchedScene) {
+          // Strong keyword match → animated SVG scene (instant, premium)
+          segment.overlay = {
+              type: 'visual-illustration',
+              props: {
+                  scene: matchedScene,
+                  label: extractKeyPhrase(seg.text),
+                  color,
+                  transition: 'fade-in',
+              },
+          };
       } else {
-          const pick = contentHash % 20;
-          if (pick < 14) chosenType = 'ai-generated-image';
-          else if (pick < 17) chosenType = 'visual-illustration';
-          else if (pick < 19) chosenType = 'gif-reaction';
-          else chosenType = 'emoji-reaction';
-      }
-
-      if (chosenType === 'ai-generated-image') {
-        // AI-generated image — most impactful, fullscreen B-roll
-        const keyPhrase = extractKeyPhrase(seg.text);
-        segment.overlay = {
-          type: 'ai-generated-image',
-          props: {
-            imagePrompt: `${seg.text.substring(0, 120)}, cinematic lighting, hyperrealistic, professional color grading, 8k, high detail`,
-            caption: keyPhrase,
-            displayMode,
-          },
-        };
-      } else if (chosenType === 'gif-reaction') {
-        // GIF reaction
-        segment.overlay = {
-          type: 'gif-reaction',
-          props: {
-            keyword: seg.text.substring(0, 60),
-            size: 'large',
-            position: 'center',
-          },
-        };
-      } else if (chosenType === 'visual-illustration') {
-        // Visual illustration (animated SVG)
-        const sceneKeys = Object.keys(SCENE_MAP);
-        let sceneName = 'globe';
-        for (const w of words) {
-          if (SCENE_MAP[w]) { sceneName = SCENE_MAP[w]; break; }
-        }
-        if (sceneName === 'globe') {
-          // random fallback if no match
-          sceneName = SCENE_MAP[sceneKeys[contentHash % sceneKeys.length]];
-        }
-        
-        segment.overlay = {
-          type: 'visual-illustration',
-          props: {
-            scene: sceneName,
-            label: extractKeyPhrase(seg.text),
-            color,
-            transition: 'fade-in',
-          },
-        };
-      } else {
-        // Emoji
-        let emoji = '🔥';
-        for (const w of words) {
-          if (EMOJI_MAP[w]) { emoji = EMOJI_MAP[w]; break; }
-        }
-        segment.overlay = {
-          type: 'emoji-reaction',
-          props: { emoji, size: 70 },
-        };
+          // No strong scene match → AI-generated image
+          const keyPhrase = extractKeyPhrase(seg.text);
+          const keyWords = words.filter(w => !new Set(['the','and','but','for','are','was','has','had','have','will','can','this','that','with','from','they','been','were','being','does','its','our','your']).has(w)).slice(0, 5).join(', ');
+          segment.overlay = {
+              type: 'ai-generated-image',
+              props: {
+                  imagePrompt: `A cinematic scene depicting: ${seg.text.substring(0, 100)}. Key elements: ${keyWords}. Dramatic composition, volumetric lighting, hyperrealistic, professional color grading, 8k, shallow depth of field`,
+                  caption: keyPhrase,
+                  displayMode: (contentHash % 5 === 0) ? 'card' : 'fullscreen',
+              },
+          };
       }
 
       // Add effects to some overlaid segments (every other one)

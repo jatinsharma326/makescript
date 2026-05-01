@@ -26,7 +26,7 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         name: 'GLM-5 (ModelScope)',
         baseUrl: 'https://api-inference.modelscope.ai/v1',
         apiKey: process.env.MODELSCOPE_API_KEY || '',
-        model: 'zai-org/GLM-5.1',
+        model: 'MiniMax/MiniMax-M2.5',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
@@ -59,7 +59,7 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         name: 'DeepSeek V4 Pro',
         baseUrl: 'https://api-inference.modelscope.ai/v1',
         apiKey: process.env.MODELSCOPE_API_KEY || '',
-        model: 'deepseek-ai/DeepSeek-V4-Pro',
+        model: 'Qwen/Qwen3-235B-A22B-Thinking-2507',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
@@ -74,7 +74,7 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         name: 'GLM-5 NVIDIA',
         baseUrl: 'https://integrate.api.nvidia.com/v1',
         apiKey: process.env.NVIDIA_GLM5_API_KEY || '',
-        model: 'openai/z-ai/glm-5.1',
+        model: 'z-ai/glm-5.1',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
@@ -85,7 +85,7 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         name: 'MiniMax M2.7 NVIDIA',
         baseUrl: 'https://integrate.api.nvidia.com/v1',
         apiKey: process.env.NVIDIA_MINIMAX_API_KEY || '',
-        model: 'openai/minimaxai/minimax-m2.7',
+        model: 'minimaxai/minimax-m2.7',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
@@ -96,7 +96,7 @@ export const CUSTOM_APIS: CustomAPIConfig[] = [
         name: 'DeepSeek V4 Pro (NVIDIA)',
         baseUrl: 'https://integrate.api.nvidia.com/v1',
         apiKey: process.env.NVIDIA_DEEPSEEK_API_KEY || '',
-        model: 'openai/deepseek-ai/deepseek-v4-pro',
+        model: 'deepseek-ai/deepseek-v4-pro',
         authHeader: 'Authorization',
         authPrefix: 'Bearer',
     },
@@ -228,9 +228,9 @@ export const MODEL_PROVIDER_MAP: Record<string, string> = {
     // DeepSeek models
     'lightning-ai/DeepSeek-V3.1': 'deepseek',
     'deepseek/deepseek-v3': 'deepseek',
-    'deepseek-v4-pro': 'custom',
-    
+
     // Lightning AI models
+    'lightning-ai/deepseek-v4-pro': 'lightning',
     'lightning-ai/llama-3.3-70b': 'lightning',
     
     // NVIDIA models (via LiteLLM proxy)
