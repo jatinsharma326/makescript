@@ -26,7 +26,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
     position = 'center',
 }) => {
     const frame = useCurrentFrame();
-    const { fps } = useVideoConfig();
+    const { fps, width } = useVideoConfig();
 
     if (frame < startFrame || frame > endFrame) return null;
 
@@ -81,6 +81,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
                         flexWrap: 'wrap',
                         justifyContent: 'center',
                         gap: '18px',
+                        width: '90%',
                         maxWidth: '90%',
                     }}
                 >
@@ -103,7 +104,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
                                 style={{
                                     display: 'inline-block',
                                     fontFamily: "'Outfit', 'Inter', sans-serif",
-                                    fontSize: 85,
+                                    fontSize: Math.min(85, width * 0.08),
                                     fontWeight: 900,
                                     letterSpacing: '-0.05em',
                                     lineHeight: 1.1,
@@ -148,6 +149,8 @@ export const KineticText: React.FC<KineticTextProps> = ({
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
+                        width: '90%',
+                        maxWidth: '90%',
                     }}
                 >
                     {/* Glassmorphic backplate */}
@@ -180,7 +183,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
                                 flexWrap: 'wrap',
                                 justifyContent: 'center',
                                 gap: '16px',
-                                maxWidth: '1000px',
+                                width: '100%',
                             }}
                         >
                             {words.map((word, i) => {
@@ -200,7 +203,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
                                             style={{
                                                 display: 'inline-block',
                                                 fontFamily: "'Inter', sans-serif",
-                                                fontSize: 64,
+                                                fontSize: Math.min(64, width * 0.06),
                                                 fontWeight: 800,
                                                 letterSpacing: '-0.02em',
                                                 color: '#ffffff',
@@ -244,7 +247,8 @@ export const KineticText: React.FC<KineticTextProps> = ({
                     top: posY,
                     transform: `translate(-50%, -50%) scale(${boxScale * exitScale}) translateY(${exitY}px)`,
                     opacity: boxOpacity * exitOpacity,
-                    maxWidth: '80%',
+                    width: '90%',
+                    maxWidth: '90%',
                 }}
             >
                 <div
@@ -277,7 +281,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
                             <span
                                 style={{
                                     fontFamily: "'JetBrains Mono', monospace",
-                                    fontSize: 36,
+                                    fontSize: Math.min(36, width * 0.04),
                                     fontWeight: 600,
                                     color: '#ffffff',
                                     letterSpacing: '0.02em',

@@ -1526,25 +1526,14 @@ export function applyEditingPlan(
                 };
             }
         } else if (seg.overlay.type === 'ai-motion-graphic') {
-            // Spread out ai-motion-graphic (they are heavy and should be peak moments only)
-            // So we will only keep it if the timestamp/index allows it, otherwise change to something lighter
-            const hash = hashString(seg.text);
-            if (hash % 4 !== 0) {
-                seg.overlay.type = hash % 2 === 0 ? 'highlight-box' : 'kinetic-text';
-                seg.overlay.props = {
-                    color: getProColor(hash),
-                    style: 'glow',
-                    text: extractLabelFromText(seg.text) || seg.text.substring(0, 30),
-                };
-            } else {
-                seg.overlay.props = {
-                    ...seg.overlay.props,
-                    label: seg.overlay.props?.label || extractLabelFromText(seg.text),
-                    color: seg.overlay.props?.color || getProColor(hash),
-                    topic: seg.overlay.props?.topic || 'general',
-                    mood: seg.overlay.props?.mood || 'energetic',
-                };
-            }
+            // Keep ai-motion-graphic — ensure it has proper transcript-synced props
+            seg.overlay.props = {
+                ...seg.overlay.props,
+                label: seg.overlay.props?.label || extractLabelFromText(seg.text),
+                color: seg.overlay.props?.color || getProColor(hashString(seg.text)),
+                topic: seg.overlay.props?.topic || 'general',
+                mood: seg.overlay.props?.mood || 'energetic',
+            };
         }
     }
     // Extract color grading from the plan

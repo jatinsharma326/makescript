@@ -30,6 +30,92 @@ const ALL_SCENES = [
     'crown-royal', 'atom-science', 'mountain-peak',
 ];
 
+// Content -> Scene mapping for topic extraction
+const SCENE_MAP_KEYWORDS: Record<string, string> = {
+    // Money & Business
+    money: 'money-flow', revenue: 'money-flow', profit: 'money-flow', income: 'money-flow',
+    dollar: 'money-flow', cash: 'money-flow', price: 'money-flow', cost: 'money-flow',
+    earn: 'money-flow', pay: 'money-flow', salary: 'money-flow',
+    sales: 'shopping-cart', buy: 'shopping-cart', shop: 'shopping-cart', purchase: 'shopping-cart',
+    store: 'shopping-cart', product: 'shopping-cart', order: 'shopping-cart', deal: 'shopping-cart',
+    business: 'growth-chart', company: 'growth-chart', startup: 'growth-chart',
+    stock: 'growth-chart', invest: 'growth-chart', market: 'growth-chart',
+    luxury: 'diamond-gem', premium: 'diamond-gem', expensive: 'diamond-gem',
+    growth: 'arrow-growth', grow: 'arrow-growth', increase: 'arrow-growth',
+    rise: 'arrow-growth', scale: 'arrow-growth', expand: 'arrow-growth',
+    success: 'checkmark-success', achieve: 'checkmark-success', accomplish: 'checkmark-success',
+    win: 'celebration', champion: 'celebration', winner: 'celebration',
+    celebrate: 'celebration', victory: 'celebration', awesome: 'celebration', amazing: 'celebration',
+    goal: 'target-bullseye', target: 'target-bullseye', aim: 'target-bullseye',
+    focus: 'target-bullseye', strategy: 'target-bullseye', plan: 'target-bullseye',
+    best: 'crown-royal', top: 'crown-royal', leader: 'crown-royal', greatest: 'crown-royal',
+    brain: 'brain-idea', think: 'brain-idea', idea: 'brain-idea',
+    smart: 'brain-idea', mind: 'brain-idea', learn: 'brain-idea',
+    secret: 'brain-idea', tip: 'brain-idea', trick: 'brain-idea', hack: 'brain-idea',
+    code: 'code-terminal', programming: 'code-terminal', software: 'code-terminal',
+    developer: 'code-terminal', app: 'code-terminal', website: 'code-terminal',
+    tech: 'code-terminal', digital: 'code-terminal', computer: 'code-terminal',
+    connect: 'connections', network: 'connections', social: 'connections',
+    internet: 'connections', online: 'connections', community: 'connections',
+    together: 'connections', collaborate: 'connections', share: 'connections',
+    people: 'connections', friends: 'connections', relationship: 'connections',
+    science: 'atom-science', research: 'atom-science', experiment: 'atom-science',
+    physics: 'atom-science', chemistry: 'atom-science', quantum: 'atom-science',
+    machine: 'gear-system', system: 'gear-system', engine: 'gear-system',
+    process: 'gear-system', automate: 'gear-system', build: 'gear-system',
+    tool: 'gear-system', work: 'gear-system', method: 'gear-system',
+    watch: 'eye-vision', see: 'eye-vision', look: 'eye-vision',
+    observe: 'eye-vision', view: 'eye-vision', discover: 'eye-vision',
+    reveal: 'eye-vision', vision: 'eye-vision', insight: 'eye-vision',
+    show: 'eye-vision', check: 'eye-vision', notice: 'eye-vision',
+    power: 'energy-pulse', energy: 'energy-pulse', force: 'energy-pulse',
+    strong: 'energy-pulse', charge: 'energy-pulse', activate: 'energy-pulse',
+    electric: 'lightning', shock: 'lightning', bolt: 'lightning',
+    fast: 'lightning', speed: 'lightning', quick: 'lightning', instant: 'lightning',
+    explode: 'explosion-burst', boom: 'explosion-burst', blast: 'explosion-burst',
+    massive: 'explosion-burst', huge: 'explosion-burst', incredible: 'explosion-burst',
+    impact: 'explosion-burst', crazy: 'explosion-burst', insane: 'explosion-burst',
+    launch: 'rocket-launch', rocket: 'rocket-launch', fly: 'rocket-launch',
+    moon: 'rocket-launch', space: 'rocket-launch', sky: 'rocket-launch',
+    start: 'rocket-launch', begin: 'rocket-launch', kick: 'rocket-launch',
+    fire: 'fire-blaze', hot: 'fire-blaze', burn: 'fire-blaze',
+    flame: 'fire-blaze', heat: 'fire-blaze', lit: 'fire-blaze',
+    passion: 'fire-blaze', intense: 'fire-blaze', trending: 'fire-blaze',
+    attract: 'magnet-attract', pull: 'magnet-attract', draw: 'magnet-attract',
+    earth: 'globe', world: 'globe', global: 'globe',
+    country: 'globe', international: 'globe', planet: 'globe',
+    travel: 'globe', worldwide: 'globe',
+    tree: 'nature-tree', nature: 'nature-tree', forest: 'nature-tree',
+    green: 'nature-tree', environment: 'nature-tree',
+    ocean: 'water-wave', water: 'water-wave', sea: 'water-wave',
+    wave: 'water-wave', flow: 'water-wave', river: 'water-wave',
+    mountain: 'mountain-peak', climb: 'mountain-peak', summit: 'mountain-peak',
+    peak: 'mountain-peak', challenge: 'mountain-peak', overcome: 'mountain-peak',
+    journey: 'mountain-peak', adventure: 'mountain-peak', effort: 'mountain-peak',
+    sun: 'solar-system', star: 'solar-system', universe: 'solar-system',
+    galaxy: 'solar-system', cosmic: 'solar-system',
+    city: 'city-skyline', urban: 'city-skyline', downtown: 'city-skyline',
+    building: 'city-skyline', skyline: 'city-skyline',
+    love: 'heartbeat', heart: 'heartbeat', feel: 'heartbeat',
+    care: 'heartbeat', emotion: 'heartbeat', life: 'heartbeat',
+    health: 'heartbeat', dream: 'heartbeat',
+    protect: 'shield-protect', safe: 'shield-protect', security: 'shield-protect',
+    guard: 'shield-protect', defense: 'shield-protect', trust: 'shield-protect',
+    walk: 'person-walking', step: 'person-walking', move: 'person-walking',
+    run: 'person-walking', exercise: 'person-walking', fitness: 'person-walking',
+    time: 'clock-time', hour: 'clock-time', minute: 'clock-time',
+    schedule: 'clock-time', deadline: 'clock-time', wait: 'clock-time',
+    today: 'clock-time', tomorrow: 'clock-time', years: 'clock-time',
+    music: 'music-notes', song: 'music-notes', sound: 'music-notes',
+    listen: 'music-notes', audio: 'music-notes', podcast: 'music-notes',
+    book: 'book-reading', read: 'book-reading', study: 'book-reading',
+    education: 'book-reading', course: 'book-reading', teach: 'book-reading',
+    video: 'camera', photo: 'camera', film: 'camera',
+    record: 'camera', content: 'camera', create: 'camera',
+    food: 'cooking', eat: 'cooking', recipe: 'cooking',
+    cook: 'cooking', meal: 'cooking', kitchen: 'cooking',
+};
+
 interface SubtitleInput {
     id: string;
     startTime: number;
@@ -277,15 +363,31 @@ Return ONLY a JSON array of segmentIds — no markdown, no explanation:
                 for (const segmentId of selectedIds) {
                     const seg = subtitleMap.get(segmentId);
                     if (!seg) continue;
-                    const isMotion = i % 4 === 0;
+                    // Every other overlay is ai-motion-graphic (50% ratio for transcript-sync)
+                    const isMotion = i % 2 === 0;
+
+                    // Extract topic from segment text using keyword matching
+                    const segWords = seg.text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter((w: string) => w.length > 2);
+                    let detectedTopic = 'general';
+                    for (const w of segWords) {
+                        if (SCENE_MAP_KEYWORDS[w]) { detectedTopic = w; break; }
+                    }
+
+                    // Detect mood from text content
+                    const lower = seg.text.toLowerCase();
+                    let detectedMood = 'energetic';
+                    if (/shock|reveal|secret|danger|war|crisis|death/.test(lower)) detectedMood = 'dramatic';
+                    else if (/peace|calm|gentle|quiet|serene/.test(lower)) detectedMood = 'calm';
+                    else if (/love|heart|happy|joy|warm|family/.test(lower)) detectedMood = 'warm';
+
                     suggestions.push({
                         segmentId,
                         type: isMotion ? 'ai-motion-graphic' : 'highlight-box',
                         props: {
                             label: isMotion ? (extractLabelFromText(seg.text) || seg.text.substring(0, 40)) : undefined,
                             color: getProColor(hashString(segmentId)),
-                            topic: 'general',
-                            mood: 'energetic',
+                            topic: detectedTopic,
+                            mood: detectedMood,
                             style: !isMotion ? 'glow' : undefined,
                         },
                     });
