@@ -7,6 +7,7 @@ import {
     SmartCutRequest,
     SmartCutRequestSegment,
     SmartCutSuccessResponse,
+    SmartCutTier,
     SmartCutWarning,
 } from '@/lib/types';
 
@@ -230,7 +231,7 @@ export async function POST(req: NextRequest) {
                 totalSegments: subtitles.length,
                 fillerCount: sortedFillers.length,
                 strategy,
-                tier: subscription.tier,
+                 tier: subscription.tier as SmartCutTier,
             },
             ...(warnings.length > 0 ? { warnings } : {}),
         };
