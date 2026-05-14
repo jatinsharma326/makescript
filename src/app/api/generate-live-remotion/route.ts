@@ -15,15 +15,23 @@ interface MotionReactRequest {
   title?: string;
 }
 
-export const maxDuration = 60; // Prevent Vercel timeouts for LLM code generation
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, mood, topic, color, label, durationInSeconds = 2, fullTranscript = "", title = "" } = (await request.json()) as MotionReactRequest;
+    const body = (await request.json()) as MotionReactRequest;
+    const { text, mood, topic, color, label, durationInSeconds = 2, fullTranscript = "", title = "" } = body;
 
     if (!text) {
       return NextResponse.json({ reactCode: '', success: false, error: 'No text provided' });
     }
+
+    if (!CROF_API_KEY) {
+      console.error('[GenerateLiveRemotion] CROF_API_KEY is not set!');
+      return NextResponse.json({ reactCode: '', success: false, error: 'CROF_API_KEY not configured' });
+    }
+
+    const scriptContent = fullTranscript?.substring(0, 1500) || text;
 
     const systemPrompt = `### SYSTEM INSTRUCTIONS ###
 You are a creative Remotion developer who creates stunning motion graphics for ANY video topic.
@@ -34,7 +42,7 @@ Read the title and script carefully. Determine what category the content falls i
 
 TITLE: ${title || "Video"}
 
-SCRIPT CONTENT: ${fullTranscript?.substring(0, 1500) || text}
+SCRIPT CONTENT: ${scriptContent}
 
 CATEGORIES:
 News, War and Geopolitics, Entertainment, Anime, Gaming, Technology, Science, History, Nature, Sports, Music, Food, Travel, Business, Health, Education
@@ -58,14 +66,18 @@ const sceneIndex = Math.floor(frame / framesPerScene);
 
 TECHNICAL REQUIREMENTS:
 - Use React + Remotion only
-- Use AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img
+- Use AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate
 - Component name: FocusMode
-- Add 200–400 animated particles
+- Add 200-400 animated particles
 - Use smooth transitions + 30-frame crossfade
+- Do NOT use any external libraries
+- Do NOT use TypeScript type annotations (no React.FC, no : string, etc.)
+- Do NOT import React separately, it is available globally
 
 OUTPUT RULES:
-- Return ONLY valid, syntactically perfect JavaScript/React code.
-- No explanations. No markdown fences.
+- Return ONLY valid, syntactically perfect JavaScript/JSX code
+- No explanations. No markdown fences. No comments before the code.
+- The code must start with an import statement
 - Provide only the raw code.`;
 
     const userPrompt = `### USER REQUEST ###
@@ -73,7 +85,7 @@ Create a Remotion animation for this video:
 
 TITLE: ${title || "Video"}
 
-SCRIPT CONTENT: ${fullTranscript?.substring(0, 1500) || text}
+SCRIPT CONTENT: ${scriptContent}
 
 The video MUST:
 - Have exactly 6 scenes
@@ -81,13 +93,12 @@ The video MUST:
 - Be 1080x1920 vertical
 - Use professional motion graphics
 - Component name must be FocusMode
+- Export it as default: export default FocusMode;
 
 Return only the raw code.`;
 
-    let aiResponse = '';
-    
-    console.log(`[GenerateLiveRemotion] Calling ${CROF_MODEL} via crof.ai`);
-    
+    console.log(`[GenerateLiveRemotion] Calling ${CROF_MODEL} via crof.ai for ${durationInSeconds}s video`);
+
     const res = await fetch(CROF_API, {
       method: 'POST',
       headers: {
@@ -107,22 +118,28 @@ Return only the raw code.`;
 
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
+      console.error(`[GenerateLiveRemotion] API returned ${res.status}: ${errText}`);
       throw new Error(`API failed: ${res.status} ${errText}`);
     }
 
     const data = await res.json();
-    aiResponse = data.choices?.[0]?.message?.content || '';
+    const aiResponse = data.choices?.[0]?.message?.content || '';
 
-    if (!aiResponse) {
-      throw new Error('Empty response from AI');
+    if (!aiResponse || aiResponse.trim().length < 50) {
+      console.error(`[GenerateLiveRemotion] AI response too short: ${aiResponse.length} chars`);
+      throw new Error('AI response is empty or too short');
     }
+
+    console.log(`[GenerateLiveRemotion] Got ${aiResponse.length} chars from AI`);
 
     // ========================================
     // PARSE AND FIX REMOTION CODE
+    // Mirrors the n8n "Parse and Fix Code" node
     // ========================================
 
-    // Clean markdown fences
     let code = aiResponse;
+
+    // Clean markdown fences
     code = code.replace(/```javascript\n?/gi, '');
     code = code.replace(/```jsx\n?/gi, '');
     code = code.replace(/```js\n?/gi, '');
@@ -136,6 +153,11 @@ Return only the raw code.`;
     if (firstImportIndex > 0) {
       code = code.substring(firstImportIndex);
     }
+
+    // Remove TypeScript annotations that Kimi sometimes adds
+    code = code.replace(/:\s*React\.FC\b(<[^>]*>)?/g, '');
+    code = code.replace(/:\s*React\.CSSProperties/g, '');
+    code = code.replace(/:\s*\{\s*\w+:\s*\w+[^}]*\}\s*(?=\)|\s*=>)/g, '');
 
     // Safe interpolate helper function
     const safeInterpolateHelper = `
@@ -180,7 +202,7 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
     let inHelper = false;
     let helperBraceCount = 0;
 
-    const fixedLines = lines.map((line) => {
+    const fixedLines = lines.map((line: string) => {
       if (line.includes('const safeInterpolate')) {
         inHelper = true;
         helperBraceCount = 0;
@@ -205,24 +227,65 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
 
     code = fixedLines.join('\n');
 
-    // Fix common export issues
-    if (!code.includes('export const LiveGraphic') && !code.includes('export default')) {
-      if (code.includes('const LiveGraphic')) {
+    // ========================================
+    // FIX EXPORTS - Handle both FocusMode AND LiveGraphic
+    // ========================================
+
+    const hasFocusMode = code.includes('const FocusMode');
+    const hasLiveGraphic = code.includes('const LiveGraphic');
+    const hasExportDefault = code.includes('export default');
+
+    if (hasFocusMode && !hasExportDefault) {
+      // Add export default for FocusMode
+      if (!code.includes('export const FocusMode')) {
+        code = code.replace('const FocusMode', 'export const FocusMode');
+      }
+      code = code + '\n\nexport default FocusMode;';
+    } else if (hasLiveGraphic && !hasExportDefault) {
+      if (!code.includes('export const LiveGraphic')) {
         code = code.replace('const LiveGraphic', 'export const LiveGraphic');
+      }
+      code = code + '\n\nexport default LiveGraphic;';
+    } else if (!hasExportDefault) {
+      // Last resort: find any component-like const and export it
+      const componentMatch = code.match(/const\s+(\w+)\s*=\s*\(/);
+      if (componentMatch) {
+        code = code + `\n\nexport default ${componentMatch[1]};`;
       }
     }
 
-    // Add export default if only named export exists
-    if (code.includes('export const LiveGraphic') && !code.includes('export default')) {
-      code = code + '\n\nexport default LiveGraphic;';
+    // ========================================
+    // VALIDATION
+    // ========================================
+
+    const hasImport = code.includes('import');
+    const hasExport = code.includes('export default') || code.includes('export const');
+    const hasAbsoluteFill = code.includes('AbsoluteFill');
+    const hasUseCurrentFrame = code.includes('useCurrentFrame');
+
+    if (!hasImport || !hasExport || !hasAbsoluteFill || !hasUseCurrentFrame) {
+      console.error(`[GenerateLiveRemotion] Validation failed: import=${hasImport}, export=${hasExport}, AbsoluteFill=${hasAbsoluteFill}, useCurrentFrame=${hasUseCurrentFrame}`);
+      console.error(`[GenerateLiveRemotion] Code preview: ${code.substring(0, 300)}`);
+      throw new Error(
+        `Invalid code: import=${hasImport}, export=${hasExport}, AbsoluteFill=${hasAbsoluteFill}, useCurrentFrame=${hasUseCurrentFrame}`
+      );
     }
 
-    console.log(`[GenerateLiveRemotion] Success via ${CROF_MODEL} (${code.length} chars)`);
-    return NextResponse.json({ reactCode: code, success: true, source: CROF_MODEL });
+    console.log(`[GenerateLiveRemotion] Success! Code length: ${code.length} chars, hasFocusMode=${hasFocusMode}, hasLiveGraphic=${hasLiveGraphic}`);
 
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : 'unknown';
+    return NextResponse.json({
+      reactCode: code,
+      success: true,
+      codeLength: code.length,
+      source: CROF_MODEL
+    });
+
+  } catch (error: any) {
+    const msg = error?.message || String(error);
     console.error(`[GenerateLiveRemotion] Error: ${msg}`);
-    return NextResponse.json({ reactCode: '', success: false, error: msg }, { status: 500 });
+    return NextResponse.json(
+      { reactCode: '', success: false, error: msg },
+      { status: 500 }
+    );
   }
 }

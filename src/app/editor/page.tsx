@@ -566,6 +566,8 @@ export default function EditorPage() {
             const color = String(firstSeg.overlay!.props.color || '#6366f1');
             const mood = String(firstSeg.overlay!.props.mood || 'energetic');
             
+            addLog(`Calling Kimi AI for ${Math.round(totalDuration)}s video (${fullTranscript.length} chars transcript)...`);
+            
             const res = await fetch('/api/generate-live-remotion', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -575,15 +577,16 @@ export default function EditorPage() {
                     topic,
                     color,
                     label,
-                    durationInSeconds: totalDuration,
+                    durationInSeconds: Math.round(totalDuration),
                     fullTranscript,
                     title: label
                 }),
             });
             
             const data = await res.json();
+            
             if (data.success && data.reactCode) {
-                addLog(`Global Motion Graphic ready!`);
+                addLog(`Global Motion Graphic ready! (${data.codeLength || data.reactCode.length} chars of React code)`);
                 return subs.map(s => {
                     if (s.id === firstSeg.id && s.overlay) {
                         s.overlay.props = { ...s.overlay.props, reactCode: data.reactCode, global: true };
@@ -596,8 +599,10 @@ export default function EditorPage() {
                     return s;
                 });
             }
-            addLog(`Global Motion Graphic failed.`);
-        } catch (err) {
+            
+            addLog(`Global Motion Graphic API failed: ${data.error || 'Unknown error'} (status: ${res.status})`);
+        } catch (err: any) {
+            addLog(`Motion Graphics generation error: ${err.message || String(err)}`);
             console.error('[preGenerateMotionGraphics] Error:', err);
         }
 

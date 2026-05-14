@@ -46,8 +46,8 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
 
-    const DynamicComponent = useMemo(() => {
-        if (!reactCode) return null;
+    const { Component: DynamicComponent, error: evalError } = useMemo(() => {
+        if (!reactCode) return { Component: null, error: null };
         
         try {
             const transpiled = Babel.transform(reactCode, {
@@ -78,10 +78,10 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
             const createComponent = new Function('scope', evalCode);
             const Component = createComponent(scope);
             
-            return Component as React.FC<any>;
-        } catch (err) {
+            return { Component: Component as React.FC<any>, error: null };
+        } catch (err: any) {
             console.error('[LiveMotionGraphic] Failed to compile/evaluate React code:', err);
-            return null;
+            return { Component: null, error: err.message || String(err) };
         }
     }, [reactCode]);
 
@@ -94,6 +94,15 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     const opacity = Math.min(enterOpacity, exitOpacity);
 
     if (frame < startFrame || frame > endFrame) return null;
+
+    if (evalError) {
+        return (
+            <AbsoluteFill style={{ backgroundColor: 'rgba(255,0,0,0.8)', zIndex: 99, padding: 40, color: 'white', fontFamily: 'monospace', justifyContent: 'center' }}>
+                <h1 style={{ fontSize: 40, marginBottom: 20 }}>AI Code Evaluation Failed</h1>
+                <p style={{ fontSize: 24, whiteSpace: 'pre-wrap' }}>{evalError}</p>
+            </AbsoluteFill>
+        );
+    }
 
     if (DynamicComponent) {
         return (
