@@ -1,9 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img, random } from 'remotion';
 import * as Babel from '@babel/standalone';
+import { CanvasMotionGraphic } from './CanvasMotionGraphic';
 
 interface AiMotionGraphicProps {
     reactCode?: string;
+    text?: string;
     imageUrl?: string;
     label?: string;
     color?: string;
@@ -32,6 +34,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallbac
 import * as Remotion from 'remotion';
 export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     reactCode,
+    text,
     imageUrl,
     label,
     color = '#6366f1',
@@ -97,6 +100,20 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
                     <DynamicComponent />
                 </ErrorBoundary>
             </AbsoluteFill>
+        );
+    }
+
+    // PRIORITY 2: Canvas-based motion graphic (professional GPU-accelerated rendering)
+    if (label || text) {
+        return (
+            <CanvasMotionGraphic
+                text={text || ''}
+                label={label}
+                color={color}
+                mood="energetic"
+                startFrame={startFrame}
+                endFrame={endFrame}
+            />
         );
     }
 
