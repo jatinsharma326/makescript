@@ -12,6 +12,7 @@ interface MotionReactRequest {
   label: string;
   durationInSeconds: number;
   fullTranscript?: string;
+  title?: string;
 }
 
 export const maxDuration = 60; // Prevent Vercel timeouts for LLM code generation
@@ -24,42 +25,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ reactCode: '', success: false, error: 'No text provided' });
     }
 
-    const systemPrompt = `You are a creative Remotion developer who creates stunning motion graphics for ANY video topic.
+    const systemPrompt = `### SYSTEM INSTRUCTIONS ###
+You are a creative Remotion developer who creates stunning motion graphics for ANY video topic.
 
-YOUR TASK:
-Create a cinematic, high-quality motion design React component using Remotion that visually illustrates the exact text segment provided.
+YOUR FIRST TASK - DETECT THE TOPIC:
+
+Read the title and script carefully. Determine what category the content falls into.
+
+TITLE: ${title || "Video"}
+
+SCRIPT CONTENT: ${fullTranscript?.substring(0, 1500) || text}
+
+CATEGORIES:
+News, War and Geopolitics, Entertainment, Anime, Gaming, Technology, Science, History, Nature, Sports, Music, Food, Travel, Business, Health, Education
 
 VISUAL STYLE RULES:
-- The visuals MUST directly represent the transcript content. 
-- Match visuals to the detected category (e.g. if the text mentions "money", use gold coins and charts. If "rocket", show a space scene).
-- Use cinematic, high-quality motion design with modern UI trends (Glassmorphism, Neon glows, Smooth gradients).
-- Add 200-400 animated particles relevant to the topic (stars, pixels, petals, geometric shapes, etc.)
-- Use smooth transitions + 30-frame crossfade for entrance and exit.
+- Match visuals to detected category
+- Use cinematic, high-quality motion design
+- Add particles relevant to topic (stars, pixels, petals, etc.)
+
+TRANSITION BETWEEN SCENES & DURATION:
+The total video duration MUST strictly match ${durationInSeconds} seconds.
+
+CRITICAL:
+- EXACTLY 6 scenes
+- NO more, NO less
+
+Use this math:
+const totalFrames = ${durationInSeconds} * 30;
+const framesPerScene = Math.floor(totalFrames / 6);
+const sceneIndex = Math.floor(frame / framesPerScene);
 
 TECHNICAL REQUIREMENTS:
-- Use React + Remotion strictly.
-- Use AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img.
-- Component name MUST be: FocusMode or LiveGraphic.
-- Do NOT use any external libraries (no styled-components, framer-motion, etc).
-- The total video duration MUST strictly match ${durationInSeconds} seconds at 30fps.
+- Use React + Remotion only
+- Use AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img
+- Component name: FocusMode
+- Add 200–400 animated particles
+- Use smooth transitions + 30-frame crossfade
 
 OUTPUT RULES:
 - Return ONLY valid, syntactically perfect JavaScript/React code.
 - No explanations. No markdown fences.
 - Provide only the raw code.`;
 
-    const userPrompt = `Create a Remotion animation component for this video segment:
+    const userPrompt = `### USER REQUEST ###
+Create a Remotion animation for this video:
 
-FULL VIDEO SCRIPT CONTEXT: "${fullTranscript.substring(0, 1500)}"
+TITLE: ${title || "Video"}
 
-THIS SPECIFIC SCENE SCRIPT: "${text}"
+SCRIPT CONTENT: ${fullTranscript?.substring(0, 1500) || text}
 
 The video MUST:
+- Have exactly 6 scenes
 - Match ${durationInSeconds}s duration perfectly
 - Be 1080x1920 vertical
-- Use professional motion graphics with 200-400 particles.
-- Display the label: "${label}" as the central element.
-- Primary color: ${color}
+- Use professional motion graphics
+- Component name must be FocusMode
 
 Return only the raw code.`;
 

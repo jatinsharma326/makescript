@@ -475,6 +475,10 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                         );
                     }
                     case 'ai-motion-graphic': {
+                        const isGlobal = !!seg.overlay.props.global;
+                        const actualStartFrame = isGlobal ? 0 : startFrame;
+                        const actualEndFrame = isGlobal ? Math.round(subtitles[subtitles.length - 1].endTime * fps) : endFrame;
+                        
                         return (
                             <AiMotionGraphic
                                 key={seg.id}
@@ -484,8 +488,8 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 imageUrl={seg.overlay.props.imageUrl ? String(seg.overlay.props.imageUrl) : undefined}
                                 label={seg.overlay.props.label ? String(seg.overlay.props.label) : undefined}
                                 color={seg.overlay.props.color ? String(seg.overlay.props.color) : undefined}
-                                startFrame={startFrame}
-                                endFrame={endFrame}
+                                startFrame={actualStartFrame}
+                                endFrame={actualEndFrame}
                             />
                         );
                     }

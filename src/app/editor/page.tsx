@@ -556,58 +556,51 @@ export default function EditorPage() {
 
         const reactCodeMap = new Map<string, string>();
         const fullTranscript = subs.map(s => s.text).join(' ');
+        const totalDuration = subs[subs.length - 1].endTime;
 
-        const results = await Promise.allSettled(
-            motionSegs.slice(0, 6).map(async (seg) => {
-                const label = String(seg.overlay!.props.label || '');
-                const topic = String(seg.overlay!.props.topic || 'general');
-                const color = String(seg.overlay!.props.color || '#6366f1');
-                const mood = String(seg.overlay!.props.mood || 'energetic');
-                
-                try {
-                    const res = await fetch('/api/generate-live-remotion', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: seg.text,
-                            mood,
-                            topic,
-                            color,
-                            label,
-                            durationInSeconds: seg.endTime - seg.startTime,
-                            fullTranscript
-                        }),
-                    });
-                    
-                    const data = await res.json();
-                    if (data.success && data.reactCode) {
-                        addLog(`Motion Graphic ready: ${label}`);
-                        return { id: seg.id, reactCode: data.reactCode };
+        try {
+            const firstSeg = motionSegs[0];
+            const label = String(firstSeg.overlay!.props.label || 'Video');
+            const topic = String(firstSeg.overlay!.props.topic || 'general');
+            const color = String(firstSeg.overlay!.props.color || '#6366f1');
+            const mood = String(firstSeg.overlay!.props.mood || 'energetic');
+            
+            const res = await fetch('/api/generate-live-remotion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: firstSeg.text,
+                    mood,
+                    topic,
+                    color,
+                    label,
+                    durationInSeconds: totalDuration,
+                    fullTranscript,
+                    title: label
+                }),
+            });
+            
+            const data = await res.json();
+            if (data.success && data.reactCode) {
+                addLog(`Global Motion Graphic ready!`);
+                return subs.map(s => {
+                    if (s.id === firstSeg.id && s.overlay) {
+                        s.overlay.props = { ...s.overlay.props, reactCode: data.reactCode, global: true };
+                        return s;
                     }
-                    
-                    addLog(`Motion Graphic failed for: ${label}`);
-                    return { id: seg.id, reactCode: null };
-                } catch (err) {
-                    console.error('[preGenerateMotionGraphics] Error:', err);
-                    return { id: seg.id, reactCode: null };
-                }
-            })
-        );
-
-        for (const r of results) {
-            if (r.status === 'fulfilled' && r.value && r.value.reactCode) {
-                reactCodeMap.set(r.value.id, r.value.reactCode);
+                    // Remove ai-motion-graphic from other segments to avoid duplicates
+                    if (s.overlay?.type === 'ai-motion-graphic') {
+                        s.overlay = undefined;
+                    }
+                    return s;
+                });
             }
+            addLog(`Global Motion Graphic failed.`);
+        } catch (err) {
+            console.error('[preGenerateMotionGraphics] Error:', err);
         }
 
-        addLog(`Motion graphics: ${reactCodeMap.size}/${motionSegs.length} components generated`);
-
-        return subs.map(s => {
-            if (reactCodeMap.has(s.id) && s.overlay) {
-                s.overlay.props = { ...s.overlay.props, reactCode: reactCodeMap.get(s.id) };
-            }
-            return s;
-        });
+        return subs;
     };
 
     const handleGenerateOverlays = async (currentSubtitles = state.subtitles) => {
