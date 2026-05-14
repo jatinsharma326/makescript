@@ -1,90 +1,215 @@
-import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion';
+import React, { useMemo, useState, useEffect } from 'react';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img, random } from 'remotion';
+import * as Babel from '@babel/standalone';
 
 interface AiMotionGraphicProps {
-    svgContent: string;
+    reactCode?: string;
+    imageUrl?: string;
+    label?: string;
+    color?: string;
     startFrame: number;
     endFrame: number;
 }
 
-function sanitizeSvg(raw: string): string {
-    let svg = raw;
-    svg = svg.replace(/<script[\s\S]*?<\/script>/gi, '');
-    svg = svg.replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '');
-    svg = svg.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
-    svg = svg.replace(/\bon\w+\s*=\s*[^\s>]+/gi, '');
-    svg = svg.replace(/javascript\s*:/gi, 'blocked:');
-    return svg;
+// Error boundary to catch errors in dynamically evaluated React components
+class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallback: React.ReactNode }, { hasError: boolean }> {
+    constructor(props: any) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+    componentDidCatch(error: any) {
+        console.error('[LiveMotionGraphic] Evaluation error:', error);
+    }
+    render() {
+        if (this.state.hasError) return this.props.fallback;
+        return this.props.children;
+    }
 }
 
-const FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
-<style>
-@keyframes pulse{0%,100%{opacity:.4;r:80}50%{opacity:.7;r:100}}
-@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-</style>
-<defs><radialGradient id="fbg"><stop offset="0%" stop-color="#6366f1" stop-opacity=".6"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></radialGradient></defs>
-<circle cx="200" cy="150" fill="url(#fbg)" style="animation:pulse 3s ease-in-out infinite"><animate attributeName="r" values="80;100;80" dur="3s" repeatCount="indefinite"/></circle>
-<g style="transform-origin:200px 150px;animation:spin 8s linear infinite"><circle cx="200" cy="80" r="4" fill="#a78bfa" opacity=".8"/></g>
-</svg>`;
-
+import * as Remotion from 'remotion';
 export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
-    svgContent,
+    reactCode,
+    imageUrl,
+    label,
+    color = '#6366f1',
     startFrame,
     endFrame,
 }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
 
+    const DynamicComponent = useMemo(() => {
+        if (!reactCode) return null;
+        
+        try {
+            const transpiled = Babel.transform(reactCode, {
+                presets: ['env', 'react', 'typescript'],
+                filename: 'dynamic.tsx',
+            }).code;
+
+            const scope = {
+                React,
+                ...Remotion,
+                console
+            };
+
+            const evalCode = `
+                const exports = {};
+                const require = (moduleName) => {
+                    if (moduleName === 'react') return scope.React;
+                    if (moduleName === 'remotion') return scope;
+                    throw new Error('Module ' + moduleName + ' not found');
+                };
+                ${Object.keys(scope).map(k => `const ${k} = scope.${k};`).join('\n')}
+                
+                ${transpiled}
+                
+                return exports.LiveGraphic || exports.default || exports.FocusMode || Object.values(exports)[0] || null;
+            `;
+
+            const createComponent = new Function('scope', evalCode);
+            const Component = createComponent(scope);
+            
+            return Component as React.FC<any>;
+        } catch (err) {
+            console.error('[LiveMotionGraphic] Failed to compile/evaluate React code:', err);
+            return null;
+        }
+    }, [reactCode]);
+
+    // ALL HOOKS MUST BE BEFORE THIS EARLY RETURN!
+    const localFrame = Math.max(0, frame - startFrame);
+    const duration = endFrame - startFrame;
+    const enterProgress = spring({ frame: localFrame, fps, config: { damping: 14, stiffness: 100, mass: 0.8 } });
+    const enterOpacity = interpolate(localFrame, [0, 10], [0, 1], { extrapolateRight: 'clamp' });
+    const exitOpacity = interpolate(localFrame, [duration - 12, duration], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+    const opacity = Math.min(enterOpacity, exitOpacity);
+
     if (frame < startFrame || frame > endFrame) return null;
 
-    const localFrame = frame - startFrame;
-    const duration = endFrame - startFrame;
-
-    const enterScale = spring({ frame: localFrame, fps, config: { damping: 14, stiffness: 100, mass: 0.8 } });
-    const enterOpacity = interpolate(localFrame, [0, 8], [0, 1], { extrapolateRight: 'clamp' });
-    const exitOpacity = interpolate(localFrame, [duration - 12, duration], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-    const exitScale = interpolate(localFrame, [duration - 12, duration], [1, 0.85], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-
-    let cleanSvg = sanitizeSvg(svgContent || '');
-
-    // Use fallback if SVG is empty or invalid
-    if (!cleanSvg || !cleanSvg.includes('<svg')) {
-        cleanSvg = FALLBACK_SVG;
+    if (DynamicComponent) {
+        return (
+            <AbsoluteFill style={{ opacity, pointerEvents: 'none', zIndex: 20 }}>
+                <ErrorBoundary fallback={<div style={{ display: 'none' }} />}>
+                    <DynamicComponent />
+                </ErrorBoundary>
+            </AbsoluteFill>
+        );
     }
 
-    // Remove background rects from AI-generated SVGs
-    cleanSvg = cleanSvg.replace(/<rect[^>]*width=["'](?:100%|400)["'][^>]*height=["'](?:100%|300)["'][^>]*\/?>(?:<\/rect>)?/i, '');
+    // FALLBACK: Image-based motion graphic
+    // FALLBACK: Image-based motion graphic
+    if (imageUrl) {
+        const slideUp = interpolate(localFrame, [0, 15], [40, 0], { extrapolateRight: 'clamp' });
+        const labelSlide = interpolate(localFrame, [5, 18], [30, 0], { extrapolateRight: 'clamp' });
+        const labelOpacity = interpolate(localFrame, [5, 18], [0, 1], { extrapolateRight: 'clamp' });
+        const glowPulse = interpolate(localFrame % 60, [0, 30, 60], [0.3, 0.6, 0.3], { extrapolateRight: 'clamp' });
+        const barScale = spring({ frame: Math.max(0, localFrame - 8), fps, config: { damping: 12, stiffness: 80 } });
 
-    // Force SVG to fill space, transparent background, and ensure CSS animations run
-    cleanSvg = cleanSvg.replace(/<svg([^>]*)>/i, (match, p1) => {
-        let attrs = p1;
-        if (!attrs.includes('width=')) attrs += ' width="100%"';
-        if (!attrs.includes('height=')) attrs += ' height="100%"';
-        return `<svg${attrs} style="background:transparent!important;overflow:visible;">` +
-            '<style>*{animation-play-state:running!important}</style>';
-    });
+        return (
+            <AbsoluteFill style={{ opacity, pointerEvents: 'none', zIndex: 10 }}>
+                {/* Darkened background image */}
+                <AbsoluteFill style={{
+                    transform: `scale(${1 + enterProgress * 0.05}) translateY(${slideUp}px)`,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                }}>
+                    <Img
+                        src={imageUrl}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            filter: 'brightness(0.4) saturate(1.3)',
+                        }}
+                    />
+                </AbsoluteFill>
 
-    return (
-        <AbsoluteFill style={{
-            opacity: Math.min(enterOpacity, exitOpacity),
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'transparent',
-        }}>
-            <div
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    transform: `scale(${enterScale * exitScale * 1.6})`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    filter: 'drop-shadow(0 0 50px rgba(99, 102, 241, 0.5))'
-                }}
-                dangerouslySetInnerHTML={{ __html: cleanSvg }}
-            />
-        </AbsoluteFill>
-    );
+                {/* Color gradient overlay */}
+                <AbsoluteFill style={{
+                    background: `linear-gradient(135deg, ${color}40 0%, transparent 50%, ${color}20 100%)`,
+                    borderRadius: 16,
+                }} />
+
+                {/* Glow accent line at top */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '10%',
+                    right: '10%',
+                    height: 3,
+                    background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+                    opacity: glowPulse,
+                    borderRadius: 2,
+                    transform: `scaleX(${barScale})`,
+                }} />
+
+                {/* Label text */}
+                {label && (
+                    <AbsoluteFill style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        gap: 12,
+                    }}>
+                        <div style={{
+                            fontSize: 42,
+                            fontWeight: 900,
+                            fontFamily: 'sans-serif',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            textTransform: 'uppercase',
+                            letterSpacing: 3,
+                            textShadow: `0 0 40px ${color}, 0 0 80px ${color}80, 0 4px 20px rgba(0,0,0,0.8)`,
+                            transform: `translateY(${labelSlide}px)`,
+                            opacity: labelOpacity,
+                            padding: '0 40px',
+                            lineHeight: 1.2,
+                        }}>
+                            {label}
+                        </div>
+
+                        {/* Accent bar under label */}
+                        <div style={{
+                            width: 80,
+                            height: 4,
+                            background: `linear-gradient(90deg, ${color}, ${color}80)`,
+                            borderRadius: 2,
+                            transform: `scaleX(${barScale}) translateY(${labelSlide}px)`,
+                            opacity: labelOpacity,
+                            boxShadow: `0 0 20px ${color}`,
+                        }} />
+                    </AbsoluteFill>
+                )}
+
+                {/* Corner accents */}
+                <div style={{
+                    position: 'absolute',
+                    top: 16,
+                    left: 16,
+                    width: 24,
+                    height: 24,
+                    borderTop: `2px solid ${color}`,
+                    borderLeft: `2px solid ${color}`,
+                    opacity: labelOpacity * 0.6,
+                }} />
+                <div style={{
+                    position: 'absolute',
+                    bottom: 16,
+                    right: 16,
+                    width: 24,
+                    height: 24,
+                    borderBottom: `2px solid ${color}`,
+                    borderRight: `2px solid ${color}`,
+                    opacity: labelOpacity * 0.6,
+                }} />
+            </AbsoluteFill>
+        );
+    }
+
+    return null;
 };

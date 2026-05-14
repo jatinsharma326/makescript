@@ -547,57 +547,63 @@ export default function EditorPage() {
 
     const preGenerateMotionSVGs = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
         const motionSegs = subs.filter(
-            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.svgContent
+            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.imageUrl && !s.overlay?.props?.reactCode
         );
         if (motionSegs.length === 0) return subs;
 
-        addLog(`Pre-generating ${motionSegs.length} motion SVGs...`);
+        addLog(`Generating ${motionSegs.length} motion graphic components...`);
+
+        const reactCodeMap = new Map<string, string>();
 
         const results = await Promise.allSettled(
-            motionSegs.slice(0, 5).map(async (seg) => {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 50000);
+            motionSegs.slice(0, 6).map(async (seg) => {
+                const label = String(seg.overlay!.props.label || '');
+                const topic = String(seg.overlay!.props.topic || 'general');
+                const color = String(seg.overlay!.props.color || '#6366f1');
+                const mood = String(seg.overlay!.props.mood || 'energetic');
+                
                 try {
-                    const res = await fetch('/api/generate-motion-svg', {
+                    const res = await fetch('/api/generate-live-remotion', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             text: seg.text,
-                            mood: 'energetic',
-                            topic: String(seg.overlay!.props.topic || 'general'),
-                            color: String(seg.overlay!.props.color || '#6366f1'),
-                            label: String(seg.overlay!.props.label || ''),
+                            mood,
+                            topic,
+                            color,
+                            label,
+                            durationInSeconds: seg.endTime - seg.startTime
                         }),
-                        signal: controller.signal,
                     });
-                    clearTimeout(timer);
+                    
                     const data = await res.json();
-                    if (data.success && data.svgContent) {
-                        addLog(`Motion SVG ready for ${seg.id}`);
-                        return { id: seg.id, svgContent: data.svgContent as string };
+                    if (data.success && data.reactCode) {
+                        addLog(`Motion Graphic ready: ${label}`);
+                        return { id: seg.id, reactCode: data.reactCode };
                     }
-                    return null;
-                } catch {
-                    clearTimeout(timer);
-                    return null;
+                    
+                    addLog(`Motion Graphic failed for: ${label}`);
+                    return { id: seg.id, reactCode: null };
+                } catch (err) {
+                    console.error('[preGenerateMotionGraphics] Error:', err);
+                    return { id: seg.id, reactCode: null };
                 }
             })
         );
 
-        const svgMap = new Map<string, string>();
         for (const r of results) {
-            if (r.status === 'fulfilled' && r.value) {
-                svgMap.set(r.value.id, r.value.svgContent);
+            if (r.status === 'fulfilled' && r.value && r.value.reactCode) {
+                reactCodeMap.set(r.value.id, r.value.reactCode);
             }
         }
 
-        addLog(`Motion SVGs generated: ${svgMap.size}/${motionSegs.length}`);
+        addLog(`Motion graphics: ${reactCodeMap.size}/${motionSegs.length} components generated`);
 
-        return subs.map(seg => {
-            if (svgMap.has(seg.id) && seg.overlay) {
-                return { ...seg, overlay: { ...seg.overlay, props: { ...seg.overlay.props, svgContent: svgMap.get(seg.id) } } };
+        return subs.map(s => {
+            if (reactCodeMap.has(s.id) && s.overlay) {
+                s.overlay.props = { ...s.overlay.props, reactCode: reactCodeMap.get(s.id) };
             }
-            return seg;
+            return s;
         });
     };
 
@@ -655,12 +661,11 @@ export default function EditorPage() {
 
                 addLog(`Applied: ${overlaysCount} overlays (${imageCount} AI images, ${motionCount} live motion), ${effectsCount} effects, ${transitionsCount} transitions`);
 
-                let finalSubtitles = imageCount > 0
-                    ? await preGenerateAIImages(editedSubtitles)
-                    : editedSubtitles;
-
-                const unfilledMotion = finalSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.svgContent).length;
-                if (unfilledMotion > 0) {
+                let finalSubtitles = editedSubtitles;
+                if (imageCount > 0) {
+                    finalSubtitles = await preGenerateAIImages(finalSubtitles);
+                }
+                if (motionCount > 0) {
                     finalSubtitles = await preGenerateMotionSVGs(finalSubtitles);
                 }
 
@@ -690,17 +695,18 @@ export default function EditorPage() {
 
             if (overlaysCount > 0) {
                 const imageCount = newSubtitles.filter(s => s.overlay?.type === 'ai-generated-image').length;
-                const motionCount2 = newSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic').length;
-                addLog(`Step 2 done: ${overlaysCount} overlays (${imageCount} AI images, ${motionCount2} live motion)`);
-                let finalSubs = imageCount > 0
-                    ? await preGenerateAIImages(newSubtitles)
-                    : newSubtitles;
-                const unfilledMotion2 = finalSubs.filter(s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.svgContent).length;
-                if (unfilledMotion2 > 0) {
+                const motionCount = newSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic').length;
+                const sceneCount = newSubtitles.filter(s => s.overlay?.type === 'visual-illustration').length;
+                addLog(`Step 2 done: ${overlaysCount} overlays (${sceneCount} visual, ${motionCount} motion graphic, ${imageCount} AI images)`);
+                let finalSubs = newSubtitles;
+                if (imageCount > 0) {
+                    finalSubs = await preGenerateAIImages(finalSubs);
+                }
+                if (motionCount > 0) {
                     finalSubs = await preGenerateMotionSVGs(finalSubs);
                 }
                 updateState({ subtitles: finalSubs, isGenerating: false });
-                toast(`AI overlays applied — ${overlaysCount} motion graphics (${imageCount} AI images, ${motionCount2} live motion)!`, 'success');
+                toast(`AI overlays applied — ${sceneCount} motion graphics, ${imageCount} AI images!`, 'success');
                 setProcessingStep('done');
                 setTimeout(() => setProcessingStep('idle'), 2000);
                 logOverlaySummary(finalSubs);
@@ -989,24 +995,27 @@ export default function EditorPage() {
             ) : (
                 <>
                     {/* ===== Header ===== */}
-                    <header className="h-11 flex items-center justify-between px-3 border-b border-border z-20 shrink-0" style={{ background: 'var(--bg-card)', opacity: 0.95, backdropFilter: 'blur(16px)' }}>
+                    <header className="h-11 flex items-center justify-between px-3 border-b z-20 shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(10,10,14,0.9)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' }}>
                         <div className="flex items-center gap-3">
                             <Link href="/" className="flex items-center gap-2 group">
-                                <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-black"
-                                    style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>M</div>
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black shrink-0"
+                                    style={{ background: 'linear-gradient(135deg, #9d4edd, #00f5d4)', boxShadow: '0 0 12px rgba(157,78,221,0.3)' }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+                                </div>
+                                <span className="text-[13px] font-bold tracking-[-0.02em] text-white/80 group-hover:text-white transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>MakeScript</span>
                             </Link>
                             {user && (
-                                <Link href="/settings" className="flex items-center gap-1.5 group" title="Settings">
-                                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: `linear-gradient(135deg, ${user.avatar || '#6366f1'}, ${user.avatar ? user.avatar + '88' : '#818cf8'})` }}>
+                                <Link href="/settings" className="flex items-center gap-1.5 group px-2 py-1 rounded-lg hover:bg-white/[0.04] transition-all" title="Settings">
+                                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: `linear-gradient(135deg, #9d4edd, #00f5d4)` }}>
                                         {user.name.charAt(0).toUpperCase()}
                                     </div>
-                                    <span className="text-[11px] text-foreground/50 hidden md:inline group-hover:text-foreground/70 transition-colors">{user.name.split(' ')[0]}</span>
+                                    <span className="text-[11px] text-white/40 hidden md:inline group-hover:text-white/60 transition-colors">{user.name.split(' ')[0]}</span>
                                 </Link>
                             )}
                             {state.videoFile && (
                                 <>
-                                    <span className="w-px h-4 bg-border" />
-                                    <span className="text-[12px] font-medium text-foreground/70 truncate max-w-[180px]">{state.videoFile.name}</span>
+                                    <span className="w-px h-4" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                                    <span className="text-[12px] font-medium text-white/50 truncate max-w-[180px]">{state.videoFile.name}</span>
                                     <button
                                         onClick={() => {
                                             if (state.projectId) {
@@ -1017,7 +1026,8 @@ export default function EditorPage() {
                                                 toast('Video removed.', 'info');
                                             }
                                         }}
-                                        className="h-7 px-2.5 rounded-md flex items-center gap-1.5 text-[11px] font-medium text-red-400 hover:bg-red-500/15 border border-red-500/20 transition-all"
+                                        className="h-7 px-2.5 rounded-md flex items-center gap-1.5 text-[11px] font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 border transition-all"
+                                        style={{ borderColor: 'rgba(239,68,68,0.15)' }}
                                         title="Delete video"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
@@ -1029,25 +1039,25 @@ export default function EditorPage() {
 
                         {/* Center: Undo / Redo / AI */}
                         <div className="flex items-center gap-1">
-                            <button onClick={handleUndo} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Undo (Ctrl+Z)">
+                            <button onClick={handleUndo} className="w-7 h-7 rounded-md flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" title="Undo (Ctrl+Z)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                             </button>
-                            <button onClick={handleRedo} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" title="Redo (Ctrl+Shift+Z)">
+                            <button onClick={handleRedo} className="w-7 h-7 rounded-md flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" title="Redo (Ctrl+Shift+Z)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
                             </button>
                             {state.subtitles.length > 0 && (
                                 <>
-                                    <span className="w-px h-4 bg-border mx-1" />
-                                    <button className="h-7 px-3 rounded-md text-[11px] font-semibold flex items-center gap-1.5 transition-all hover:bg-muted"
-                                        style={{ color: '#a78bfa' }}
+                                    <span className="w-px h-4 mx-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                                    <button className="h-7 px-3 rounded-md text-[11px] font-semibold flex items-center gap-1.5 transition-all hover:brightness-110"
+                                        style={{ background: 'linear-gradient(135deg, #9d4edd, #7c3aed)', color: '#fff', boxShadow: '0 0 16px rgba(157,78,221,0.25)' }}
                                         onClick={handleAutoSuggest} disabled={state.isGenerating}>
-                                        {state.isGenerating ? <><span className="spinner w-3 h-3" /> Generating…</> : <><Sparkles /> AI Suggest</>}
+                                        {state.isGenerating ? <><span className="spinner w-3 h-3" /> Generating…</> : <><Sparkles className="w-3 h-3" /> AI Suggest</>}
                                     </button>
                                     {/* Model Selector */}
                                     <div className="relative">
                                         <button
-                                            className="h-7 px-2 rounded-md text-[10px] font-medium flex items-center gap-1 transition-all hover:bg-muted border border-border/50"
-                                            style={{ color: 'var(--text-secondary)' }}
+                                            className="h-7 px-2 rounded-md text-[10px] font-medium flex items-center gap-1 transition-all hover:bg-white/[0.04] border"
+                                            style={{ color: 'rgba(255,255,255,0.4)', borderColor: 'rgba(255,255,255,0.06)' }}
                                             onClick={() => setShowModelPicker(!showModelPicker)}
                                             title="Select AI model"
                                         >
@@ -1154,27 +1164,27 @@ export default function EditorPage() {
                             )}
                             {state.videoSrc && (
                                 <button
-                                    className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${state.subtitles?.length > 0 ? 'text-violet-400 hover:bg-violet-500/10' : 'text-muted-foreground/40 hover:bg-white/5'}`}
+                                    className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${state.subtitles?.length > 0 ? 'text-[#9d4edd] hover:bg-[#9d4edd]/10' : 'text-white/20 hover:bg-white/5'}`}
                                     onClick={() => state.subtitles?.length > 0 ? setShowAiMeta(true) : alert('Please click "Transcribe" first to use AI features!')}
                                     title="✨ AI Tools (Requires Transcription)"
                                 >
                                     <Sparkles />
                                 </button>
                             )}
-                            <button className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all" onClick={toggleTheme} title="Toggle theme" suppressHydrationWarning>
-                                {mounted ? (theme === 'light' ? <Moon /> : <Sun />) : <Moon />}
+                            <button className="w-7 h-7 rounded-md flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all" onClick={toggleTheme} title="Toggle theme" suppressHydrationWarning>
+                                {mounted ? (theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />) : <Moon className="w-3.5 h-3.5" />}
                             </button>
                             <button className="h-7 px-3.5 rounded-md text-[11px] font-bold flex items-center gap-1.5 text-white transition-all ml-1"
-                                style={{ background: state.videoSrc ? 'linear-gradient(135deg, #6366f1, #7c3aed)' : 'rgba(255,255,255,0.06)', color: state.videoSrc ? '#fff' : 'var(--text-secondary)' }}
+                                style={{ background: state.videoSrc ? 'linear-gradient(135deg, #9d4edd, #7c3aed)' : 'rgba(255,255,255,0.06)', color: state.videoSrc ? '#fff' : 'rgba(255,255,255,0.3)', boxShadow: state.videoSrc ? '0 0 16px rgba(157,78,221,0.25)' : 'none' }}
                                 onClick={() => state.videoSrc ? setShowExportModal(true) : toast('Upload a video first', 'warning')}
                                 disabled={!state.videoSrc}>
-                                <Download /> Export
+                                <Download className="w-3 h-3" /> Export
                             </button>
                         </div>
                     </header>
 
                     {/* ===== Main ===== */}
-                    <div className="flex-1 flex overflow-hidden">
+                    <div className="flex-1 flex overflow-hidden" style={{ background: '#0a0a0e' }}>
                         <ProjectSidebar
                             projects={projectList}
                             activeProjectId={state.projectId}
@@ -1198,8 +1208,13 @@ export default function EditorPage() {
                         />
 
                         {/* Main Stage */}
-                        <main className="flex-1 flex flex-col min-w-0 bg-background relative">
+                        <main className="flex-1 flex flex-col min-w-0 relative" style={{ background: '#0a0a0e' }}>
+                            {/* Subtle ambient glow */}
+                            <div className="absolute top-0 right-0 w-[600px] h-[600px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(157,78,221,0.04) 0%, transparent 70%)', filter: 'blur(80px)' }} />
+                            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(0,245,212,0.03) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+
                             {!state.videoSrc ? (
+                                <div className="relative z-10">
                                 <Dashboard
                                     projects={projectList}
                                     onNewProject={() => {
@@ -1213,10 +1228,11 @@ export default function EditorPage() {
                                     }}
                                     onFileDrop={handleUpload}
                                 />
+                                </div>
                             ) : (
                                 <>
                                     {/* Split Layout: Transcript + Video */}
-                                    <div className="flex-1 flex min-h-0 overflow-hidden">
+                                    <div className="flex-1 flex min-h-0 overflow-hidden relative z-10">
                                         {/* Transcript Panel (left) */}
                                         <div className="shrink-0" style={{ width: '320px', minWidth: '260px' }}>
                                             <TranscriptPanel
@@ -1241,13 +1257,15 @@ export default function EditorPage() {
                                         </div>
 
                                         {/* Video Preview (right) */}
-                                        <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
-                                            <div className="relative shadow-2xl bg-black flex flex-col" style={{
+                                        <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden">
+                                            <div className="relative shadow-2xl bg-black flex flex-col rounded-lg overflow-hidden" style={{
                                                 width: '100%',
                                                 maxWidth: state.videoWidth && state.videoHeight
                                                     ? `min(100%, calc((100vh - 300px) * ${state.videoWidth / state.videoHeight}))`
                                                     : '100%',
                                                 aspectRatio: state.videoWidth && state.videoHeight ? `${state.videoWidth}/${state.videoHeight}` : '16/9',
+                                                boxShadow: '0 0 40px rgba(157,78,221,0.08), 0 8px 32px rgba(0,0,0,0.4)',
+                                                border: '1px solid rgba(255,255,255,0.06)',
                                             }}>
                                                 <PlayerPreview ref={playerPreviewRef} videoSrc={state.videoSrc} subtitles={state.subtitles} fps={state.fps || 30}
                                                     durationInFrames={Math.ceil((state.videoDuration || 10) * (state.fps || 30))}
@@ -1260,7 +1278,7 @@ export default function EditorPage() {
 
                                                 {/* Processing Overlay */}
                                                 {(processingStep === 'transcribing' || processingStep === 'generating') && (
-                                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+                                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ background: 'rgba(10,10,14,0.85)', backdropFilter: 'blur(8px)' }}>
                                                         <div className="flex flex-col items-center gap-5">
                                                             {/* Steps */}
                                                             <div className="flex items-center gap-2">
@@ -1277,31 +1295,35 @@ export default function EditorPage() {
                                                                     return (
                                                                         <React.Fragment key={step.key}>
                                                                             {i > 0 && (
-                                                                                <div className="w-8 h-px" style={{ background: isCompleted ? '#6366f1' : 'rgba(255,255,255,0.15)' }} />
+                                                                                <div className="w-8 h-px" style={{ background: isCompleted ? '#9d4edd' : 'rgba(255,255,255,0.1)' }} />
                                                                             )}
                                                                             <div className="flex items-center gap-2">
-                                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${isCompleted ? 'bg-indigo-500 text-white' : isActive ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/50 step-active' : 'bg-white/5 text-white/30 border border-white/10'
-                                                                                    }`}>
+                                                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${isCompleted ? 'text-white' : isActive ? 'text-white border' : 'text-white/30 border'
+                                                                                    }`} style={{
+                                                                                        background: isCompleted ? 'linear-gradient(135deg, #9d4edd, #7c3aed)' : isActive ? 'rgba(157,78,221,0.15)' : 'rgba(255,255,255,0.04)',
+                                                                                        borderColor: isActive ? 'rgba(157,78,221,0.4)' : 'rgba(255,255,255,0.08)',
+                                                                                        boxShadow: isActive ? '0 0 12px rgba(157,78,221,0.2)' : 'none',
+                                                                                    }}>
                                                                                     {isCompleted ? <Check className="w-3 h-3" /> : isActive ? <Loader2 className="w-3 h-3 animate-spin" /> : (i + 1)}
                                                                                 </div>
-                                                                                <span className={`text-[11px] font-medium ${isActive ? 'text-white' : isCompleted ? 'text-white/60' : 'text-white/25'}`}>{step.label}</span>
+                                                                                <span className={`text-[11px] font-medium ${isActive ? 'text-white' : isCompleted ? 'text-white/50' : 'text-white/25'}`}>{step.label}</span>
                                                                             </div>
                                                                         </React.Fragment>
                                                                     );
                                                                 })}
                                                             </div>
                                                             {/* Progress bar */}
-                                                            <div className="w-48 h-1 rounded-full bg-white/10 overflow-hidden">
-                                                                <div className="h-full processing-bar rounded-full" />
+                                                            <div className="w-48 h-1 rounded-full bg-white/5 overflow-hidden">
+                                                                <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #9d4edd, #00f5d4)', animation: 'processingBar 2s ease-in-out infinite' }} />
                                                             </div>
                                                             <p className="text-[11px] text-white/40 font-medium">
                                                                 {processingStep === 'transcribing' ? 'Analyzing audio with Whisper...' : 'Selecting motion graphics for each segment...'}
                                                             </p>
                                                             {processingStep === 'generating' && genLogs.length > 0 && (
-                                                                <div className="mt-3 w-72 max-h-36 overflow-y-auto rounded-lg border border-white/10 bg-black/60 p-2 text-left">
+                                                                <div className="mt-3 w-72 max-h-36 overflow-y-auto rounded-lg border border-white/5 bg-black/60 p-2 text-left">
                                                                     {genLogs.map((log, i) => (
                                                                         <div key={i} className={`text-[10px] leading-relaxed font-mono ${log.msg.startsWith('ERROR') ? 'text-red-400' : log.msg.startsWith('Done') || log.msg.startsWith('All images') || log.msg.includes('plan received') ? 'text-emerald-400' : log.msg.startsWith('Image') ? 'text-blue-300' : 'text-white/50'}`}>
-                                                                            <span className="text-white/20 mr-1">{log.time}</span>
+                                                                            <span className="text-white/15 mr-1">{log.time}</span>
                                                                             {log.msg}
                                                                         </div>
                                                                     ))}
@@ -1314,9 +1336,9 @@ export default function EditorPage() {
                                                 {/* Done flash */}
                                                 {processingStep === 'done' && (
                                                     <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none" style={{ animation: 'fadeIn 0.3s ease-out' }}>
-                                                        <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', backdropFilter: 'blur(8px)' }}>
-                                                            <Check className="w-4 h-4 text-emerald-400" />
-                                                            <span className="text-[13px] font-semibold text-emerald-300">Ready!</span>
+                                                        <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl" style={{ background: 'rgba(0,245,212,0.1)', border: '1px solid rgba(0,245,212,0.2)', backdropFilter: 'blur(8px)' }}>
+                                                            <Check className="w-4 h-4" style={{ color: '#00f5d4' }} />
+                                                            <span className="text-[13px] font-semibold" style={{ color: '#00f5d4' }}>Ready!</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1326,10 +1348,10 @@ export default function EditorPage() {
 
                                     {/* Generation Log */}
                                     {genLogs.length > 0 && processingStep !== 'generating' && (
-                                        <div className="mx-3 mb-2 rounded-lg border border-white/10 bg-black/40 overflow-hidden">
+                                        <div className="mx-3 mb-2 rounded-lg border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.04)', background: 'rgba(0,0,0,0.3)' }}>
                                             <button
                                                 onClick={() => setGenLogs([])}
-                                                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] text-white/40 hover:text-white/60 transition-colors"
+                                                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] text-white/30 hover:text-white/50 transition-colors"
                                             >
                                                 <span className="font-semibold uppercase tracking-wider">Generation Log ({genLogs.length})</span>
                                                 <span>dismiss</span>
@@ -1337,7 +1359,7 @@ export default function EditorPage() {
                                             <div className="max-h-28 overflow-y-auto px-3 pb-2">
                                                 {genLogs.map((log, i) => (
                                                     <div key={i} className={`text-[10px] leading-relaxed font-mono ${log.msg.startsWith('ERROR') ? 'text-red-400' : log.msg.startsWith('Done') || log.msg.startsWith('All images') || log.msg.includes('plan received') ? 'text-emerald-400' : log.msg.startsWith('Image') ? 'text-blue-300' : 'text-white/40'}`}>
-                                                        <span className="text-white/15 mr-1">{log.time}</span>
+                                                        <span className="text-white/10 mr-1">{log.time}</span>
                                                         {log.msg}
                                                     </div>
                                                 ))}
@@ -1362,18 +1384,18 @@ export default function EditorPage() {
                                     />
 
                                     {/* Status bar */}
-                                    <div className="h-8 border-t border-border px-4 flex items-center justify-between text-[10px] text-muted-foreground/60 shrink-0" style={{ background: 'var(--bg-card)' }}>
+                                    <div className="h-8 border-t flex items-center justify-between px-4 text-[10px] shrink-0" style={{ borderColor: 'rgba(255,255,255,0.04)', background: 'rgba(10,10,14,0.95)', color: 'rgba(255,255,255,0.3)' }}>
                                         <div className="flex items-center gap-3 font-mono tabular-nums">
                                             <span>{fmtTime(currentTime)} / {fmtTime(state.videoDuration)}</span>
-                                            <span className="text-border">|</span>
+                                            <span style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
                                             <span>{state.playbackSpeed !== 1 ? `${state.playbackSpeed}x` : '1x'}</span>
                                         </div>
                                         <div className="flex items-center gap-3 font-mono tabular-nums">
                                             <span>{state.videoWidth}x{state.videoHeight}</span>
-                                            <span className="text-border">|</span>
+                                            <span style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
                                             <span>{state.fps}fps</span>
-                                            <span className="text-border">|</span>
-                                            <button onClick={() => setShowShortcuts(true)} className="hover:text-muted-foreground transition-colors cursor-pointer font-sans font-medium text-muted-foreground/40">
+                                            <span style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
+                                            <button onClick={() => setShowShortcuts(true)} className="hover:text-white/50 transition-colors cursor-pointer font-sans font-medium" style={{ color: 'rgba(255,255,255,0.25)' }}>
                                                 ?
                                             </button>
                                         </div>

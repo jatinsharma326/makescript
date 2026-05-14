@@ -535,6 +535,79 @@ export function buildAnalysisPayload(analysis: VideoAnalysisResult, subtitles: S
 }
 
 /**
+ * Client-side safety net: post-process API suggestions to enforce visual-illustration
+ * for segments with strong keyword matches. The AI often returns 100% ai-generated-image.
+ */
+/**
+ * Client-side safety net: keep ONLY keyword-matched visual-illustration overlays.
+ * Drop everything else — NO generic fallbacks allowed.
+ */
+function enforceVisualIllustrationsClient(
+    suggestions: Array<{ segmentId: string; type: string; props: Record<string, unknown> }>,
+    subtitles: SubtitleSegment[]
+): Array<{ segmentId: string; type: string; props: Record<string, unknown> }> {
+    const subMap = new Map(subtitles.map(s => [s.id, s]));
+    let lastScene = '';
+    const result: Array<{ segmentId: string; type: string; props: Record<string, unknown> }> = [];
+
+    for (const s of suggestions) {
+        const seg = subMap.get(s.segmentId);
+        if (!seg) continue;
+
+        const best = pickBestSceneForTextClient(seg.text, lastScene);
+        if (best && best.score >= 1) {
+            lastScene = best.scene;
+            result.push({
+                segmentId: s.segmentId,
+                type: 'visual-illustration',
+                props: {
+                    scene: best.scene,
+                    label: s.props.caption || extractLabelFromText(seg.text) || seg.text.substring(0, 40),
+                    color: s.props.color || getProColor(hashString(seg.text)),
+                    transition: 'fade-in',
+                },
+            });
+        }
+        // Non-matching segments are DROPPED — no fallback overlay
+    }
+
+    return result;
+}
+
+/**
+ * Client-side scene picker using scoring (mirrors server logic).
+ */
+function pickBestSceneForTextClient(text: string, lastScene?: string): { scene: string; score: number } | null {
+    const lower = text.toLowerCase();
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
+    const SKIP_GENERIC = new Set([
+        'guys', 'everybody', 'hello', 'welcome', 'right', 'true', 'real',
+        'tell', 'happen', 'finally', 'literally', 'actually', 'basically',
+        'definitely', 'probably', 'going', 'different', 'new', 'old', 'next',
+        'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why',
+        'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free',
+    ]);
+
+    const sceneScores: Record<string, number> = {};
+    for (const word of words) {
+        if (SKIP_GENERIC.has(word)) continue;
+        const scene = CONTENT_SCENE_MAP[word];
+        if (scene) {
+            sceneScores[scene] = (sceneScores[scene] || 0) + 1;
+        }
+    }
+
+    if (Object.keys(sceneScores).length === 0) return null;
+
+    const sorted = Object.entries(sceneScores).sort((a, b) => b[1] - a[1]);
+    const bestScore = sorted[0][1];
+    const topScenes = sorted.filter(([, score]) => score === bestScore).map(([scene]) => scene);
+    const chosen = topScenes.find(s => s !== lastScene) || topScenes[0];
+
+    return { scene: chosen, score: bestScore };
+}
+
+/**
  * Suggest overlays using DeepSeek V3.1 AI via the server-side API route.
  * Falls back to local dynamic prompt generation if the API is unavailable.
  * Now generates custom AI images based on script content.
@@ -553,9 +626,9 @@ export async function suggestOverlaysWithAI(
         log('Analysis serialization failed — sending without it');
     }
 
-    const tryModel = 'lightning-ai/deepseek-v4-pro';
+    const tryModel = 'openai';
     try {
-        log(`Calling Lightning AI DeepSeek V4 Pro...`);
+        log(`Calling kimi-k2.6-precision AI...`);
         const response = await fetch('/api/suggest-overlays', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -575,9 +648,16 @@ export async function suggestOverlaysWithAI(
 
         if (data.suggestions && data.suggestions.length > 0) {
             const src = data.source || tryModel;
-            log(`Lightning AI responded — ${data.suggestions.length} suggestions (source: ${src})`);
+            log(`AI responded — ${data.suggestions.length} suggestions (source: ${src})`);
+
+            // Server now returns only visual-illustration — trust it
+            const suggestions = data.suggestions || [];
+            const motionCount = suggestions.filter((s: { type: string }) => s.type === 'visual-illustration').length;
+            const imgCount = suggestions.filter((s: { type: string }) => s.type === 'ai-generated-image').length;
+            log(`Applied: ${motionCount} motion graphics, ${imgCount} AI images`);
+
             return subtitles.map((seg) => {
-                const suggestion = data.suggestions.find(
+                const suggestion = suggestions.find(
                     (s: { segmentId: string; type: string; props: Record<string, unknown> }) =>
                         s.segmentId === seg.id
                 );
@@ -591,13 +671,13 @@ export async function suggestOverlaysWithAI(
             });
         }
 
-        log(`Lightning AI failed: no suggestions returned`);
+        log(`AI failed: no suggestions returned`);
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'network error';
-        log(`Lightning AI error: ${msg}`);
+        log(`ModelScope error: ${msg}`);
     }
 
-    log('ERROR: Lightning AI failed — no overlay suggestions received');
+    log('ERROR: AI failed — no overlay suggestions received');
     return subtitles;
 }
 
@@ -658,11 +738,14 @@ export async function generateDynamicOverlaysAsync(subtitles: SubtitleSegment[])
         const segmentHash = hashString(seg.text);
         const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
         
-        // Get async overlay with real AI-generated image
+        // Get async overlay — only if keyword match found
         const overlay = await selectProOverlayWithErnieImage(seg.text, overlayCount, uniqueSeed);
-        overlayCount++;
-
-        results.push({ ...seg, overlay });
+        if (overlay) {
+            overlayCount++;
+            results.push({ ...seg, overlay });
+        } else {
+            results.push(seg); // No match = no overlay
+        }
     }
 
     return results;
@@ -716,8 +799,9 @@ export function generateDynamicOverlays(subtitles: SubtitleSegment[]): SubtitleS
         const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
         
         const overlayType = selectProOverlayWithUniqueSeed(seg.text, overlayCount, uniqueSeed);
-        overlayCount++;
+        if (!overlayType) return seg; // No keyword match = NO overlay
 
+        overlayCount++;
         return { ...seg, overlay: overlayType };
     });
 }
@@ -726,7 +810,7 @@ export function generateDynamicOverlays(subtitles: SubtitleSegment[]): SubtitleS
  * Async overlay selection with real Ernie Image API calls.
  * Overlay TYPE is chosen based on content analysis, not a fixed pattern.
  */
-async function selectProOverlayWithErnieImage(text: string, count: number, uniqueSeed: number): Promise<OverlayConfig> {
+async function selectProOverlayWithErnieImage(text: string, count: number, uniqueSeed: number): Promise<OverlayConfig | null> {
     const lower = text.toLowerCase();
     const color = getProColor(uniqueSeed);
     const label = extractLabelFromText(text);
@@ -747,39 +831,25 @@ async function selectProOverlayWithErnieImage(text: string, count: number, uniqu
         if (CONTENT_SCENE_MAP[w]) { matchedScene = CONTENT_SCENE_MAP[w]; break; }
     }
 
+    if (!matchedScene) return null; // No keyword match = NO overlay
+
     const contentHash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
 
-    if (matchedScene) {
-        // Strong keyword match → use animated SVG scene (instant, premium look)
-        const finalScene = matchedScene === lastUsedScene
-            ? ALL_SCENES[(ALL_SCENES.indexOf(matchedScene) + 1) % ALL_SCENES.length]
-            : matchedScene;
-        lastUsedScene = finalScene;
-        const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
-        return {
-            type: 'visual-illustration',
-            props: {
-                scene: finalScene,
-                label: label || text.substring(0, 30),
-                color,
-                transition: transitions[contentHash % transitions.length],
-            },
-        };
-    } else {
-        // No strong scene match → AI-generated image
-        const dynamicPrompt = generateDynamicPrompt(text);
-        const imagePrompt = dynamicPrompt?.prompt || `${text.substring(0, 100)}, cinematic, professional`;
-        const imageUrl = await generateErnieImageUrl(imagePrompt, uniqueSeed);
-        return {
-            type: 'ai-generated-image',
-            props: {
-                imageUrl,
-                caption: label || text.substring(0, 40),
-                seed: uniqueSeed,
-                imagePrompt,
-            },
-        };
-    }
+    // Strong keyword match → use animated SVG scene (instant, premium look)
+    const finalScene = matchedScene === lastUsedScene
+        ? ALL_SCENES[(ALL_SCENES.indexOf(matchedScene) + 1) % ALL_SCENES.length]
+        : matchedScene;
+    lastUsedScene = finalScene;
+    const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
+    return {
+        type: 'visual-illustration',
+        props: {
+            scene: finalScene,
+            label: label || text.substring(0, 30),
+            color,
+            transition: transitions[contentHash % transitions.length],
+        },
+    };
 }
 
 /**
@@ -799,7 +869,7 @@ function hashStringLocal(str: string): number {
  * Select overlay with a unique seed for THIS specific segment.
  * Overlay TYPE is chosen based on content analysis, not a fixed pattern.
  */
-function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed: number): OverlayConfig {
+function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed: number): OverlayConfig | null {
     const lower = text.toLowerCase();
     const color = getProColor(uniqueSeed);
     const label = extractLabelFromText(text);
@@ -819,38 +889,25 @@ function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed:
         if (CONTENT_SCENE_MAP[w]) { matchedScene = CONTENT_SCENE_MAP[w]; break; }
     }
 
+    if (!matchedScene) return null; // No keyword match = NO overlay
+
     const contentHash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
 
-    if (matchedScene) {
-        // Strong keyword match → animated SVG scene (instant, premium)
-        const finalScene = matchedScene === lastUsedScene
-            ? ALL_SCENES[(ALL_SCENES.indexOf(matchedScene) + 1) % ALL_SCENES.length]
-            : matchedScene;
-        lastUsedScene = finalScene;
-        const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
-        return {
-            type: 'visual-illustration',
-            props: {
-                scene: finalScene,
-                label: label || text.substring(0, 30),
-                color,
-                transition: transitions[contentHash % transitions.length],
-            },
-        };
-    } else {
-        // No strong scene match → AI-generated image
-        const dynamicPrompt = generateDynamicPrompt(text);
-        const imagePrompt = dynamicPrompt?.prompt || `${text.substring(0, 100)}, cinematic, professional`;
-        const imageUrl = generateAIImageUrl(imagePrompt, uniqueSeed);
-        return {
-            type: 'ai-generated-image',
-            props: {
-                imageUrl,
-                caption: label || text.substring(0, 40),
-                seed: uniqueSeed,
-            },
-        };
-    }
+    // Strong keyword match → animated SVG scene (instant, premium)
+    const finalScene = matchedScene === lastUsedScene
+        ? ALL_SCENES[(ALL_SCENES.indexOf(matchedScene) + 1) % ALL_SCENES.length]
+        : matchedScene;
+    lastUsedScene = finalScene;
+    const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
+    return {
+        type: 'visual-illustration',
+        props: {
+            scene: finalScene,
+            label: label || text.substring(0, 30),
+            color,
+            transition: transitions[contentHash % transitions.length],
+        },
+    };
 }
 
 /**
@@ -870,36 +927,23 @@ function scoreSegmentRelevance(text: string): number {
     ];
     if (fillerPatterns.some(p => lower.includes(p))) return 0;
 
+    // ONLY keyword matches from CONTENT_SCENE_MAP count — exact same logic as scene picker
+    const SKIP_GENERIC = new Set([
+        'guys', 'everybody', 'hello', 'welcome', 'right', 'true', 'real',
+        'tell', 'happen', 'finally', 'literally', 'actually', 'basically',
+        'definitely', 'probably', 'going', 'different', 'new', 'old', 'next',
+        'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why',
+        'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free',
+    ]);
+
     let score = 0;
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-
-    // Strong keyword matches from CONTENT_SCENE_MAP (not common conversational words)
-    const strongKeywords = new Set([
-        'money', 'revenue', 'profit', 'income', 'growth', 'success', 'rocket',
-        'brain', 'technology', 'code', 'science', 'power', 'energy', 'fire',
-        'earth', 'world', 'mountain', 'ocean', 'celebrate', 'love', 'protect',
-        'invest', 'market', 'stock', 'launch', 'explode', 'scale', 'secret',
-        'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
-    ]);
     for (const w of words) {
-        if (strongKeywords.has(w)) score += 3;
-        else if (CONTENT_SCENE_MAP[w]) score += 1;
+        if (SKIP_GENERIC.has(w)) continue;
+        if (CONTENT_SCENE_MAP[w]) score += 2;
     }
 
-    // Numbers / stats are always visually interesting
-    if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 4;
-
-    // Questions are good overlay points
-    if (text.includes('?')) score += 2;
-
-    // Exclamations / emphasis
-    if (text.includes('!')) score += 1;
-
-    // Penalize very short or purely conversational text
-    const nonStopWords = words.filter(w => !STOP_WORDS.has(w));
-    if (nonStopWords.length < 2) score -= 2;
-
-    return Math.max(0, score);
+    return score;
 }
 
 /**
@@ -1355,9 +1399,9 @@ export async function requestAgentEditPlan(
         log('Analysis serialization failed — sending without it');
     }
 
-    const tryModel = 'lightning-ai/deepseek-v4-pro';
+    const tryModel = 'openai';
     try {
-        log(`Calling Lightning AI DeepSeek V4 Pro...`);
+        log(`Calling Gemma4 AI...`);
         const response = await fetch('/api/agent-edit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1381,17 +1425,17 @@ export async function requestAgentEditPlan(
 
         if (data.ok && data.editingPlan) {
             const src = data.source || tryModel;
-            log(`Lightning AI responded (source: ${src})`);
+            log(`AI responded (source: ${src})`);
             return data.editingPlan as EditingPlan;
         }
 
-        log(`Lightning AI failed: ${data.error || 'no plan returned'}`);
+        log(`AI failed: ${data.error || 'no plan returned'}`);
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'network error';
-        log(`Lightning AI error: ${msg}`);
+        log(`ModelScope error: ${msg}`);
     }
 
-    log('ERROR: Lightning AI failed — no editing plan received');
+    log('ERROR: AI failed — no editing plan received');
     return null;
 }
 
@@ -1437,17 +1481,6 @@ export function applyEditingPlan(
                 };
             }
 
-            // For ai-motion-graphic overlays, ensure props are carried through
-            // svgContent will be populated by the API post-processing or client pre-generation
-            if (planSeg.overlay.type === 'ai-motion-graphic') {
-                updated.overlay.props = {
-                    ...updated.overlay.props,
-                    label: planSeg.overlay.props?.label || extractLabelFromText(seg.text),
-                    color: planSeg.overlay.props?.color || '#6366f1',
-                    topic: planSeg.overlay.props?.topic || 'general',
-                };
-            }
-
         }
 
         // Apply effect
@@ -1475,6 +1508,45 @@ export function applyEditingPlan(
         return updated;
     });
 
+    // POST-PROCESS: ensure overlays have proper props
+    for (const seg of updatedSubtitles) {
+        if (!seg.overlay) continue;
+
+        if (seg.overlay.type === 'ai-generated-image') {
+            // Keep ai-generated-image as-is -- generate Pollinations URL if missing
+            if (!seg.overlay.props?.imageUrl) {
+                const prompt = String(seg.overlay.props?.imagePrompt || seg.text);
+                const seed = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 1000000;
+                seg.overlay.props = {
+                    ...seg.overlay.props,
+                    imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt.substring(0, 120)}, cinematic`)}?width=768&height=512&nologo=true&seed=${seed}`,
+                    caption: seg.overlay.props?.caption || extractLabelFromText(seg.text),
+                    seed,
+                    imagePrompt: prompt,
+                };
+            }
+        } else if (seg.overlay.type === 'ai-motion-graphic') {
+            // Spread out ai-motion-graphic (they are heavy and should be peak moments only)
+            // So we will only keep it if the timestamp/index allows it, otherwise change to something lighter
+            const hash = hashString(seg.text);
+            if (hash % 4 !== 0) {
+                seg.overlay.type = hash % 2 === 0 ? 'highlight-box' : 'kinetic-text';
+                seg.overlay.props = {
+                    color: getProColor(hash),
+                    style: 'glow',
+                    text: extractLabelFromText(seg.text) || seg.text.substring(0, 30),
+                };
+            } else {
+                seg.overlay.props = {
+                    ...seg.overlay.props,
+                    label: seg.overlay.props?.label || extractLabelFromText(seg.text),
+                    color: seg.overlay.props?.color || getProColor(hash),
+                    topic: seg.overlay.props?.topic || 'general',
+                    mood: seg.overlay.props?.mood || 'energetic',
+                };
+            }
+        }
+    }
     // Extract color grading from the plan
     const filters: Partial<VideoFilters> = {};
     if (plan.colorGrade) {

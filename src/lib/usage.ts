@@ -10,8 +10,8 @@ interface UsageData {
 }
 
 const PLAN_LIMITS: Record<PlanType, number> = {
-    free: 10,
-    creator: 20,
+    free: 30,
+    creator: 30,
     studio: Infinity,
 };
 

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const CROF_API = 'https://crof.ai/v2/chat/completions';
+const CROF_API_KEY = process.env.CROF_API_KEY || '';
+const CROF_MODEL = 'kimi-k2.6-precision';
+
 interface MotionSvgRequest {
   text: string;
   mood: string;
@@ -8,116 +12,99 @@ interface MotionSvgRequest {
   label: string;
 }
 
-const SYSTEM_PROMPT = `You are a motion graphics artist who creates animated SVGs. Given a video segment's text, mood, and topic, generate a SINGLE self-contained animated SVG that visually represents the content.
+const SYSTEM_PROMPT = `You are a professional motion graphics artist. Create a stunning animated SVG overlay for a video segment.
 
-STRICT OUTPUT RULES:
-- Output ONLY the <svg>...</svg> element. No markdown, no explanation, no code fences.
-- The SVG must start with <svg and end with </svg>
-- Use viewBox="0 0 400 300" and xmlns="http://www.w3.org/2000/svg"
-- Keep total output under 3KB
-- NEVER include <script>, <foreignObject>, or on* event attributes
+OUTPUT: ONLY the <svg>...</svg> element. No markdown, no explanation, no code fences.
 
-ANIMATION TECHNIQUES (use CSS @keyframes inside <style>):
-- fade-in: opacity 0 → 1
-- rise-up: translateY(30px) → translateY(0)
-- pulse: opacity or scale oscillating
-- draw: stroke-dashoffset animation for line drawing effect
-- rotate: transform: rotate() for spinning elements
-- scale-bounce: scale(0) → scale(1.1) → scale(1)
+TECHNICAL:
+- viewBox="0 0 400 300", xmlns="http://www.w3.org/2000/svg"
+- Under 4KB. NO <script>, <foreignObject>, or on* attributes.
+- Transparent background (no background rect).
 
-VISUAL QUALITY:
-- Use <linearGradient> or <radialGradient> in <defs> for rich colors
-- Use the provided color as the PRIMARY color, derive secondary colors from it
-- Add text labels using <text> with font-family="sans-serif"
-- Use rounded rectangles (rx), circles, and paths for modern look
-- Add subtle glow via filter or semi-transparent shapes
-- Keep backgrounds TRANSPARENT (no background rect)
+ANIMATION (CSS @keyframes in <style>):
+- Stagger with animation-delay for a "building up" feel
+- Use ease-out for entrances, ease-in-out for loops
+- Combine: rise-up + fade-in, scale-bounce + glow, draw + pulse
+- 0.5s-3s durations
 
-CONTENT MAPPING:
-- Read the segment text carefully and create visuals that ILLUSTRATE the specific content
-- For numbers/stats: animated bar charts, counters, or percentage circles
-- For actions/verbs: motion-based animations (arrows, movement, transitions)
-- For concepts: iconic representations with animation
-- For emotions: expressive colors and dynamic movement
-- The label text should appear as an animated text element in the SVG`;
+DESIGN QUALITY (match After Effects level):
+- <linearGradient>/<radialGradient> in <defs> — NEVER flat fills
+- 15-30 animated background particles (small circles with random positions, slow float/drift animation, low opacity)
+- Glow effects using feGaussianBlur filters
+- Bold headline text: font-family="sans-serif", font-weight="800", large size
+- Depth: layered semi-transparent shapes, subtle shadows
 
-const EXAMPLE_1 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
-<style>
-@keyframes rise{0%{transform:translateY(40px);opacity:0}100%{transform:translateY(0);opacity:1}}
-@keyframes glow{0%,100%{opacity:.6}50%{opacity:1}}
-@keyframes countUp{0%{opacity:0;transform:scale(.5)}100%{opacity:1;transform:scale(1)}}
-.bar{animation:rise .7s ease-out forwards}
-.lbl{animation:glow 2.5s ease-in-out infinite;fill:#fff;font-family:sans-serif;font-weight:700}
-.num{animation:countUp .5s ease-out 1s forwards;opacity:0;fill:#fff;font-family:sans-serif}
-</style>
-<defs><linearGradient id="g1" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs>
-<rect class="bar" x="60" y="160" width="50" height="100" rx="6" fill="url(#g1)" style="animation-delay:0s"/>
-<rect class="bar" x="130" y="110" width="50" height="150" rx="6" fill="url(#g1)" style="animation-delay:.15s"/>
-<rect class="bar" x="200" y="70" width="50" height="190" rx="6" fill="url(#g1)" style="animation-delay:.3s"/>
-<rect class="bar" x="270" y="40" width="50" height="220" rx="6" fill="url(#g1)" style="animation-delay:.45s"/>
-<text class="lbl" x="200" y="28" text-anchor="middle" font-size="22">REVENUE GROWTH</text>
-<text class="num" x="295" y="35" text-anchor="middle" font-size="16">+340%</text>
-</svg>`;
+TOPIC-SPECIFIC VISUALS:
+- Space/Astronomy: stars, planet rings, orbital paths, nebula gradients, cosmic dust particles
+- Technology: circuit lines, data nodes, binary rain, holographic blue tones
+- Business/Finance: chart bars, rising arrows, coin symbols, growth lines
+- Nature: leaves, water ripples, organic curves, earth tones
+- Science: atom orbits, molecular bonds, wave functions, lab aesthetics
+- General: geometric shapes, abstract particles, clean modern look
 
-const EXAMPLE_2 = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
-<style>
-@keyframes orbit{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{r:8;opacity:.7}50%{r:12;opacity:1}}
-@keyframes fadeUp{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
-.orb{transform-origin:200px 150px;animation:orbit 6s linear infinite}
-.core{animation:pulse 2s ease-in-out infinite}
-.title{animation:fadeUp .8s ease-out forwards;fill:#fff;font-family:sans-serif;font-weight:700}
-</style>
-<defs><radialGradient id="rg"><stop offset="0%" stop-color="#f59e0b" stop-opacity=".9"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></radialGradient></defs>
-<circle cx="200" cy="150" r="50" fill="url(#rg)"/>
-<circle class="core" cx="200" cy="150" r="8" fill="#fbbf24"/>
-<g class="orb"><circle cx="280" cy="150" r="6" fill="#60a5fa"/></g>
-<g class="orb" style="animation-delay:-2s"><circle cx="200" cy="80" r="5" fill="#34d399"/></g>
-<g class="orb" style="animation-delay:-4s"><circle cx="130" cy="180" r="4" fill="#f472b6"/></g>
-<text class="title" x="200" y="260" text-anchor="middle" font-size="20">AI NEURAL NETWORK</text>
-</svg>`;
+The LABEL text must be the HERO element — biggest, boldest, center of attention.`;
 
 function sanitizeSvg(raw: string): string {
-  let svg = raw;
-  svg = svg.replace(/<script[\s\S]*?<\/script>/gi, '');
-  svg = svg.replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '');
-  svg = svg.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
-  svg = svg.replace(/\bon\w+\s*=\s*[^\s>]+/gi, '');
-  svg = svg.replace(/javascript\s*:/gi, 'blocked:');
-  svg = svg.replace(/data\s*:\s*text\/html/gi, 'blocked:');
-  return svg;
+  return raw
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\bon\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript\s*:/gi, 'blocked:')
+    .replace(/data\s*:\s*text\/html/gi, 'blocked:');
 }
 
 function extractSvgFromResponse(content: string): string {
   let text = content.trim();
-  // Strip non-ASCII chars DeepSeek sometimes injects
-  text = text.replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
-  // Strip markdown code fences
   text = text.replace(/^```(?:svg|xml|html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
-  // Extract the SVG element
   const match = text.match(/<svg[\s\S]*?<\/svg>/i);
   if (match) return match[0];
-  // If SVG was truncated (starts but no closing tag), try to close it
   const openMatch = text.match(/<svg[\s\S]*/i);
   if (openMatch) return openMatch[0] + '</svg>';
   return '';
 }
 
-interface LLMConfig {
-  name: string;
-  baseUrl: string;
-  apiKey: string;
-  model: string;
-}
+async function callLLM(systemPrompt: string, userPrompt: string): Promise<string | null> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      console.log(`[MotionSVG] Calling ${CROF_MODEL} via crof.ai (attempt ${attempt}/2)`);
+      const res = await fetch(CROF_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CROF_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: CROF_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 4096,
+        }),
+      });
 
-function getLLMConfigs(): LLMConfig[] {
-  // Use Lightning AI DeepSeek V4 Pro exclusively for SVG generation
-  return [{
-    name: 'DeepSeek V4 Pro (Lightning)',
-    baseUrl: 'https://lightning.ai/api/v1',
-    apiKey: process.env.LIGHTNING_API_KEY || 'a136ad94-f05f-4431-b3ad-2148a0c72ac3/giggletales18/vision-model',
-    model: 'lightning-ai/deepseek-v4-pro',
-  }];
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.warn(`[MotionSVG] crof.ai failed: ${res.status} ${errText.substring(0, 200)} (attempt ${attempt})`);
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+        return null;
+      }
+
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content || null;
+      if (!content) {
+        console.warn(`[MotionSVG] crof.ai: empty content (attempt ${attempt})`);
+        if (attempt < 2) continue;
+      }
+      return content;
+    } catch (err) {
+      console.warn(`[MotionSVG] crof.ai attempt ${attempt} error:`, err);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -128,7 +115,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ svgContent: '', success: false, error: 'No text provided' });
     }
 
-    const userPrompt = `Create an animated SVG for this video segment:
+    const userPrompt = `Create an animated SVG for this video overlay:
 
 TEXT: "${text}"
 MOOD: ${mood || 'energetic'}
@@ -136,94 +123,41 @@ TOPIC: ${topic || 'general'}
 PRIMARY COLOR: ${color || '#6366f1'}
 LABEL: "${label || ''}"
 
-Here are two examples of the quality and style expected:
+Generate a UNIQUE animated SVG that:
+1. Has 15-20 animated background particles matching the topic
+2. Uses "${color}" as primary with gradient variations
+3. Shows "${label}" as a bold animated headline
+4. Matches the "${mood}" mood through animation speed
+5. Is visually specific to the topic "${topic}"
 
-EXAMPLE 1 (bar chart with rising animation):
-${EXAMPLE_1}
+Output ONLY <svg>...</svg>.`;
 
-EXAMPLE 2 (orbital/network animation):
-${EXAMPLE_2}
+    console.log(`[MotionSVG] Generating via ${CROF_MODEL} for: "${label}"`);
 
-Now generate a NEW, UNIQUE animated SVG that visually represents the TEXT above. Use the PRIMARY COLOR as the main color. Include the LABEL as animated text. Match the MOOD through animation speed and visual intensity. Output ONLY the <svg>...</svg> element.`;
+    const content = await callLLM(SYSTEM_PROMPT, userPrompt);
 
-    const configs = getLLMConfigs();
-    if (configs.length === 0) {
-      console.warn('[MotionSVG] No LLM configs available');
-      return NextResponse.json({ svgContent: '', success: false, error: 'No AI models configured' });
+    if (!content) {
+      console.warn('[MotionSVG] crof.ai returned no content');
+      return NextResponse.json({ svgContent: '', success: false, error: 'Empty response' });
     }
 
-    for (const config of configs) {
-      try {
-        console.log(`[MotionSVG] Trying ${config.name}...`);
-
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 35000);
-
-        const url = config.baseUrl.includes('/chat/completions')
-          ? config.baseUrl
-          : `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
-
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: config.model,
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: userPrompt },
-            ],
-            max_tokens: 2500,
-            temperature: 0.6,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timer);
-
-        if (!response.ok) {
-          console.warn(`[MotionSVG] ${config.name} failed: ${response.status}`);
-          continue;
-        }
-
-        const data = await response.json();
-        const content = data?.choices?.[0]?.message?.content;
-
-        if (!content || typeof content !== 'string') {
-          console.warn(`[MotionSVG] ${config.name} returned empty content`);
-          continue;
-        }
-
-        const rawSvg = extractSvgFromResponse(content);
-        if (!rawSvg) {
-          console.warn(`[MotionSVG] ${config.name} response had no valid SVG`);
-          continue;
-        }
-
-        const svgContent = sanitizeSvg(rawSvg);
-
-        if (!svgContent.includes('<svg')) {
-          console.warn(`[MotionSVG] ${config.name} SVG invalid after sanitization`);
-          continue;
-        }
-
-        console.log(`[MotionSVG] Success via ${config.name} (${svgContent.length} chars)`);
-        return NextResponse.json({ svgContent, success: true, source: config.name });
-
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : 'unknown';
-        console.warn(`[MotionSVG] ${config.name} error: ${msg}`);
-        continue;
-      }
+    const rawSvg = extractSvgFromResponse(content);
+    if (!rawSvg) {
+      console.warn('[MotionSVG] No SVG in crof.ai response');
+      return NextResponse.json({ svgContent: '', success: false, error: 'No SVG in response' });
     }
 
-    console.warn('[MotionSVG] All models failed');
-    return NextResponse.json({ svgContent: '', success: false, error: 'All AI models failed' });
+    const svgContent = sanitizeSvg(rawSvg);
+    if (!svgContent.includes('<svg')) {
+      return NextResponse.json({ svgContent: '', success: false, error: 'Invalid SVG' });
+    }
+
+    console.log(`[MotionSVG] Success via ${CROF_MODEL} (${svgContent.length} chars)`);
+    return NextResponse.json({ svgContent, success: true, source: CROF_MODEL });
 
   } catch (error) {
-    console.error('[MotionSVG] Route error:', error);
-    return NextResponse.json({ svgContent: '', success: false, error: 'Internal error' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : 'unknown';
+    console.error(`[MotionSVG] Error: ${msg}`);
+    return NextResponse.json({ svgContent: '', success: false, error: msg }, { status: 500 });
   }
 }

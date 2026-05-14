@@ -1,817 +1,1167 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react';
-import { cn } from '../lib/utils';
-import { Button } from '../components/ui/Button';
-import {
-    Film, ArrowRight, FileText, Sparkles, Download, Upload,
-    Layers, Wand2, Play, Check, Moon, Sun
-} from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+
+/* ─── Color tokens ─── */
+const C = {
+  bg: '#0A0A0E',
+  purple: '#9D4EDD',
+  cyan: '#00F5D4',
+  yellow: '#FEE440',
+  white: '#F8F9FA',
+};
+
+/* ─── Section data ─── */
+const ENGINE_CARDS = [
+  {
+    step: '1',
+    title: 'Dump Raw',
+    desc: 'Drop your messy, unedited footage into the void. We accept anything — Log, flat, shaky, noisy.',
+    gradient: 'from-[#9D4EDD]/20 to-[#0A0A0E]',
+    border: '#9D4EDD',
+  },
+  {
+    step: '2',
+    title: 'Neural Edit',
+    desc: 'Our AI analyzes every frame, finds the rhythm, color-grades, and cuts like a seasoned editor.',
+    gradient: 'from-[#00F5D4]/20 to-[#0A0A0E]',
+    border: '#00F5D4',
+  },
+  {
+    step: '3',
+    title: 'Viral Output',
+    desc: 'What comes out is retention-optimized, captioned, and formatted for any platform instantly.',
+    gradient: 'from-[#FEE440]/20 to-[#0A0A0E]',
+    border: '#FEE440',
+  },
+];
+
+const FEATURES = [
+  {
+    title: 'Silence Shredder',
+    desc: 'Dead air, umms, awkward pauses — the AI detects them on the timeline and physically collapses them. Your video tightens automatically.',
+    tag: 'Timeline AI',
+    gradient: 'linear-gradient(135deg, #9D4EDD 0%, #00F5D4 100%)',
+    visual: 'waveform',
+    image: `https://image.pollinations.ai/prompt/A_professional_video_editing_timeline_showing_audio_waveforms_with_gaps_collapsing_cyberpunk_UI_dark_purple?width=640&height=360&nologo=true&seed=410`,
+  },
+  {
+    title: 'Auto B-Roll',
+    desc: 'Say a place, a concept, or a mood — the AI instantly finds and punch-zooms into the perfect stock footage. No searching, no importing.',
+    tag: 'Context Engine',
+    gradient: 'linear-gradient(135deg, #00F5D4 0%, #FEE440 100%)',
+    visual: 'zoom',
+    image: `https://image.pollinations.ai/prompt/Cinematic_drone_shot_of_Manhattan_skyline_golden_hour_high_quality?width=640&height=360&nologo=true&seed=420`,
+  },
+  {
+    title: 'Kinetic Captions',
+    desc: 'Words don\'t just appear — they explode, bounce, and pulse in perfect sync with your voice. Every syllable lands like a punchline.',
+    tag: 'Typography FX',
+    gradient: 'linear-gradient(135deg, #FEE440 0%, #9D4EDD 100%)',
+    visual: 'captions',
+    image: `https://image.pollinations.ai/prompt/Animated_text_captions_exploding_on_screen_dark_background_neon_glow_purple_cyan?width=640&height=360&nologo=true&seed=430`,
+  },
+];
+
+const CREATORS = Array.from({ length: 8 }, (_, i) => ({
+  id: i,
+  handle: ['@techreviewer', '@alexvisuals', '@motiondaily', '@filmbykai', '@editwiz', '@cliptok', '@studiopulse', '@cutmaster'][i],
+  realName: ['Sarah Chen', 'Alex Rivera', 'Marcus Kim', 'Kai Yamamoto', 'Emma Torres', 'Liam O\'Brien', 'Priya Sharma', 'Jake Hudson'][i],
+  color: ['#9D4EDD', '#00F5D4', '#FEE440', '#9D4EDD', '#00F5D4', '#FEE440', '#9D4EDD', '#00F5D4'][i],
+  reaction: ['🤯', '🔥', '✨', '😱', '💜', '⚡', '🎯', '🚀'][i],
+  avatar: `https://api.dicebear.com/7.x/notionists-neutral/svg?seed=${['Sarah+Chen', 'Alex+Rivera', 'Marcus+Kim', 'Kai+Yamamoto', 'Emma+Torres', 'Liam+OBrien', 'Priya+Sharma', 'Jake+Hudson'][i]}&backgroundColor=${['b58df1','00f5d4','fee440','b58df1','00f5d4','fee440','b58df1','00f5d4'][i]}`,
+  thumbnail: `https://image.pollinations.ai/prompt/A_stunning_cinematic_video_thumbnail_with_dynamic_visuals_high_contrast_professional_youtube_style?width=320&height=568&nologo=true&seed=${600 + i}`,
+  views: ['2.4M', '890K', '1.2M', '3.1M', '560K', '4.7M', '920K', '1.8M'][i],
+  quote: [
+    'MakeScript cut my editing time from 6 hours to 15 minutes. The silence shredder alone is worth it.',
+    'I was skeptical until I saw the first auto-generated edit. Now I can\'t go back.',
+    'The kinetic captions feature literally doubled my retention. Game changer for short-form.',
+    'Finally, an AI that understands pacing. It doesn\'t just cut — it edits with intention.',
+    'My entire workflow changed. I upload raw footage and get a broadcast-ready edit.',
+    'We use it for all 12 of our client channels. The consistency is unreal.',
+    'The auto B-roll feature understands context better than most human editors I\'ve worked with.',
+    'I\'ve tested every AI video tool. MakeScript is the only one that actually delivers.',
+  ][i],
+}));
+
+/* ─── Micro hook: cursor position for neon borders ─── */
+function useMousePosition() {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const handler = (e: MouseEvent) => setPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener('mousemove', handler, { passive: true });
+    return () => window.removeEventListener('mousemove', handler);
+  }, []);
+  return pos;
+}
+
+/* ─── Section divider with glitch wipe ─── */
+function GlitchDivider() {
+  return (
+    <div className="relative h-px w-full overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#9D4EDD]/30 to-transparent" />
+      <div className="absolute inset-0 opacity-20" style={{ animation: 'glitchStripe 3s ease-in-out infinite' }}>
+        <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(157,78,221,0.3) 20px, rgba(157,78,221,0.3) 21px)' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Neon cursor tracker ─── */
+function NeonBorder({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mouse = useMousePosition();
+  const [gradient, setGradient] = useState('transparent');
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const x = mouse.x - rect.left;
+    const y = mouse.y - rect.top;
+    setGradient(`radial-gradient(circle 60px at ${x}px ${y}px, rgba(157,78,221,0.15), transparent 80%)`);
+  }, [mouse]);
+
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <div className="absolute inset-0 pointer-events-none rounded-[inherit] transition-opacity duration-200" style={{ background: gradient }} />
+      {children}
+    </div>
+  );
+}
+
+/* ─── Magnetic button ─── */
+function MagneticButton({ children, href, className = '' }: { children: React.ReactNode; href: string; className?: string }) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+
+  const handleMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const dx = e.clientX - (rect.left + rect.width / 2);
+    const dy = e.clientY - (rect.top + rect.height / 2);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const maxDist = 150;
+    if (dist < maxDist) {
+      const pull = 1 - dist / maxDist;
+      setOffset({ x: dx * pull * 0.3, y: dy * pull * 0.3 });
+    } else {
+      setOffset({ x: 0, y: 0 });
+    }
+  }, []);
+
+  const handleLeave = useCallback(() => setOffset({ x: 0, y: 0 }), []);
+
+  return (
+    <Link
+      ref={ref}
+      href={href}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      className={`inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-[15px] transition-transform duration-200 ease-out ${className}`}
+      style={{
+        transform: `translate(${offset.x}px, ${offset.y}px)`,
+        background: `linear-gradient(135deg, ${C.purple}, #7c3aed)`,
+        color: '#fff',
+        boxShadow: `0 0 40px ${C.purple}66, 0 8px 32px rgba(0,0,0,0.4)`,
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/* ─── Snap button ─── */
+function SnapButton({ children, onClick, variant = 'primary', className = '' }: { children: React.ReactNode; onClick?: () => void; variant?: 'primary' | 'ghost'; className?: string }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    const el = btnRef.current;
+    if (!el) return;
+    el.style.transform = 'scale(0.92)';
+    setTimeout(() => { el.style.transform = 'scale(1)'; }, 120);
+    onClick?.();
+  }, [onClick]);
+
+  const isPrimary = variant === 'primary';
+  return (
+    <button
+      ref={btnRef}
+      onClick={handleClick}
+      className={`relative overflow-hidden rounded-xl font-semibold text-[13px] px-6 py-3 transition-all duration-100 ${className}`}
+      style={{
+        background: isPrimary ? `linear-gradient(135deg, ${C.purple}, #7c3aed)` : 'transparent',
+        color: isPrimary ? '#fff' : C.white,
+        border: isPrimary ? 'none' : `1px solid rgba(255,255,255,0.1)`,
+        boxShadow: isPrimary ? `0 0 30px ${C.purple}44` : 'none',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ─── Playhead scrollbar ─── */
+function PlayheadScrollbar() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const handler = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(docHeight > 0 ? scrollTop / docHeight : 0);
+    };
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+  return (
+    <div className="fixed right-0 top-0 bottom-0 w-1 z-[9999] pointer-events-none">
+      <div className="absolute inset-0 bg-white/[0.03]" />
+      <div
+        className="absolute left-0 right-0 transition-all duration-150"
+        style={{
+          top: `${progress * 100}%`,
+          height: '4px',
+          background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})`,
+          boxShadow: `0 0 12px ${C.purple}`,
+        }}
+      />
+      <div
+        className="absolute left-0 right-0 flex items-center justify-center"
+        style={{ top: `${progress * 100}%`, transform: 'translateY(-50%)' }}
+      >
+        <div
+          className="w-3 h-3 rounded-full border-2"
+          style={{
+            background: C.bg,
+            borderColor: C.purple,
+            boxShadow: `0 0 10px ${C.purple}`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Particle background ─── */
+function ParticleField({ count = 30, color = C.purple }: { count?: number; color?: string }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            width: `${1 + Math.random() * 2}px`,
+            height: `${1 + Math.random() * 2}px`,
+            background: color,
+            opacity: 0.1 + Math.random() * 0.3,
+            animation: `particleFloat ${5 + Math.random() * 10}s linear ${Math.random() * 5}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════════ */
 
 export default function LandingPage() {
-    const [mounted, setMounted] = useState(false);
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const [email, setEmail] = useState('');
-    const [emailSubmitted, setEmailSubmitted] = useState(false);
-    const [openFaq, setOpenFaq] = useState<number | null>(null);
-    const [navScrolled, setNavScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [laserPos, setLaserPos] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const [beforeAfter, setBeforeAfter] = useState(50);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [scrollY, setScrollY] = useState(0);
 
-    useEffect(() => {
-        setMounted(true);
-        const saved = localStorage.getItem('theme');
-        if (saved === 'light' || saved === 'dark') {
-            setTheme(saved);
-            document.documentElement.setAttribute('data-theme', saved);
-        } else {
-            document.documentElement.setAttribute('data-theme', 'dark');
+  useEffect(() => {
+    setMounted(true);
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  /* Laser sweep animation loop */
+  useEffect(() => {
+    if (!mounted) return;
+    let start: number | null = null;
+    const duration = 4000;
+    const animate = (ts: number) => {
+      if (!start) start = ts;
+      const elapsed = (ts - start) % duration;
+      setLaserPos(elapsed / duration);
+      requestAnimationFrame(animate);
+    };
+    const raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [mounted]);
+
+  /* Before/after slider drag */
+  const handleSlider = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    setBeforeAfter(pct);
+  }, []);
+
+  /* File drag events for footer */
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+  const handleDragLeave = useCallback(() => setDragOver(false), []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}>
+        <div className="w-6 h-6 rounded-full border-2 border-t-transparent" style={{ borderColor: `${C.purple} transparent ${C.purple} ${C.purple}`, animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: C.bg, color: C.white, fontFamily: "'Inter', sans-serif" }}>
+      <PlayheadScrollbar />
+
+      {/* ═══════════════════ NAVBAR ═══════════════════ */}
+      <nav className="fixed top-0 left-0 right-0 z-50 py-4 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div
+            className="flex items-center justify-between px-6 h-12 rounded-2xl border transition-all duration-300"
+            style={{
+              background: 'rgba(10,10,14,0.75)',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              borderColor: 'rgba(255,255,255,0.06)',
+            }}
+          >
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${C.purple}, ${C.cyan})` }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+              </div>
+                            <span className="font-bold text-[15px] tracking-[-0.02em]" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>MakeScript</span>
+            </Link>
+
+            <div className="hidden md:flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '2px' }}>
+              {['Features', 'Engine', 'Pricing'].map((item) => (
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-[12px] font-medium px-3 py-1.5 rounded-lg transition-all" style={{ color: 'rgba(248,249,250,0.5)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = C.white; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(248,249,250,0.5)'; e.currentTarget.style.background = 'transparent'; }}
+                >{item}</a>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href="/editor"
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-[13px] transition-all duration-100 hover:scale-95 active:scale-90"
+                style={{
+                  background: `linear-gradient(135deg, ${C.purple}, #7c3aed)`,
+                  color: '#fff',
+                  boxShadow: `0 0 30px ${C.purple}44`,
+                }}
+              >
+                Open Editor →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ═══════════════════ HERO ═══════════════════ */}
+      <section
+        className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 pt-20"
+        style={{ background: C.bg }}
+      >
+        <ParticleField count={40} color={C.purple} />
+
+        {/* Glassmorphism drop zone */}
+        <div
+          className="relative w-full max-w-6xl mx-auto rounded-3xl overflow-hidden"
+          style={{
+            minHeight: '70vh',
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            boxShadow: '0 32px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+        >
+          {/* Laser scanning line */}
+          <div
+            className="absolute top-0 bottom-0 w-[3px] z-20 pointer-events-none"
+            style={{
+              left: `${laserPos * 100}%`,
+              background: `linear-gradient(180deg, transparent, ${C.cyan}, ${C.yellow}, ${C.cyan}, transparent)`,
+              boxShadow: `0 0 24px ${C.cyan}, 0 0 60px ${C.cyan}44`,
+              animation: 'laserGlow 0.5s ease-in-out infinite alternate',
+            }}
+          >
+            {/* Laser glow flare */}
+            <div className="absolute top-1/2 -translate-y-1/2 -left-[30px] w-[66px] h-[66px] rounded-full" style={{ background: `radial-gradient(circle, ${C.cyan}33, transparent 70%)` }} />
+          </div>
+
+          {/* Left side: raw footage */}
+          <div className="absolute inset-0 z-10 overflow-hidden">
+            <div
+              className="absolute inset-0 transition-all duration-100"
+              style={{ clipPath: `inset(0 ${100 - laserPos * 100}% 0 0)` }}
+            >
+              {/* Raw footage simulation */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }} />
+              {/* Shake overlays */}
+              <div className="absolute inset-0" style={{ animation: 'cameraShake 0.15s infinite' }}>
+                <div className="absolute top-[15%] left-[10%] w-[70%] h-[55%] rounded-lg border border-red-500/20" style={{ background: 'rgba(0,0,0,0.4)', animation: 'shakeInner 0.3s infinite alternate' }}>
+                  {/* Bad waveform */}
+                  <div className="absolute bottom-2 left-2 right-2 h-8 flex items-end gap-[2px]">
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <div key={i} className="flex-1 rounded-t" style={{ background: '#ef444466', height: `${4 + Math.random() * 20}px`, animation: `waveformBad ${0.2 + Math.random() * 0.3}s infinite` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Label */}
+              <div className="absolute bottom-8 left-8 px-3 py-1 rounded border border-red-500/30" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                <span className="text-[10px] font-mono text-red-400">LOG PROFILE · 29.97fps · UNSHARP</span>
+              </div>
+            </div>
+
+            {/* Right side: polished edit */}
+            <div
+              className="absolute inset-0 transition-all duration-100"
+              style={{ clipPath: `inset(0 0 0 ${laserPos * 100}%)` }}
+            >
+              {/* Polished footage simulation */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0d0221 0%, #1a0533 30%, #240046 60%, #10002b 100%)' }} />
+              <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(157,78,221,0.1) 0%, transparent 60%)' }} />
+              {/* Color graded scene */}
+              <div className="absolute top-[15%] left-[10%] w-[70%] h-[55%] rounded-lg overflow-hidden" style={{ border: '1px solid rgba(157,78,221,0.2)', boxShadow: '0 0 40px rgba(157,78,221,0.1), inset 0 0 40px rgba(0,0,0,0.3)' }}>
+                {/* Cinematic scene */}
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 50%, #16213e 100%)' }} />
+                {/* Cinematic bars */}
+                <div className="absolute top-0 left-0 right-0 h-[15%]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.6), transparent)' }} />
+                <div className="absolute bottom-0 left-0 right-0 h-[15%]" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.6), transparent)' }} />
+                {/* Glowing title text */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-[clamp(18px,3vw,36px)] font-bold tracking-[-0.02em] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white, textShadow: `0 0 40px ${C.purple}, 0 0 80px ${C.purple}44` }}>
+                      {['NEW YORK', 'THE VISION', 'BEYOND'][Math.floor(Math.random() * 3)]}
+                    </div>
+                    {/* Kinetic caption bounce */}
+                    <div className="h-6 flex items-center justify-center gap-1">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <span key={i} className="text-[11px] font-bold" style={{ color: C.cyan, animation: `captionBounce ${0.4 + Math.random() * 0.3}s ease-in-out ${i * 0.08}s infinite alternate` }}>▌</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* Zoom effect overlay */}
+                <div className="absolute inset-0" style={{ animation: 'cinematicZoom 6s ease-in-out infinite' }} />
+              </div>
+              {/* Label */}
+              <div className="absolute bottom-8 left-8 px-3 py-1 rounded border border-emerald-500/30" style={{ background: 'rgba(16,185,129,0.1)' }}>
+                <span className="text-[10px] font-mono text-emerald-400">COLOR GRADED · 4K HDR · CAPTIONS SYNCED</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Center headline (always on top) */}
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none" style={{ textShadow: '0 4px 32px rgba(0,0,0,0.6)' }}>
+            <h1
+              className="text-[clamp(3rem,10vw,7rem)] font-bold tracking-[-0.06em] leading-[0.95] text-center mb-4"
+              style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}
+            >
+              MakeScript
+            </h1>
+            <p className="text-[clamp(1.2rem,3vw,2rem)] font-semibold tracking-[0.15em] uppercase" style={{ color: C.yellow, fontFamily: "'Space Grotesk', sans-serif" }}>
+              Drop. Done. Viral.
+            </p>
+          </div>
+
+          {/* CTA */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
+            <MagneticButton href="/editor">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+              Drop Your Video
+            </MagneticButton>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════ THE ENGINE ═══════════════════ */}
+      <section id="engine" className="py-28 px-6 relative overflow-hidden">
+        <ParticleField count={20} color={C.cyan} />
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.cyan, border: `1px solid ${C.cyan}33`, fontFamily: "'JetBrains Mono', monospace" }}>THE ENGINE</span>
+            <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] mt-6 mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Three moves. <span style={{ color: C.purple }}>Zero effort.</span>
+            </h2>
+            <p className="text-[15px] max-w-xl mx-auto" style={{ color: 'rgba(248,249,250,0.5)' }}>
+              From raw timeline to finished cut — the engine does the heavy lifting in silence.
+            </p>
+          </div>
+
+          {/* Bento grid */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {ENGINE_CARDS.map((card, i) => (
+              <NeonBorder key={i}>
+                <div
+                  className="relative rounded-2xl p-8 overflow-hidden h-[420px] flex flex-col justify-between group"
+                  style={{
+                    background: `linear-gradient(180deg, ${card.gradient})`,
+                    border: `1px solid ${card.border}22`,
+                  }}
+                >
+                  {/* 3D animation simulation */}
+                  <div className="absolute top-6 right-6 w-20 h-20 opacity-30">
+                    <div className="w-full h-full rounded-full border-2" style={{ borderColor: card.border, animation: `orbit3d ${6 - i * 1.5}s linear infinite` }}>
+                      <div className="w-3 h-3 rounded-full absolute -top-1 left-1/2 -translate-x-1/2" style={{ background: card.border, boxShadow: `0 0 12px ${card.border}` }} />
+                    </div>
+                    <div className="absolute inset-[20%] rounded-full border" style={{ borderColor: `${card.border}44`, animation: `orbit3dReverse ${8 - i * 1.5}s linear infinite` }}>
+                      <div className="w-2 h-2 rounded-full absolute top-0 left-1/2 -translate-x-1/2" style={{ background: card.border === '#FEE440' ? C.purple : card.border === '#00F5D4' ? C.yellow : C.cyan }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[40px] font-black opacity-20" style={{ fontFamily: "'Space Grotesk', sans-serif", color: card.border }}>{card.step}</span>
+                    <h3 className="text-[22px] font-bold mt-2 mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{card.title}</h3>
+                    <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(248,249,250,0.55)' }}>{card.desc}</p>
+                  </div>
+
+                  {/* Animated particles inside card */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <div
+                        key={j}
+                        className="absolute w-1 h-1 rounded-full"
+                        style={{
+                          background: card.border,
+                          left: `${10 + Math.random() * 80}%`,
+                          top: `${50 + Math.random() * 40}%`,
+                          opacity: 0.1 + Math.random() * 0.3,
+                          animation: `particleRise ${2 + Math.random() * 4}s ease-in-out ${j * 0.3}s infinite`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </NeonBorder>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <GlitchDivider />
+
+      <GlitchDivider />
+
+      {/* ═══════════════════ LIVE DEMO ═══════════════════ */}
+      <section className="py-28 px-6 relative overflow-hidden">
+        <ParticleField count={25} color={C.purple} />
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.purple, border: `1px solid ${C.purple}33`, fontFamily: "'JetBrains Mono', monospace" }}>LIVE DEMO</span>
+            <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] mt-6 mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              See it <span style={{ color: C.cyan }}>in action</span>
+            </h2>
+          </div>
+
+          {/* Editor mockup */}
+          <div className="relative rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            {/* Title bar */}
+            <div className="h-11 flex items-center px-4 gap-2" style={{ background: '#0d0d0f', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+              </div>
+              <div className="flex-1 text-center">
+                <span className="text-[10px] font-mono" style={{ color: 'rgba(255,255,255,0.2)' }}>MakeScript Editor</span>
+              </div>
+            </div>
+
+            {/* Editor body */}
+            <div className="flex flex-col lg:flex-row" style={{ background: C.bg }}>
+              {/* Left: Transcript panel */}
+              <div className="w-full lg:w-56 shrink-0 border-r p-3" style={{ borderColor: 'rgba(255,255,255,0.04)', background: '#0d0d0f' }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>Transcript</div>
+                <div className="space-y-1">
+                  {[
+                    { time: '0:00', text: 'Welcome to MakeScript...', active: false },
+                    { time: '0:05', text: '50K users in 6 months', active: true },
+                    { time: '0:12', text: 'Let me show the numbers', active: false },
+                    { time: '0:18', text: 'Revenue hit $2M ARR', active: false },
+                    { time: '0:25', text: 'Here is the growth chart', active: false },
+                  ].map((s, j) => (
+                    <div key={j} className="px-2 py-1.5 rounded-md text-[10px]" style={{
+                      background: s.active ? 'rgba(157,78,221,0.1)' : 'transparent',
+                      borderLeft: s.active ? `2px solid ${C.purple}` : '2px solid transparent',
+                    }}>
+                      <span className="font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>{s.time}</span>
+                      <span className="ml-2" style={{ color: s.active ? C.white : 'rgba(255,255,255,0.4)' }}>{s.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Center: Video canvas */}
+              <div className="flex-1 aspect-video relative bg-black">
+                {/* Demo video image */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://image.pollinations.ai/prompt/A_professional_video_editing_interface_showing_a_talking_head_video_with_overlays_and_effects_modern_dark_UI?width=960&height=540&nologo=true&seed=500"
+                  alt="MakeScript Editor Demo"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Animated lower third overlay */}
+                <div className="absolute bottom-8 left-4" style={{ animation: 'demoLowerThird 4s ease-in-out infinite' }}>
+                  <div style={{ background: 'rgba(10,10,14,0.8)', backdropFilter: 'blur(12px)', padding: '8px 16px 8px 12px', borderLeft: `3px solid ${C.purple}`, borderRadius: '0 8px 8px 0' }}>
+                    <div className="text-[14px] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>Sarah Chen</div>
+                    <div className="text-[8px] font-semibold uppercase tracking-wider" style={{ color: C.purple }}>Product Designer · MakeScript</div>
+                  </div>
+                </div>
+                {/* Floating caption */}
+                <div className="absolute top-6 right-4" style={{ animation: 'demoCaption 5s ease-in-out 1s infinite' }}>
+                  <div style={{ background: 'rgba(0,245,212,0.12)', border: `1px solid ${C.cyan}33`, padding: '6px 12px', borderRadius: '8px' }}>
+                    <span className="text-[20px] font-black" style={{ color: C.cyan, fontFamily: "'Space Grotesk', sans-serif" }}>50K+</span>
+                    <div className="text-[7px] font-semibold uppercase tracking-widest" style={{ color: C.cyan + '99' }}>Active Users</div>
+                  </div>
+                </div>
+                {/* Play button overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110" style={{ background: 'rgba(157,78,221,0.2)', backdropFilter: 'blur(8px)', border: '1px solid rgba(157,78,221,0.3)' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill={C.white}><polygon points="6 3 20 12 6 21 6 3" /></svg>
+                  </div>
+                </div>
+                {/* Scrubbing progress */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5">
+                  <div className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})`, width: '35%' }} />
+                </div>
+              </div>
+
+              {/* Right: Properties */}
+              <div className="w-full lg:w-48 shrink-0 border-l p-3" style={{ borderColor: 'rgba(255,255,255,0.04)', background: '#0d0d0f' }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>Properties</div>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Overlay', value: 'Lower Third' },
+                    { label: 'Style', value: 'Purple Accent' },
+                    { label: 'Duration', value: '0:03.200' },
+                  ].map((p, j) => (
+                    <div key={j} className="p-2 rounded" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div className="text-[8px] mb-0.5" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>{p.label}</div>
+                      <div className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.7)', fontFamily: "'JetBrains Mono', monospace" }}>{p.value}</div>
+                    </div>
+                  ))}
+                  <div className="p-2 rounded" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div className="text-[8px] mb-1.5" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>Opacity</div>
+                    <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full w-3/4 rounded-full" style={{ background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Waveform timeline */}
+            <div className="h-12 flex items-center px-4 gap-[2px]" style={{ background: '#0d0d0f', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              {Array.from({ length: 60 }).map((_, j) => (
+                <div key={j} className="flex-1 flex items-end justify-center h-full py-2">
+                  <div className="w-[2px] rounded-full" style={{
+                    height: `${6 + Math.sin(j * 0.4) * 8 + Math.abs(Math.sin(j * 1.1)) * 6}px`,
+                    background: j < 22 ? `linear-gradient(to top, ${C.purple}, ${C.cyan})` : 'rgba(255,255,255,0.08)',
+                    animation: j < 22 ? `waveformPulseShort ${0.4 + (j % 4) * 0.08}s ease-in-out ${j * 0.02}s infinite alternate` : undefined,
+                  }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA below demo */}
+          <div className="text-center mt-10">
+            <MagneticButton href="/editor">
+              Try the Editor Free →
+            </MagneticButton>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════ MAGIC FEATURES ═══════════════════ */}
+      <section id="features" className="py-28 px-6 relative overflow-hidden">
+        <ParticleField count={25} color={C.yellow} />
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.yellow, border: `1px solid ${C.yellow}33`, fontFamily: "'JetBrains Mono', monospace" }}>MAGIC FEATURES</span>
+            <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] mt-6" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              It knows <span style={{ color: C.cyan }}>what to do.</span>
+            </h2>
+          </div>
+
+          <div className="space-y-16">
+            {FEATURES.map((feat, i) => (
+              <div key={i} className={`flex flex-col ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-10 items-center`}>
+                {/* Visual side */}
+                <div className="flex-1 w-full">
+                  <div
+                    className="relative rounded-2xl overflow-hidden aspect-video"
+                    style={{
+                      border: `1px solid rgba(255,255,255,0.06)`,
+                      background: i === 0
+                        ? 'linear-gradient(135deg, #0d0221, #1a0533)'
+                        : i === 1
+                        ? 'linear-gradient(135deg, #001a1a, #002222)'
+                        : 'linear-gradient(135deg, #1a1200, #2a1f00)',
+                    }}
+                  >
+                    {/* Feature demo image with animated overlay */}
+                    <div className="absolute inset-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={feat.image}
+                        alt={feat.title}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[8s]"
+                        style={{ animation: 'slowZoom 10s ease-in-out infinite alternate' }}
+                      />
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 30%, rgba(10,10,14,0.8) 100%)' }} />
+                      <div className="absolute inset-0" style={{ background: i === 0 ? 'linear-gradient(135deg, rgba(157,78,221,0.08), transparent)' : i === 1 ? 'linear-gradient(135deg, rgba(0,245,212,0.08), transparent)' : 'linear-gradient(135deg, rgba(254,228,64,0.08), transparent)' }} />
+                      {/* Animated badge */}
+                      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full" style={{ background: 'rgba(10,10,14,0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <span className="text-[10px] font-mono font-semibold" style={{ color: i === 0 ? C.purple : i === 1 ? C.cyan : C.yellow }}>
+                          {feat.tag}
+                        </span>
+                      </div>
+                      {/* Animated status bar */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <div className="h-full rounded-full" style={{ background: feat.gradient, width: '60%', animation: 'mgTimelineScrub 4s ease-in-out infinite' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Text side */}
+                <div className="flex-1">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-1 rounded" style={{ color: i === 0 ? C.purple : i === 1 ? C.cyan : C.yellow, background: `${i === 0 ? C.purple : i === 1 ? C.cyan : C.yellow}11`, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {feat.tag}
+                  </span>
+                  <h3 className="text-[clamp(1.5rem,3vw,2.2rem)] font-bold tracking-[-0.02em] mt-4 mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {feat.title}
+                  </h3>
+                  <p className="text-[14px] leading-relaxed" style={{ color: 'rgba(248,249,250,0.55)' }}>
+                    {feat.desc}
+                  </p>
+                  <div className="mt-6 flex gap-3">
+                    {['Try it', 'Watch'].map((label, j) => (
+                      <SnapButton key={label} variant={j === 0 ? 'primary' : 'ghost'}>{label} →</SnapButton>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <GlitchDivider />
+
+      {/* ═══════════════════ BEFORE / AFTER ═══════════════════ */}
+      <section className="py-28 px-6 relative overflow-hidden">
+        <ParticleField count={20} color={C.purple} />
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.purple, border: `1px solid ${C.purple}33`, fontFamily: "'JetBrains Mono', monospace" }}>THE PROOF</span>
+            <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] mt-6" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Before <span style={{ color: '#ef4444' }}>→</span> After
+            </h2>
+          </div>
+
+          {/* Interactive slider */}
+          <div
+            ref={sliderRef}
+            className="relative rounded-2xl overflow-hidden aspect-video cursor-ew-resize select-none"
+            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+            onMouseMove={handleSlider}
+            onTouchMove={handleSlider}
+          >
+            {/* Before (left) — raw unedited footage */}
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}>
+              {/* Shake effect overlay */}
+              <div className="absolute inset-0" style={{ animation: 'cameraShake 0.15s infinite' }}>
+                {/* Dull video frame */}
+                <div className="absolute top-[12%] left-[8%] right-[8%] bottom-[18%] rounded-lg overflow-hidden" style={{ background: 'linear-gradient(180deg, #2a2a3e 0%, #1e1e32 100%)', border: '1px solid rgba(239,68,68,0.1)' }}>
+                  {/* Badly lit subject silhouette */}
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[30%] h-[75%] rounded-t-full" style={{ background: 'linear-gradient(180deg, #3a3a4e 0%, #2a2a3e 100%)' }} />
+                  {/* Terrible waveform */}
+                  <div className="absolute bottom-2 left-2 right-2 h-6 flex items-end gap-[2px]">
+                    {Array.from({ length: 40 }).map((_, i) => (
+                      <div key={i} className="flex-1 rounded-t" style={{
+                        background: '#ef444433',
+                        height: `${3 + Math.sin(i * 0.8) * 6 + Math.abs(Math.sin(i * 1.5)) * 4}px`,
+                        animation: `waveformBad ${0.2 + (i % 3) * 0.1}s infinite`,
+                      }} />
+                    ))}
+                  </div>
+                </div>
+                {/* Exposure warning icon */}
+                <div className="absolute top-[15%] right-[12%] w-6 h-6 rounded-full border-2 border-red-400/30 flex items-center justify-center" style={{ animation: 'fadeInOut 1s ease-in-out infinite' }}>
+                  <span className="text-[10px]">!</span>
+                </div>
+              </div>
+              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full" style={{ background: 'rgba(239,68,68,0.2)', backdropFilter: 'blur(8px)' }}>
+                <span className="text-[10px] font-mono text-red-400 font-semibold">BEFORE · RAW LOG</span>
+              </div>
+            </div>
+
+            {/* After (right) — color graded */}
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{ clipPath: `inset(0 ${100 - beforeAfter}% 0 0)` }}
+            >
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0d0221 0%, #1a0533 30%, #240046 60%, #10002b 100%)' }}>
+                {/* Polished video frame */}
+                <div className="absolute top-[12%] left-[8%] right-[8%] bottom-[18%] rounded-lg overflow-hidden" style={{ border: '1px solid rgba(157,78,221,0.15)', boxShadow: 'inset 0 0 40px rgba(157,78,221,0.1)' }}>
+                  {/* Well-lit subject */}
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[30%] h-[75%] rounded-t-full" style={{ background: 'linear-gradient(180deg, #4a3a5e 0%, #3a2a4e 100%)' }} />
+                  {/* Color grade glow */}
+                  <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[60%] h-[40%]" style={{ background: 'radial-gradient(ellipse, rgba(157,78,221,0.08) 0%, transparent 70%)' }} />
+                  {/* Cinematic bars */}
+                  <div className="absolute top-0 left-0 right-0 h-[12%]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.5), transparent)' }} />
+                  <div className="absolute bottom-0 left-0 right-0 h-[12%]" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.5), transparent)' }} />
+                  {/* Caption text */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+                    <span className="text-[11px] font-bold tracking-wide" style={{ color: C.cyan, fontFamily: "'Space Grotesk', sans-serif" }}>THIS IS HIGH RETENTION</span>
+                  </div>
+                </div>
+                {/* Engagement metrics */}
+                <div className="absolute top-[14%] right-[12%] flex items-center gap-2">
+                  <span style={{ animation: 'reactionPop 1.5s ease-in-out infinite' }}>🔥</span>
+                  <span className="text-[9px] font-mono text-white/40">2.4K</span>
+                </div>
+              </div>
+              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full" style={{ background: 'rgba(16,185,129,0.2)', backdropFilter: 'blur(8px)' }}>
+                <span className="text-[10px] font-mono text-emerald-400 font-semibold">AFTER · AI GRADED</span>
+              </div>
+            </div>
+
+            {/* Neon slider handle */}
+            <div
+              className="absolute top-0 bottom-0 w-1 z-10 pointer-events-none"
+              style={{ left: `${beforeAfter}%` }}
+            >
+              <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, transparent, ${C.yellow}, ${C.purple}, transparent)` }} />
+              <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center" style={{ background: C.bg, border: `2px solid ${C.yellow}`, boxShadow: `0 0 20px ${C.yellow}66` }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.yellow} strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <GlitchDivider />
+
+      {/* ═══════════════════ CREATOR WALL ═══════════════════ */}
+      <section className="py-28 px-6 relative overflow-hidden">
+        <ParticleField count={30} color={C.yellow} />
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.yellow, border: `1px solid ${C.yellow}33`, fontFamily: "'JetBrains Mono', monospace" }}>CREATOR WALL</span>
+            <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] mt-6" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Loved by <span style={{ color: C.purple }}>creators</span>
+            </h2>
+          </div>
+
+          {/* Testimonial cards grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {CREATORS.map((c) => (
+              <div
+                key={c.id}
+                className="group relative rounded-xl overflow-hidden transition-all duration-500 hover:scale-[1.02]"
+                style={{
+                  background: `${c.color}06`,
+                  border: `1px solid ${c.color}15`,
+                }}
+              >
+                {/* Video thumbnail */}
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={c.thumbnail}
+                    alt={`${c.realName}'s video`}
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 40%, rgba(10,10,14,0.95) 100%)' }} />
+                  {/* Avatar + identity */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0" style={{ boxShadow: `0 0 0 2px ${c.color}` }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={c.avatar}
+                        alt={c.realName}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    {/* Name + handle */}
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold leading-tight text-white truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{c.realName}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px]" style={{ color: `${c.color}bb`, fontFamily: "'JetBrains Mono', monospace" }}>{c.handle}</span>
+                        <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: `${C.yellow}22`, color: C.yellow }}>{c.views}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Play button on hover */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `${c.color}44`, backdropFilter: 'blur(8px)' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill={c.color}><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                      </div>
+                      <span className="text-[22px]">{c.reaction}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Testimonial quote */}
+                <div className="p-4">
+                  <p className="text-[12px] leading-relaxed" style={{ color: 'rgba(248,249,250,0.6)' }}>
+                    &ldquo;{c.quote}&rdquo;
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <GlitchDivider />
+
+      {/* ═══════════════════ FINAL DROP ═══════════════════ */}
+      <footer
+        className="relative py-28 px-6 transition-all duration-500"
+        style={{
+          background: dragOver
+            ? `radial-gradient(ellipse at center, ${C.purple}22 0%, ${C.bg} 70%)`
+            : C.bg,
+        }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDragOver}
+      >
+        {/* Particle suck effect */}
+        {dragOver && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  width: `${2 + Math.random() * 4}px`,
+                  height: `${2 + Math.random() * 4}px`,
+                  background: C.purple,
+                  animation: `suckToCenter ${1 + Math.random() * 1.5}s ease-in forwards`,
+                  animationDelay: `${Math.random() * 0.5}s`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="max-w-3xl mx-auto text-center relative z-10">
+          {/* Upload icon */}
+          <div
+            className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-8 transition-all duration-500"
+            style={{
+              background: dragOver ? C.purple : `${C.purple}15`,
+              border: `2px dashed ${dragOver ? C.cyan : `${C.purple}33`}`,
+              transform: dragOver ? 'scale(1.15)' : 'scale(1)',
+              boxShadow: dragOver ? `0 0 80px ${C.purple}44` : 'none',
+            }}
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={dragOver ? C.cyan : C.purple} strokeWidth="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </div>
+
+          <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-[-0.03em] mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Upload your worst.<br />
+            <span style={{ background: `linear-gradient(135deg, ${C.purple}, ${C.cyan})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              We'll make it your best.
+            </span>
+          </h2>
+          <p className="text-[14px] mb-8" style={{ color: 'rgba(248,249,250,0.5)' }}>
+            Drag any video file onto this page. No sign-up, no credit card.
+          </p>
+
+          <MagneticButton href="/editor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+            Start Editing Free
+          </MagneticButton>
+
+          {/* Footer bottom */}
+          <div className="mt-16 pt-8 border-t" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-[11px]" style={{ color: 'rgba(248,249,250,0.25)' }}>
+              <span>© 2026 MakeScript</span>
+              <span>·</span>
+              <span>Built with Remotion & Next.js</span>
+              <span>·</span>
+              <a href="#" className="hover:text-white/60 transition-colors">Privacy</a>
+              <span>·</span>
+              <a href="#" className="hover:text-white/60 transition-colors">Terms</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* ═══════════════════ GLOBAL STYLES (injected once) ═══════════════════ */}
+      <style jsx global>{`
+        /* ─── Smooth scroll ─── */
+        html { scroll-behavior: smooth; }
+
+        /* ─── Animations ─── */
+        @keyframes laserGlow {
+          0% { opacity: 0.6; }
+          100% { opacity: 1; }
         }
 
-        const handleScroll = () => setNavScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+        @keyframes cameraShake {
+          0% { transform: translate(0, 0) rotate(0deg); }
+          25% { transform: translate(-2px, 1px) rotate(-0.5deg); }
+          50% { transform: translate(1px, -1px) rotate(0.5deg); }
+          75% { transform: translate(-1px, 2px) rotate(-0.3deg); }
+          100% { transform: translate(0, 0) rotate(0deg); }
+        }
 
-    const toggleTheme = () => {
-        const next = theme === 'light' ? 'dark' : 'light';
-        setTheme(next);
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-    };
+        @keyframes shakeInner {
+          0% { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(3px, -2px) scale(1.01); }
+        }
 
-    if (!mounted) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-[var(--lp-bg)]">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--lp-text-faint)]" />
-            </div>
-        );
-    }
+        @keyframes waveformBad {
+          0% { height: 4px; }
+          100% { height: 28px; }
+        }
 
-    return (
-        <div className="min-h-screen flex flex-col bg-[var(--lp-bg)] text-[var(--lp-text)] transition-colors duration-300">
+        @keyframes captionBounce {
+          0% { transform: translateY(0); opacity: 0.4; }
+          100% { transform: translateY(-8px); opacity: 1; }
+        }
 
-            {/* ── Navbar ── */}
-            <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${navScrolled ? 'py-2' : 'py-3'}`}>
-                <div className={`max-w-5xl mx-auto px-2 ${navScrolled ? '' : ''}`}>
-                    <div className={`flex items-center justify-between px-5 h-12 rounded-2xl border transition-all duration-500 ${navScrolled ? 'lp-nav-scrolled border-white/[0.06]' : 'bg-[var(--lp-nav)] border-[var(--lp-border)]'}`} style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
-                        <Link href="/" className="flex items-center gap-2.5 group">
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-all" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-                                <Film className="w-3.5 h-3.5 text-white" />
-                            </div>
-                            <span className="font-bold text-[15px] tracking-[-0.02em] text-[var(--lp-text)] group-hover:opacity-80 transition-opacity">MakeScript</span>
-                        </Link>
+        @keyframes cinematicZoom {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
 
-                        <div className="hidden md:flex items-center gap-1 bg-[var(--lp-bg)]/30 rounded-xl px-1 py-1" style={{ backdropFilter: 'blur(10px)' }}>
-                            <a href="#features" className="text-[12px] font-medium text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] px-3 py-1.5 rounded-lg hover:bg-[var(--lp-hover-s)] transition-all">Features</a>
-                            <a href="#how-it-works" className="text-[12px] font-medium text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] px-3 py-1.5 rounded-lg hover:bg-[var(--lp-hover-s)] transition-all">How it works</a>
-                            <a href="#pricing" className="text-[12px] font-medium text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] px-3 py-1.5 rounded-lg hover:bg-[var(--lp-hover-s)] transition-all">Pricing</a>
-                        </div>
+        @keyframes particleFloat {
+          0% { transform: translateY(0) translateX(0); opacity: 0; }
+          10% { opacity: 0.3; }
+          90% { opacity: 0.1; }
+          100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+        }
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={toggleTheme}
-                                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--lp-text-muted)] hover:text-[var(--lp-text)] hover:bg-[var(--lp-hover-s)] transition-all"
-                            >
-                                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                            </button>
-                            <Link href="/editor">
-                                <Button className="h-8 px-4 text-[12px] font-semibold rounded-xl gap-1.5 transition-all" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: '#fff', boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' }}>
-                                    Open Editor <ArrowRight className="w-3 h-3" />
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+        @keyframes particleRise {
+          0% { transform: translateY(0) scale(0); opacity: 0; }
+          50% { opacity: 0.4; }
+          100% { transform: translateY(-60px) scale(1.5); opacity: 0; }
+        }
 
-            {/* ── Hero ── */}
-            <section className="pt-32 md:pt-44 pb-16 px-6 relative overflow-hidden" style={{ minHeight: '85vh' }}>
-                {/* Ambient gradient orbs */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full" style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 65%)', filter: 'blur(80px)', opacity: 0.35, animation: 'orbFloat 8s ease-in-out infinite' }} />
-                    <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 65%)', filter: 'blur(70px)', opacity: 0.25, animation: 'orbFloat 12s ease-in-out infinite reverse' }} />
-                    <div className="absolute bottom-0 left-[40%] w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, #06b6d4 0%, transparent 65%)', filter: 'blur(70px)', opacity: 0.15, animation: 'orbFloat 14s ease-in-out 4s infinite reverse' }} />
-                </div>
+        @keyframes orbit3d {
+          0% { transform: rotate(0deg) scale(1); }
+          100% { transform: rotate(360deg) scale(1); }
+        }
 
-                {/* ── 3D Rotating Wireframe Globe ── */}
-                <div className="absolute pointer-events-none hidden md:block" style={{ top: '50%', left: '58%', transform: 'translate(-50%, -50%)' }}>
-                    <div className="lp-globe-container" style={{ opacity: 0.6 }}>
-                        {/* Glowing core */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, rgba(99,102,241,0.15) 40%, transparent 70%)', animation: 'globePulse 5s ease-in-out infinite' }} />
+        @keyframes orbit3dReverse {
+          0% { transform: rotate(360deg) scale(1); }
+          100% { transform: rotate(0deg) scale(1); }
+        }
 
-                        {/* Wireframe sphere — multiple rings at different 3D angles */}
-                        <div className="lp-globe">
-                            {/* Latitude rings (horizontal planes) */}
-                            <div className="lp-globe-ring" style={{ transform: 'rotateX(90deg) scale(1)' }} />
-                            <div className="lp-globe-ring lp-globe-ring-bright" style={{ transform: 'rotateX(90deg) scale(0.85)' }} />
-                            <div className="lp-globe-ring" style={{ transform: 'rotateX(90deg) scale(0.65)' }} />
-                            <div className="lp-globe-ring" style={{ transform: 'rotateX(90deg) scale(0.4)' }} />
+        @keyframes fadeInOut {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
 
-                            {/* Longitude rings (vertical planes) */}
-                            <div className="lp-globe-ring lp-globe-ring-bright" style={{ transform: 'rotateY(0deg)' }} />
-                            <div className="lp-globe-ring" style={{ transform: 'rotateY(45deg)' }} />
-                            <div className="lp-globe-ring lp-globe-ring-bright" style={{ transform: 'rotateY(90deg)' }} />
-                            <div className="lp-globe-ring" style={{ transform: 'rotateY(135deg)' }} />
+        @keyframes slowZoom {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+          100% { transform: scale(1); }
+        }
 
-                            {/* Tilted equator ring */}
-                            <div className="lp-globe-ring" style={{ transform: 'rotateX(60deg) rotateZ(30deg)', borderColor: 'rgba(139, 92, 246, 0.2)' }} />
-                        </div>
+        @keyframes zoomBurst {
+          0% { transform: scale(0.8); opacity: 0.3; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0.3; }
+        }
 
-                        {/* Orbiting glowing dots */}
-                        <div className="absolute top-1/2 left-1/2" style={{ transformStyle: 'preserve-3d' }}>
-                            <div style={{ animation: 'orbitDot 12s linear infinite', transformStyle: 'preserve-3d' }}>
-                                <div className="w-2 h-2 rounded-full" style={{ background: '#818cf8', boxShadow: '0 0 10px 2px rgba(129,140,248,0.6)' }} />
-                            </div>
-                        </div>
-                        <div className="absolute top-1/2 left-1/2" style={{ transformStyle: 'preserve-3d' }}>
-                            <div style={{ animation: 'orbitDot2 18s linear infinite', transformStyle: 'preserve-3d' }}>
-                                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#a78bfa', boxShadow: '0 0 8px 2px rgba(167,139,250,0.5)' }} />
-                            </div>
-                        </div>
-                        <div className="absolute top-1/2 left-1/2" style={{ transformStyle: 'preserve-3d' }}>
-                            <div style={{ animation: 'orbitDot3 15s linear infinite reverse', transformStyle: 'preserve-3d' }}>
-                                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#06b6d4', boxShadow: '0 0 8px 2px rgba(6,182,212,0.5)' }} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        @keyframes captionExplode {
+          0% { opacity: 0; transform: scale(0) translateY(20px); filter: blur(4px); }
+          60% { opacity: 1; transform: scale(1.2) translateY(-2px); filter: blur(0); }
+          100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
 
-                {/* Dot grid pattern */}
-                <div className="absolute inset-0 pointer-events-none opacity-[0.04]" style={{
-                    backgroundImage: 'radial-gradient(circle, var(--lp-text) 1px, transparent 1px)',
-                    backgroundSize: '32px 32px',
-                }} />
+        @keyframes waveformPulse {
+          0% { height: 5%; }
+          100% { height: 70%; }
+        }
 
-                <div className="max-w-3xl mx-auto text-center relative z-10">
-                    {/* Animated badge */}
-                    <div className="lp-float-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-indigo-500/20 mb-8" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08))' }}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[12px] font-medium text-indigo-400">Now in beta — free to use</span>
-                    </div>
+        @keyframes waveformPulseShort {
+          0% { height: 3px; }
+          100% { height: 16px; }
+        }
 
-                    <h1 className="lp-float-up lp-float-up-1 text-[clamp(2.5rem,6vw,4.5rem)] font-bold tracking-[-0.04em] leading-[1.05] mb-6">
-                        <span className="lp-shimmer-text">Motion graphics</span>
-                        <br />for your videos,
-                        <br /><span style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>automated</span>
-                    </h1>
+        @keyframes reactionPop {
+          0% { transform: scale(0); }
+          50% { transform: scale(1.3); }
+          100% { transform: scale(1); }
+        }
 
-                    <p className="lp-float-up lp-float-up-2 text-[17px] md:text-[19px] text-[var(--lp-text-sub)] max-w-xl mx-auto leading-relaxed mb-10">
-                        Upload a video. AI transcribes it, finds the key moments,
-                        and adds lower thirds, kinetic text, and particle effects — automatically.
-                    </p>
+        @keyframes suckToCenter {
+          0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+          100% { transform: translate(var(--suck-x, 0), var(--suck-y, 0)) scale(0); opacity: 0; }
+        }
 
-                    <div className="lp-float-up lp-float-up-3 flex flex-col sm:flex-row gap-3 justify-center">
-                        <Link href="/editor">
-                            <Button className="h-12 px-8 text-[14px] font-semibold rounded-xl gap-2 transition-all" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: '#fff', boxShadow: '0 4px 30px rgba(99, 102, 241, 0.4)' }}>
-                                Try it free <ArrowRight className="w-4 h-4" />
-                            </Button>
-                        </Link>
-                        <a href="#how-it-works">
-                            <Button variant="outline" className="h-12 px-8 text-[14px] font-medium border-[var(--lp-outline-border)] text-[var(--lp-text-sub)] hover:text-[var(--lp-text)] hover:border-[var(--lp-outline-hover)] rounded-xl gap-2 transition-all">
-                                <Play className="w-3.5 h-3.5" /> Watch demo
-                            </Button>
-                        </a>
-                    </div>
+        @keyframes glitchStripe {
+          0%, 100% { transform: translateX(-100%); }
+          50% { transform: translateX(100%); }
+        }
 
-                    {/* Trusted by */}
-                    <div className="lp-float-up lp-float-up-4 mt-12 flex items-center justify-center gap-3">
-                        <div className="flex -space-x-2">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="w-7 h-7 rounded-full border-2" style={{ borderColor: 'var(--lp-bg)', background: `linear-gradient(135deg, ${['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'][i]}, ${['#818cf8', '#f472b6', '#fbbf24', '#34d399', '#a78bfa'][i]})` }} />
-                            ))}
-                        </div>
-                        <span className="text-[12px] text-[var(--lp-text-muted)]">Trusted by <strong className="text-[var(--lp-text-sub)]">2,000+</strong> creators</span>
-                    </div>
-                </div>
-            </section>
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
 
-            {/* ── Editor Mockup (stays dark in both themes — it's showing the product) ── */}
-            <section className="px-6 pt-16 pb-24">
-                <div className="max-w-5xl mx-auto">
-                    <div className="rounded-xl overflow-hidden border border-[var(--lp-border-s)] bg-[#111113]" style={{ boxShadow: 'var(--lp-shadow)' }}>
-                        {/* Title bar */}
-                        <div className="h-10 bg-[#161618] border-b border-white/[0.06] flex items-center px-4">
-                            <div className="flex gap-1.5">
-                                <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-                                <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-                                <div className="w-3 h-3 rounded-full bg-[#28c840]" />
-                            </div>
-                            <div className="flex-1 text-center">
-                                <span className="text-[11px] font-mono text-zinc-600">MakeScript Editor</span>
-                            </div>
-                            <div className="w-12" />
-                        </div>
+        @keyframes mgTimelineScrub {
+          0% { width: 0%; }
+          50% { width: 85%; }
+          100% { width: 0%; }
+        }
 
-                        {/* Editor body */}
-                        <div className="flex" style={{ height: '420px' }}>
-                            {/* Left: Segments */}
-                            <div className="w-56 shrink-0 hidden lg:flex flex-col border-r border-white/[0.06] bg-[#0d0d0f]">
-                                <div className="p-3 border-b border-white/[0.06]">
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-2">Transcript</div>
-                                    <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                                        <div className="h-full w-full bg-emerald-500/60 rounded-full" />
-                                    </div>
-                                    <div className="text-[9px] text-zinc-700 mt-1">6 segments detected</div>
-                                </div>
-                                <div className="flex-1 p-2 space-y-0.5 overflow-hidden">
-                                    {[
-                                        { time: '0:00', text: 'Welcome to our product...', overlay: 'Lower Third', color: 'bg-blue-400' },
-                                        { time: '0:05', text: '50K users in 6 months', overlay: 'Highlight', color: 'bg-amber-400' },
-                                        { time: '0:12', text: 'Let me show the numbers', overlay: 'Kinetic Text', color: 'bg-rose-400' },
-                                        { time: '0:18', text: 'Revenue hit $2M ARR', overlay: 'Particles', color: 'bg-violet-400' },
-                                        { time: '0:25', text: 'Here is the growth chart', overlay: 'Scene Cut', color: 'bg-emerald-400' },
-                                        { time: '0:31', text: 'Thanks for watching', overlay: null, color: '' },
-                                    ].map((seg, i) => (
-                                        <div key={i} className={cn(
-                                            "px-2.5 py-2 rounded-md text-[11px]",
-                                            i === 1 ? "bg-white/[0.04] ring-1 ring-white/[0.08]" : "hover:bg-white/[0.02]"
-                                        )}>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[9px] font-mono text-zinc-700 w-5 shrink-0">{seg.time}</span>
-                                                <span className={cn("truncate", i === 1 ? "text-zinc-200" : "text-zinc-500")}>{seg.text}</span>
-                                            </div>
-                                            {seg.overlay && (
-                                                <div className="ml-7 mt-1 flex items-center gap-1.5">
-                                                    <div className={cn("w-1.5 h-1.5 rounded-full", seg.color)} />
-                                                    <span className="text-[9px] text-zinc-600 font-medium">{seg.overlay}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+        @keyframes demoLowerThird {
+          0% { transform: translateX(-120%); opacity: 0; }
+          15% { transform: translateX(0); opacity: 1; }
+          85% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(-120%); opacity: 0; }
+        }
 
-                            {/* Center: Video canvas */}
-                            <div className="flex-1 flex flex-col bg-black">
-                                <div className="flex-1 flex items-center justify-center p-6 md:p-8 relative">
-                                    <div className="relative w-full max-w-[520px] aspect-video rounded-lg overflow-hidden bg-zinc-900 border border-white/[0.04]">
-                                        {/* Animated gradient scene background — simulates a real video */}
-                                        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0f0b1e 0%, #1a1040 25%, #0d1b2a 50%, #162447 75%, #1a0e2e 100%)', backgroundSize: '400% 400%', animation: 'gradientShift 12s ease infinite' }} />
-
-                                        {/* Animated ambient light */}
-                                        <div className="absolute inset-0 pointer-events-none">
-                                            <div className="absolute top-0 left-1/4 w-[200px] h-[200px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)', filter: 'blur(40px)', animation: 'orbFloat 6s ease-in-out infinite' }} />
-                                            <div className="absolute bottom-0 right-1/4 w-[160px] h-[160px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.2) 0%, transparent 70%)', filter: 'blur(30px)', animation: 'orbFloat 8s ease-in-out infinite reverse' }} />
-                                            <div className="absolute top-1/3 right-0 w-[120px] h-[120px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.15) 0%, transparent 70%)', filter: 'blur(25px)', animation: 'orbFloat 10s ease-in-out 2s infinite' }} />
-                                        </div>
-
-                                        {/* Perspective grid lines */}
-                                        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.06]">
-                                            {Array.from({ length: 6 }).map((_, i) => (
-                                                <div key={i} className="absolute left-0 right-0" style={{ top: `${20 + i * 14}%`, height: '1px', background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)' }} />
-                                            ))}
-                                            {Array.from({ length: 5 }).map((_, i) => (
-                                                <div key={`v${i}`} className="absolute top-0 bottom-0" style={{ left: `${15 + i * 18}%`, width: '1px', background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)' }} />
-                                            ))}
-                                        </div>
-
-                                        {/* Bokeh circles */}
-                                        <div className="absolute inset-0 pointer-events-none">
-                                            {[
-                                                { x: '15%', y: '20%', size: 8, opacity: 0.15, delay: 0 },
-                                                { x: '75%', y: '35%', size: 12, opacity: 0.1, delay: 2 },
-                                                { x: '60%', y: '70%', size: 6, opacity: 0.12, delay: 4 },
-                                                { x: '30%', y: '60%', size: 10, opacity: 0.08, delay: 1 },
-                                                { x: '85%', y: '15%', size: 7, opacity: 0.1, delay: 3 },
-                                            ].map((b, i) => (
-                                                <div key={i} className="absolute rounded-full" style={{
-                                                    left: b.x, top: b.y,
-                                                    width: b.size, height: b.size,
-                                                    background: 'rgba(255,255,255,0.9)',
-                                                    opacity: b.opacity,
-                                                    filter: 'blur(1px)',
-                                                    animation: `orbFloat ${5 + i}s ease-in-out ${b.delay}s infinite`,
-                                                }} />
-                                            ))}
-                                        </div>
-
-                                        {/* Speaker silhouette — dark figure in center-left */}
-                                        <div className="absolute bottom-0 left-[15%] pointer-events-none" style={{ width: '70px', height: '55%' }}>
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[28px] h-[28px] rounded-full" style={{ background: 'linear-gradient(to bottom, rgba(40,40,60,0.9), rgba(30,30,50,0.95))' }} />
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[40px] h-[70%] rounded-t-lg" style={{ background: 'linear-gradient(to bottom, rgba(35,35,55,0.85), rgba(25,25,45,0.95))', marginBottom: '24px' }} />
-                                        </div>
-
-                                        {/* Vignette overlay */}
-                                        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%)' }} />
-
-                                        {/* Subtle scanline effect */}
-                                        <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
-                                            <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', background: 'white', animation: 'mgScanline 4s linear infinite' }} />
-                                        </div>
-
-                                        {/* Animated Lower Third — slides in from left */}
-                                        <div className="absolute bottom-10 left-0" style={{ animation: 'mgSlideInLeft 8s ease-in-out infinite' }}>
-                                            <div style={{ background: 'rgba(255,255,255,0.95)', padding: '5px 14px 5px 10px', borderLeft: '3px solid #6366f1' }}>
-                                                <div style={{ fontSize: '12px', fontWeight: 700, color: '#111', letterSpacing: '-0.01em' }}>Jatin Sharma</div>
-                                                <div style={{ fontSize: '8px', fontWeight: 600, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CEO & Founder</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Animated Highlight Box — top right, pops in */}
-                                        <div className="absolute top-4 right-4" style={{ animation: 'mgPopIn 10s ease-in-out 2s infinite' }}>
-                                            <div style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.35)', padding: '6px 12px', borderRadius: '4px', animation: 'mgHighlightPulse 2s ease-in-out infinite' }}>
-                                                <div style={{ fontSize: '16px', fontWeight: 800, color: '#fbbf24', letterSpacing: '-0.02em' }}>50K+</div>
-                                                <div style={{ fontSize: '7px', fontWeight: 600, color: 'rgba(251,191,36,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Users</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Emoji Reaction — floats up from bottom right */}
-                                        <div className="absolute bottom-12 right-6" style={{ fontSize: '22px', animation: 'mgEmojiFloat 6s ease-in-out 4s infinite' }}>🔥</div>
-                                        <div className="absolute bottom-12 right-14" style={{ fontSize: '18px', animation: 'mgEmojiFloat 7s ease-in-out 5.5s infinite' }}>🚀</div>
-
-                                        {/* Scrubbing progress bar */}
-                                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-800">
-                                            <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ animation: 'mgTimelineScrub 12s linear infinite' }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Animated waveform timeline */}
-                                <div className="h-14 border-t border-white/[0.06] bg-[#0d0d0f] px-3 flex items-center gap-[2px]">
-                                    {Array.from({ length: 48 }).map((_, i) => {
-                                        const h = 6 + Math.sin(i * 0.55) * 10 + Math.abs(Math.sin(i * 1.3)) * 8;
-                                        return (
-                                            <div key={i} className="flex-1 flex items-end justify-center h-full py-2.5">
-                                                <div
-                                                    className={cn("w-[2px] rounded-full", i < 17 ? "bg-white/25" : "bg-zinc-800")}
-                                                    style={{
-                                                        height: `${h}px`,
-                                                        animation: i < 17 ? `mgWaveBar ${0.4 + (i % 5) * 0.1}s ease-in-out ${i * 0.03}s infinite alternate` : undefined,
-                                                    }}
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Right: Properties */}
-                            <div className="w-52 shrink-0 hidden xl:flex flex-col border-l border-white/[0.06] bg-[#0d0d0f] p-3">
-                                <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-3">Properties</div>
-                                <div className="space-y-2">
-                                    {[
-                                        { label: 'Type', value: 'Highlight Box' },
-                                        { label: 'Start', value: '0:05.200' },
-                                        { label: 'End', value: '0:11.800' },
-                                        { label: 'Text', value: '50K Users' },
-                                    ].map((prop, i) => (
-                                        <div key={i} className="p-2 rounded bg-white/[0.02] border border-white/[0.04]">
-                                            <div className="text-[9px] text-zinc-600 mb-0.5">{prop.label}</div>
-                                            <div className="text-[11px] text-zinc-300 font-medium font-mono">{prop.value}</div>
-                                        </div>
-                                    ))}
-                                    <div className="p-2 rounded bg-white/[0.02] border border-white/[0.04]">
-                                        <div className="text-[9px] text-zinc-600 mb-2">Opacity</div>
-                                        <div className="h-1 bg-zinc-800 rounded-full">
-                                            <div className="h-full w-[80%] bg-white/30 rounded-full" />
-                                        </div>
-                                    </div>
-                                    <div className="p-2 rounded bg-white/[0.02] border border-white/[0.04]">
-                                        <div className="text-[9px] text-zinc-600 mb-2">Scale</div>
-                                        <div className="h-1 bg-zinc-800 rounded-full">
-                                            <div className="h-full w-[100%] bg-white/30 rounded-full" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Features ── */}
-            <section id="features" className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)] relative overflow-hidden">
-                {/* 3D Floating Polyhedra — decorative wireframe shapes */}
-                <div className="absolute inset-0 pointer-events-none hidden md:block">
-                    {/* Octahedron-style shape — top right */}
-                    <div className="lp-poly-container" style={{ top: '10%', right: '8%', opacity: 0.4 }}>
-                        <div style={{ width: '80px', height: '80px', transformStyle: 'preserve-3d', animation: 'polyFloat 20s linear infinite' }}>
-                            <div className="lp-poly-face" style={{ width: '60px', height: '60px', transform: 'rotateX(45deg) rotateY(45deg) translateZ(30px)' }} />
-                            <div className="lp-poly-face" style={{ width: '60px', height: '60px', transform: 'rotateX(45deg) rotateY(-45deg) translateZ(30px)' }} />
-                            <div className="lp-poly-face" style={{ width: '60px', height: '60px', transform: 'rotateX(-45deg) rotateY(45deg) translateZ(30px)' }} />
-                            <div className="lp-poly-face" style={{ width: '60px', height: '60px', transform: 'rotateX(-45deg) rotateY(-45deg) translateZ(30px)' }} />
-                        </div>
-                    </div>
-                    {/* Tetrahedron-style shape — bottom left */}
-                    <div className="lp-poly-container" style={{ bottom: '15%', left: '5%', opacity: 0.3 }}>
-                        <div style={{ width: '70px', height: '70px', transformStyle: 'preserve-3d', animation: 'polyFloat2 25s linear infinite' }}>
-                            <div className="lp-poly-face" style={{ width: '50px', height: '50px', transform: 'rotateX(30deg) translateZ(25px)', borderColor: 'rgba(139, 92, 246, 0.15)' }} />
-                            <div className="lp-poly-face" style={{ width: '50px', height: '50px', transform: 'rotateY(120deg) rotateX(30deg) translateZ(25px)', borderColor: 'rgba(139, 92, 246, 0.15)' }} />
-                            <div className="lp-poly-face" style={{ width: '50px', height: '50px', transform: 'rotateY(240deg) rotateX(30deg) translateZ(25px)', borderColor: 'rgba(139, 92, 246, 0.15)' }} />
-                        </div>
-                    </div>
-                    {/* Small spinning cube — middle left */}
-                    <div className="lp-poly-container" style={{ top: '45%', left: '12%', opacity: 0.25 }}>
-                        <div style={{ width: '40px', height: '40px', transformStyle: 'preserve-3d', animation: 'polyFloat 18s linear infinite reverse' }}>
-                            <div className="lp-poly-face" style={{ width: '35px', height: '35px', transform: 'translateZ(17px)', borderColor: 'rgba(6, 182, 212, 0.15)' }} />
-                            <div className="lp-poly-face" style={{ width: '35px', height: '35px', transform: 'rotateY(90deg) translateZ(17px)', borderColor: 'rgba(6, 182, 212, 0.15)' }} />
-                            <div className="lp-poly-face" style={{ width: '35px', height: '35px', transform: 'rotateX(90deg) translateZ(17px)', borderColor: 'rgba(6, 182, 212, 0.15)' }} />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="max-w-5xl mx-auto relative z-10">
-                    <div className="max-w-2xl mb-14">
-                        <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-4">
-                            Built for speed,<br />not complexity
-                        </h2>
-                        <p className="text-[var(--lp-text-muted)] text-[16px] leading-relaxed">
-                            Most video tools make you do the work. MakeScript reads your content
-                            and makes the creative decisions for you.
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-4">
-                        {[
-                            {
-                                icon: Wand2,
-                                title: 'AI overlay selection',
-                                desc: 'Reads your transcript, identifies stats, names, and topics, then picks the right overlay for each moment.',
-                                gradient: 'linear-gradient(135deg, #6366f1, #818cf8)'
-                            },
-                            {
-                                icon: FileText,
-                                title: 'Whisper transcription',
-                                desc: 'Word-level accuracy from OpenAI Whisper. Auto-segments your video into chapters with timestamps.',
-                                gradient: 'linear-gradient(135deg, #10b981, #34d399)'
-                            },
-                            {
-                                icon: Layers,
-                                title: '30+ overlay types',
-                                desc: 'Lower thirds, kinetic text, highlight boxes, particle effects, scene transitions — all customizable.',
-                                gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)'
-                            },
-                            {
-                                icon: Upload,
-                                title: 'Drag and drop',
-                                desc: 'Drop any MP4, WebM, or MOV into the editor. Processing starts immediately, no setup needed.',
-                                gradient: 'linear-gradient(135deg, #ec4899, #f472b6)'
-                            },
-                            {
-                                icon: Download,
-                                title: '4K export',
-                                desc: 'Preview overlays in real-time with Remotion, then export at 1080p or 4K with everything baked in.',
-                                gradient: 'linear-gradient(135deg, #8b5cf6, #a78bfa)'
-                            },
-                            {
-                                icon: Sparkles,
-                                title: 'Dynamic labels',
-                                desc: 'AI generates contextual labels from your transcript — stats, quotes, key phrases — unique to each video.',
-                                gradient: 'linear-gradient(135deg, #06b6d4, #22d3ee)'
-                            },
-                        ].map((feat, i) => (
-                            <div key={i} className="lp-feature-card p-6 rounded-xl bg-[var(--lp-s1)] border border-[var(--lp-border-s)] group">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110" style={{ background: feat.gradient }}>
-                                    <feat.icon className="w-5 h-5 text-white" />
-                                </div>
-                                <h3 className="text-[15px] font-semibold text-[var(--lp-text)] mb-2">{feat.title}</h3>
-                                <p className="text-[13px] text-[var(--lp-text-muted)] leading-relaxed">{feat.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Social Proof ── */}
-            <section className="py-16 px-6 border-t border-[var(--lp-border)]">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-12">
-                        <div className="flex items-center justify-center gap-1 mb-4">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <div key={i} className="w-8 h-8 rounded-full -ml-2 first:ml-0 border-2" style={{
-                                    borderColor: 'var(--lp-bg)',
-                                    background: `linear-gradient(135deg, ${['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316'][i]} 0%, ${['#818cf8', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#f87171', '#22d3ee', '#fb923c'][i]} 100%)`,
-                                }} />
-                            ))}
-                        </div>
-                        <p className="text-[15px] font-semibold text-[var(--lp-text)] mb-1">Trusted by 2,000+ creators</p>
-                        <p className="text-[13px] text-[var(--lp-text-muted)]">From YouTube creators to startup founders</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-5">
-                        {[
-                            { name: 'Arjun M.', role: 'YouTuber, 450K subs', quote: 'Saved me 3 hours per video. The AI picks the perfect overlay every time — lower thirds for intros, kinetic text for stats.' },
-                            { name: 'Sarah L.', role: 'Product Manager', quote: 'We use it for all our product demos. Upload, wait 30 seconds, and the video looks like it was edited by a pro team.' },
-                            { name: 'David K.', role: 'Startup Founder', quote: 'The Whisper transcription is incredibly accurate. Motion graphics that actually match what I\'m saying — not random effects.' },
-                        ].map((t, i) => (
-                            <div key={i} className="lp-tilt-card">
-                                <div className="lp-tilt-card-inner p-6 rounded-xl border border-[var(--lp-border-s)] bg-[var(--lp-s1)] hover:bg-[var(--lp-cell-hover)] transition-colors">
-                                    <p className="text-[13px] text-[var(--lp-text-sub)] leading-relaxed mb-5">&ldquo;{t.quote}&rdquo;</p>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full" style={{
-                                            background: `linear-gradient(135deg, ${['#6366f1', '#ec4899', '#10b981'][i]}, ${['#a78bfa', '#f472b6', '#34d399'][i]})`,
-                                        }} />
-                                        <div>
-                                            <div className="text-[13px] font-semibold text-[var(--lp-text)]">{t.name}</div>
-                                            <div className="text-[11px] text-[var(--lp-text-muted)]">{t.role}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── How It Works ── */}
-            <section id="how-it-works" className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
-                <div className="max-w-5xl mx-auto">
-                    <div className="max-w-2xl mb-16">
-                        <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-4">
-                            Upload to export<br />in four steps
-                        </h2>
-                    </div>
-
-                    <div className="grid md:grid-cols-4 gap-10 md:gap-6 relative">
-                        {/* Connecting line */}
-                        <div className="hidden md:block absolute top-7 left-[12%] right-[12%] h-px border-t-2 border-dashed border-[var(--lp-border-s)]" />
-                        {[
-                            { num: '1', title: 'Upload', desc: 'Drag a video file into the editor. MP4, WebM, MOV — up to 2GB.', color: '#6366f1', icon: '↑' },
-                            { num: '2', title: 'Transcribe', desc: 'AI generates word-level captions and splits your video into segments.', color: '#10b981', icon: '¶' },
-                            { num: '3', title: 'Enhance', desc: 'Each segment gets an overlay — lower third, highlight, particles — automatically.', color: '#f59e0b', icon: '✦' },
-                            { num: '4', title: 'Export', desc: 'Preview everything in real-time, tweak what you want, then download.', color: '#ec4899', icon: '↓' },
-                        ].map((step, i) => (
-                            <div key={i} className="relative">
-                                {/* 3D Rotating Cube */}
-                                <div className="lp-cube-scene mb-4 relative z-10">
-                                    <div className="lp-cube" style={{ animationDelay: `${i * -3}s` }}>
-                                        <div className="lp-cube-face lp-cube-face--front" style={{ background: `linear-gradient(135deg, ${step.color}, ${step.color}88)`, boxShadow: `0 4px 20px ${step.color}33` }}>
-                                            {step.num}
-                                        </div>
-                                        <div className="lp-cube-face lp-cube-face--back" style={{ background: `linear-gradient(135deg, ${step.color}88, ${step.color}44)` }}>
-                                            {step.icon}
-                                        </div>
-                                        <div className="lp-cube-face lp-cube-face--right" style={{ background: `linear-gradient(135deg, ${step.color}66, ${step.color}33)` }}>
-                                            {step.num}
-                                        </div>
-                                        <div className="lp-cube-face lp-cube-face--left" style={{ background: `linear-gradient(135deg, ${step.color}44, ${step.color}66)` }}>
-                                            {step.icon}
-                                        </div>
-                                        <div className="lp-cube-face lp-cube-face--top" style={{ background: `linear-gradient(135deg, ${step.color}, ${step.color}66)` }}>
-                                            {step.num}
-                                        </div>
-                                        <div className="lp-cube-face lp-cube-face--bottom" style={{ background: `linear-gradient(135deg, ${step.color}33, ${step.color})` }}>
-                                            {step.icon}
-                                        </div>
-                                    </div>
-                                </div>
-                                <h3 className="text-[15px] font-semibold text-[var(--lp-text)] mb-2">{step.title}</h3>
-                                <p className="text-[13px] text-[var(--lp-text-muted)] leading-relaxed">{step.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Pricing ── */}
-            <section id="pricing" className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
-                <div className="max-w-5xl mx-auto">
-                    <div className="max-w-2xl mb-14">
-                        <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-4">
-                            Simple pricing
-                        </h2>
-                        <p className="text-[var(--lp-text-muted)] text-[16px]">
-                            Start free. Upgrade for premium AI models.
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-5 relative">
-                        {/* 3D Floating Diamond behind Popular card — decorative */}
-                        <div className="hidden md:block lp-diamond-container" style={{ top: '-30px', left: '50%', transform: 'translateX(-50%)', opacity: 0.35, zIndex: 0 }}>
-                            <div className="lp-diamond">
-                                <div className="lp-diamond-face" style={{ transform: 'translateZ(30px)' }} />
-                                <div className="lp-diamond-face" style={{ transform: 'rotateY(90deg) translateZ(30px)' }} />
-                                <div className="lp-diamond-face" style={{ transform: 'rotateY(180deg) translateZ(30px)' }} />
-                                <div className="lp-diamond-face" style={{ transform: 'rotateY(270deg) translateZ(30px)' }} />
-                                <div className="lp-diamond-face" style={{ transform: 'rotateX(90deg) translateZ(30px)' }} />
-                                <div className="lp-diamond-face" style={{ transform: 'rotateX(-90deg) translateZ(30px)' }} />
-                            </div>
-                        </div>
-
-                        {/* Free */}
-                        <div className="lp-pricing-3d relative z-10">
-                            <div className="lp-pricing-3d-inner p-7 rounded-xl border border-[var(--lp-border-s)] bg-[var(--lp-s1)]">
-                                <div className="text-[13px] font-medium text-[var(--lp-text-muted)] mb-1">Free</div>
-                                <div className="text-4xl font-bold text-[var(--lp-text)] mb-2">$0</div>
-                                <p className="text-[12px] text-[var(--lp-text-muted)] mb-6">Get started with powerful open models</p>
-                                <div className="space-y-2.5 mb-6">
-                                    {['10 videos / month', 'AI transcription (Whisper)', '10 overlay types', '1080p export'].map(f => (
-                                        <div key={f} className="flex items-center gap-2 text-[13px] text-[var(--lp-text-sub)]">
-                                            <Check className="w-3.5 h-3.5 text-[var(--lp-check-free)] shrink-0" />
-                                            {f}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mb-6">
-                                    <p className="text-[10px] font-bold text-[var(--lp-text-muted)] uppercase tracking-wider mb-2">AI Models</p>
-                                    <div className="space-y-1">
-                                        {['DeepSeek V3.1', 'Llama 3.3 70B', 'GPT-5 Nano', 'Gemini 3 Flash'].map(m => (
-                                            <div key={m} className="text-[11px] text-[var(--lp-text-sub)] flex items-center gap-1.5">
-                                                <span className="w-1 h-1 rounded-full bg-current opacity-40" />{m}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <Link href="/editor" className="block">
-                                    <Button variant="outline" className="w-full h-10 text-[13px] font-medium border-[var(--lp-outline-border)] hover:border-[var(--lp-outline-hover)] text-[var(--lp-text-sub)] rounded-lg transition-colors">
-                                        Get started
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Creator */}
-                        <div className="lp-pricing-3d relative z-10">
-                            <div className="lp-pricing-3d-inner p-7 rounded-xl border-2 border-indigo-500/30 bg-[var(--lp-s2)] relative">
-                                <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff' }}>Popular</div>
-                                <div className="text-[13px] font-medium text-indigo-400 mb-1">Creator</div>
-                                <div className="flex items-baseline gap-1 mb-2">
-                                    <span className="text-4xl font-bold text-[var(--lp-text)]">$12</span>
-                                    <span className="text-[var(--lp-text-faint)] text-sm">/mo</span>
-                                </div>
-                                <p className="text-[12px] text-[var(--lp-text-muted)] mb-6">Premium models for serious creators</p>
-                                <div className="space-y-2.5 mb-6">
-                                    {['20 videos / month', 'Priority processing', '4K export', 'No watermark', 'Brand kit'].map(f => (
-                                        <div key={f} className="flex items-center gap-2 text-[13px] text-[var(--lp-text-2)]">
-                                            <Check className="w-3.5 h-3.5 text-[var(--lp-check-pro)] shrink-0" />
-                                            {f}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mb-6">
-                                    <p className="text-[10px] font-bold text-[var(--lp-text-muted)] uppercase tracking-wider mb-2">AI Models (Free +)</p>
-                                    <div className="space-y-1">
-                                        {['GPT-5', 'Claude Sonnet 4', 'Gemini 3 Pro', 'Claude Haiku 4.5', 'Kimi K2.5'].map(m => (
-                                            <div key={m} className="text-[11px] text-[var(--lp-text-2)] flex items-center gap-1.5">
-                                                <span className="w-1 h-1 rounded-full bg-indigo-400" />{m}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <Link href="/editor" className="block">
-                                    <Button className="w-full h-10 text-[13px] font-medium bg-[var(--lp-btn)] text-[var(--lp-btn-fg)] hover:bg-[var(--lp-btn-hover)] rounded-lg transition-colors">
-                                        Start free trial
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Studio */}
-                        <div className="lp-pricing-3d relative z-10">
-                            <div className="lp-pricing-3d-inner p-7 rounded-xl border border-[var(--lp-border-s)] bg-[var(--lp-s1)]">
-                                <div className="text-[13px] font-medium text-amber-400 mb-1">Studio</div>
-                                <div className="flex items-baseline gap-1 mb-2">
-                                    <span className="text-4xl font-bold text-[var(--lp-text)]">$29</span>
-                                    <span className="text-[var(--lp-text-faint)] text-sm">/mo</span>
-                                </div>
-                                <p className="text-[12px] text-[var(--lp-text-muted)] mb-6">The best AI models, unlimited access</p>
-                                <div className="space-y-2.5 mb-6">
-                                    {['Unlimited videos', 'All Creator features', 'Custom branding', 'API access', 'Team collaboration'].map(f => (
-                                        <div key={f} className="flex items-center gap-2 text-[13px] text-[var(--lp-text-sub)]">
-                                            <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                            {f}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mb-6">
-                                    <p className="text-[10px] font-bold text-[var(--lp-text-muted)] uppercase tracking-wider mb-2">AI Models (All +)</p>
-                                    <div className="space-y-1">
-                                        {['GPT-5.2', 'Claude Opus 4.6', 'Claude Sonnet 4.6'].map(m => (
-                                            <div key={m} className="text-[11px] text-[var(--lp-text-sub)] flex items-center gap-1.5">
-                                                <span className="w-1 h-1 rounded-full bg-amber-400" />{m}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <Link href="/editor" className="block">
-                                    <Button variant="outline" className="w-full h-10 text-[13px] font-medium border-amber-500/30 hover:border-amber-400/50 text-amber-400/80 hover:text-amber-400 rounded-lg transition-colors">
-                                        Contact sales
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── FAQ ── */}
-            <section className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)]">
-                <div className="max-w-2xl mx-auto">
-                    <h2 className="text-3xl md:text-[40px] font-bold tracking-[-0.025em] leading-[1.15] mb-12">
-                        FAQ
-                    </h2>
-
-                    <div className="space-y-px rounded-xl overflow-hidden border border-[var(--lp-border-s)]">
-                        {[
-                            { q: 'What video formats are supported?', a: 'MP4, WebM, and MOV files up to 2GB. We recommend MP4 with H.264 encoding for the best compatibility and fastest processing.' },
-                            { q: 'How does the AI choose which overlays to use?', a: 'Our AI analyzes each transcript segment for keywords, context, and sentiment. It scores all possible overlay types and picks the best match — stats get highlight boxes, names get lower thirds, transitions get particle effects.' },
-                            { q: 'Can I export in 4K?', a: 'Yes! Free users can export at 1080p. Pro users unlock 4K exports with all overlays baked into the final video file.' },
-                            { q: 'Is my video data private?', a: 'All processing happens in your browser. Videos are never uploaded to our servers — transcription uses a local Whisper model and overlay generation runs client-side.' },
-                            { q: 'Can I customize the overlays after they\'re generated?', a: 'Absolutely. Click any segment in the transcript panel to change its overlay type, edit the text, adjust timing, or remove it entirely. You have full control.' },
-                        ].map((faq, i) => (
-                            <div key={i} className="bg-[var(--lp-s1)]">
-                                <button
-                                    className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-[var(--lp-cell-hover)] transition-colors"
-                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                                >
-                                    <span className="text-[14px] font-medium text-[var(--lp-text)] pr-4">{faq.q}</span>
-                                    <span className={`text-[var(--lp-text-muted)] transition-transform duration-200 shrink-0 ${openFaq === i ? 'rotate-45' : ''}`}>+</span>
-                                </button>
-                                <div className={`overflow-hidden transition-all duration-300 ${openFaq === i ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                    <p className="px-6 pb-4 text-[13px] text-[var(--lp-text-muted)] leading-relaxed">{faq.a}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── CTA ── */}
-            <section className="py-20 md:py-28 px-6 border-t border-[var(--lp-border)] relative overflow-hidden">
-                {/* Background glow */}
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', filter: 'blur(100px)' }} />
-                </div>
-
-                {/* 3D Orbit Rings */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden md:block" style={{ perspective: '800px', transformStyle: 'preserve-3d' }}>
-                    {/* Ring 1 — large, slow */}
-                    <div className="lp-cta-ring" style={{ width: '400px', height: '400px', top: '-200px', left: '-200px', animation: 'ctaOrbit 25s linear infinite', opacity: 0.4 }} />
-                    {/* Ring 2 — medium, tilted */}
-                    <div className="lp-cta-ring" style={{ width: '320px', height: '320px', top: '-160px', left: '-160px', animation: 'ctaOrbit2 20s linear infinite', borderColor: 'rgba(139, 92, 246, 0.2)', opacity: 0.35 }} />
-                    {/* Ring 3 — small, fast */}
-                    <div className="lp-cta-ring" style={{ width: '240px', height: '240px', top: '-120px', left: '-120px', animation: 'ctaOrbit 15s linear infinite reverse', borderColor: 'rgba(6, 182, 212, 0.15)', opacity: 0.3 }} />
-
-                    {/* Orbiting dots */}
-                    <div className="absolute top-0 left-0" style={{ transformStyle: 'preserve-3d', animation: 'ctaOrbit 25s linear infinite' }}>
-                        <div style={{ animation: 'ctaOrbitDot 10s linear infinite', '--orbit-radius': '200px' } as React.CSSProperties}>
-                            <div className="w-2 h-2 rounded-full" style={{ background: '#818cf8', boxShadow: '0 0 10px 2px rgba(129,140,248,0.6)' }} />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0" style={{ transformStyle: 'preserve-3d', animation: 'ctaOrbit2 20s linear infinite' }}>
-                        <div style={{ animation: 'ctaOrbitDot 14s linear infinite reverse', '--orbit-radius': '160px' } as React.CSSProperties}>
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#a78bfa', boxShadow: '0 0 8px 2px rgba(167,139,250,0.5)' }} />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0" style={{ transformStyle: 'preserve-3d', animation: 'ctaOrbit 15s linear infinite reverse' }}>
-                        <div style={{ animation: 'ctaOrbitDot 8s linear infinite', '--orbit-radius': '120px' } as React.CSSProperties}>
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#06b6d4', boxShadow: '0 0 8px 2px rgba(6,182,212,0.5)' }} />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="max-w-xl mx-auto text-center relative z-10">
-                    <h2 className="text-2xl md:text-4xl font-bold tracking-tight mb-4">
-                        Ready to make your videos <span style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>stand out</span>?
-                    </h2>
-                    <p className="text-[var(--lp-text-muted)] mb-8 text-[16px]">
-                        Join 2,000+ creators using AI-powered motion graphics.
-                    </p>
-
-                    {emailSubmitted ? (
-                        <div className="inline-flex items-center gap-2 text-sm text-[var(--lp-text-sub)]">
-                            <Check className="w-4 h-4 text-emerald-500" />
-                            You&apos;re on the list.
-                        </div>
-                    ) : (
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            if (!email.includes('@')) return;
-                            const list = JSON.parse(localStorage.getItem('makescript-waitlist') || '[]');
-                            list.push({ email, date: new Date().toISOString() });
-                            localStorage.setItem('makescript-waitlist', JSON.stringify(list));
-                            setEmailSubmitted(true);
-                        }} className="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
-                            <input
-                                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                placeholder="you@email.com" required
-                                className="flex-1 h-11 px-4 rounded-xl text-[13px] bg-[var(--lp-input-bg)] border border-[var(--lp-input-border)] text-[var(--lp-text)] placeholder:text-[var(--lp-input-ph)] focus:outline-none focus:border-indigo-500/50 transition-colors"
-                            />
-                            <Button type="submit" className="h-11 px-6 text-[13px] font-semibold rounded-xl shrink-0 transition-all" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: '#fff', boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)' }}>
-                                Join waitlist
-                            </Button>
-                        </form>
-                    )}
-                </div>
-            </section>
-
-            {/* ── Footer ── */}
-            <footer className="border-t border-[var(--lp-border)] py-8 px-6">
-                <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-                            <Film className="w-3 h-3 text-white" />
-                        </div>
-                        <span className="text-[13px] font-medium text-[var(--lp-text-faint)]">MakeScript</span>
-                    </div>
-                    <div className="flex items-center gap-6 text-[12px] text-[var(--lp-text-dim)]">
-                        <a href="#" className="hover:text-[var(--lp-text-sub)] transition-colors">Privacy</a>
-                        <a href="#" className="hover:text-[var(--lp-text-sub)] transition-colors">Terms</a>
-                        <a href="#" className="hover:text-[var(--lp-text-sub)] transition-colors">Contact</a>
-                        <span>&copy; 2026</span>
-                    </div>
-                </div>
-            </footer>
-        </div>
-    );
+        @keyframes demoCaption {
+          0% { transform: translateY(-20px); opacity: 0; }
+          20% { transform: translateY(0); opacity: 1; }
+          80% { transform: translateY(0); opacity: 1; }
+          100% { transform: translateY(20px); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
 }

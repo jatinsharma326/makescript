@@ -57,64 +57,22 @@ THINK LIKE A PROFESSIONAL EDITOR:
 - Identify filler segments to speed up (ums, repeated phrases, dead air)
 - Choose a color grade that matches the video's overall mood
 
-AVAILABLE OVERLAY TYPES (choose the BEST type for each segment):
+OVERLAY TYPES (choose the best type for each segment):
 
-1. "visual-illustration" — ANIMATED SVG MOTION GRAPHIC. PREFER this when the transcript mentions a concrete concept. These render instantly and look premium.
-  Props: { "scene": "<scene-name>", "label": "2-4 word label", "color": "<hex>", "transition": "fade-in" }
-  AVAILABLE SCENES:
-  - "money-flow" (money, revenue, profit, income, cash, price, earn, pay)
-  - "growth-chart" (business, company, startup, stock, invest, market, growth)
-  - "arrow-growth" (grow, increase, rise, scale, expand, boost)
-  - "rocket-launch" (launch, start, begin, kick off, takeoff, moon, space)
-  - "brain-idea" (brain, think, idea, smart, learn, knowledge, secret, tip, hack, AI)
-  - "code-terminal" (code, programming, software, developer, app, website, tech)
-  - "connections" (connect, network, social, internet, community, together, people)
-  - "globe" (earth, world, global, country, international, travel)
-  - "fire-blaze" (fire, hot, burn, passion, intense, trending)
-  - "lightning" (electric, shock, fast, speed, quick, instant)
-  - "explosion-burst" (explode, massive, huge, incredible, impact, disrupt, crazy)
-  - "celebration" (win, champion, congratulations, celebrate, victory, awesome)
-  - "target-bullseye" (goal, target, aim, focus, precise, strategy)
-  - "crown-royal" (best, king, queen, top, leader, greatest)
-  - "heartbeat" (love, heart, feel, care, emotion, health, life)
-  - "shield-protect" (protect, safe, security, guard, defense, trust)
-  - "clock-time" (time, hour, minute, schedule, deadline, wait)
-  - "mountain-peak" (mountain, climb, challenge, overcome, journey, adventure)
-  - "water-wave" (ocean, water, sea, wave, flow, calm, beach)
-  - "diamond-gem" (luxury, premium, expensive, valuable, precious, rich)
-  - "atom-science" (science, research, experiment, physics, chemistry, quantum)
-  - "gear-system" (machine, system, engine, process, automate, mechanism, tool)
-  - "eye-vision" (watch, see, look, discover, reveal, vision, insight)
-  - "energy-pulse" (power, energy, force, strong, charge, activate)
-  - "checkmark-success" (success, achieve, accomplish, done, complete, results)
-  - "nature-tree" (tree, nature, forest, green, environment)
-  - "solar-system" (sun, star, universe, galaxy, cosmic, space)
-  - "city-skyline" (city, urban, downtown, building, skyline)
-  - "music-notes" (music, song, sound, listen, audio, podcast)
-  - "book-reading" (book, read, study, education, course, teach)
-  - "camera" (video, photo, film, record, content, create)
-  - "cooking" (food, eat, recipe, cook, meal, kitchen)
-  - "shopping-cart" (sales, buy, shop, purchase, store, product)
+1. "ai-motion-graphic" u2014 LIVE AI-GENERATED REMOTION REACT CODE. Use this for ANY segment that deserves a visual overlay.
+   Props: { "label": "2-4 word CAPITALIZED label", "color": "<hex>", "topic": "<topic-keyword>", "mood": "energetic|calm|dramatic|warm" }
+   This generates a UNIQUE animated React component for each segment. USE THIS AS YOUR PRIMARY OVERLAY TYPE.
 
-2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE, fullscreen cinematic. Use for descriptive/narrative content without a clear scene match.
-  Props: { "imagePrompt": "detailed cinematic visual description", "caption": "short label" }
-  Write RICH, SPECIFIC prompts with cinematic language:
-  - Lighting: golden hour, chiaroscuro, volumetric, rim light, neon glow
-  - Quality: "cinematic lighting, 8k, hyperrealistic, professional color grading"
-  GOOD: "A dramatic upward-trending stock chart rendered as a glowing glass sculpture in a dark executive boardroom, golden hour, 8k"
-  BAD: "business growth" (too vague)
+2. "ai-generated-image" u2014 AI-GENERATED CINEMATIC IMAGE. Use for segments that would benefit from a photo-realistic background.
+   Props: { "imagePrompt": "detailed cinematic image description, 50-100 words", "caption": "2-4 word label", "color": "<hex>" }
+   Write vivid, specific imagePrompts u2014 describe the actual scene, lighting, mood, composition.
 
-3. "ai-motion-graphic" — LIVE AI-GENERATED ANIMATED SVG. Use for 2-3 PEAK MOMENTS per video — stats reveals, key claims, dramatic statements, or high-impact visuals that deserve a unique custom animation.
-  Props: { "label": "2-4 word label", "color": "<hex>", "topic": "1-2 word topic keyword" }
-  The system will auto-generate a custom animated SVG based on the segment content. Use sparingly for maximum impact.
-
-OVERLAY SELECTION STRATEGY:
-- PREFER "visual-illustration" (50-60% of overlays) — instant, animated, premium
-- Use "ai-motion-graphic" (10-20% of overlays) — for 2-3 peak moments that deserve unique custom animation
-- Use "ai-generated-image" (20-30% of overlays) — for narrative segments without a clear scene
-- Match scenes PRECISELY to transcript content
-- Use DIFFERENT scenes — never repeat the same scene twice in a row
-
+OVERLAY STRATEGY:
+- Overlay 40-60% of segments. Skip filler.
+- Use "ai-motion-graphic" for most overlays u2014 it creates unique animated graphics.
+- Use "ai-generated-image" for 2-4 segments that would look best with a cinematic photo background.
+- NEVER overlay consecutive segments u2014 minimum 1 segment gap.
+- Every overlay MUST have a unique label/caption specific to the segment content.
 AVAILABLE EFFECTS (applied to the base video layer):
 - "zoom-in" — gradual scale up (1.0 → intensity). Good for emphasis.
 - "zoom-out" — gradual scale down (intensity → 1.0). Good for reveals.
@@ -144,7 +102,7 @@ RULES:
 4. Effects should cover 20-30% of segments
 5. Speed up filler segments with speedFactor 1.3-2.0
 6. Do NOT cut segments unless they are completely empty/silence
-7. imagePrompt should be vivid and specific
+7. imagePrompt should be vivid, specific, and cinematic
 
 Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
 {
@@ -155,7 +113,7 @@ Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
       {
         "segmentId": "seg_0",
         "action": "keep",
-        "overlay": { "type": "visual-illustration", "props": { "scene": "rocket-launch", "label": "GETTING STARTED", "color": "#ef4444", "transition": "fade-in" } },
+        "overlay": { "type": "ai-motion-graphic", "props": { "label": "GETTING STARTED", "color": "#ef4444", "topic": "launch", "mood": "energetic" } },
         "effect": { "type": "zoom-in", "intensity": 1.2 },
         "transition": null
       },
@@ -165,10 +123,65 @@ Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
         "overlay": null,
         "effect": null,
         "transition": { "type": "fade", "duration": 0.5 }
+      },
+      {
+        "segmentId": "seg_4",
+        "action": "keep",
+        "overlay": { "type": "ai-generated-image", "props": { "imagePrompt": "Aerial view of a modern city skyline at golden hour, dramatic clouds, warm amber light reflecting off glass skyscrapers, cinematic shallow depth of field, professional color grading", "caption": "CITY GROWTH", "color": "#f59e0b" } },
+        "effect": { "type": "ken-burns", "intensity": 1.15, "direction": "left" },
+        "transition": null
       }
     ]
   }
 }`;
+
+/**
+ * Aggressively repair common LLM JSON malformations.
+ * Tries multiple strategies until valid JSON is produced.
+ */
+function repairJson(raw: string): string {
+  let str = raw;
+
+  // 1. Strip markdown code fencing
+  str = str.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+
+  // 2. Extract the outermost JSON object or array
+  const objMatch = str.match(/\{[\s\S]*\}/);
+  const arrMatch = str.match(/\[[\s\S]*\]/);
+  if (objMatch && (!arrMatch || objMatch[0].length >= arrMatch[0].length)) {
+    str = objMatch[0];
+  } else if (arrMatch) {
+    str = arrMatch[0];
+  }
+
+  // 3. Remove control characters (but keep tabs/newlines)
+  str = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+  // 4. Remove reasoning/thinking tags that some models inject
+  str = str.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  str = str.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '');
+
+  // 5. Fix trailing commas before } or ]
+  str = str.replace(/,\s*([}\]])/g, '$1');
+
+  // 6. Fix missing commas between object properties:
+  //    "key": "val"\n  "key2":  →  "key": "val",\n  "key2":
+  str = str.replace(/("[^"]*"\s*:\s*(?:"[^"]*"|\[[^\]]*\]|\{[^}]*\}|\d+(?:\.\d+)?|true|false|null))\s*\n\s*(?="[^"]*"\s*:)/g, '$1,\n');
+
+  // 7. Fix missing commas between array elements:
+  //    }\n  {  →  },\n  {
+  str = str.replace(/(\}|\])\s*\n\s*(\{|\[)/g, '$1,\n$2');
+
+  // 8. Replace single-quoted strings with double-quoted (conservative)
+  //    Only for simple cases: 'word' → "word"
+  str = str.replace(/'([^'\n\r]*)'/g, '"$1"');
+
+  // 9. Remove C-style comments
+  str = str.replace(/\/\/[^\n\r]*/g, '');
+  str = str.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  return str;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -222,28 +235,20 @@ ${transcriptText}
 
 Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The JSON must start with { and end with }.`;
 
-    console.log('[AgentEdit] Generating editing plan via Lightning AI DeepSeek V4 Pro');
+    console.log('[AgentEdit] Generating editing plan via kimi-k2.6-precision');
     console.log('[AgentEdit] Transcript has', subtitles.length, 'segments,', videoDuration.toFixed(1), 's');
 
-    const usedModel = 'lightning-ai/deepseek-v4-pro';
+    const usedModel = 'kimi-k2.6-precision';
     const result = await callLLM(usedModel, SYSTEM_PROMPT, userPrompt);
 
     if (!result) {
-      console.error('[AgentEdit] Lightning AI DeepSeek V4 Pro returned no result');
-      return NextResponse.json({ ok: false, error: 'AI model failed (Lightning AI DeepSeek V4 Pro). Check API key.' });
+      console.error('[AgentEdit] kimi-k2.6-precision returned no result');
+      return NextResponse.json({ ok: false, error: 'AI model failed (kimi-k2.6-precision). Try again.' });
     }
 
     // Parse the JSON response
     try {
-      let jsonStr = result;
-      // Strip markdown code fencing if present
-      const jsonMatch = result.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[0];
-      }
-
-      // DeepSeek sometimes injects Chinese/non-ASCII chars that corrupt JSON structure
-      jsonStr = jsonStr.replace(/[^\x20-\x7E\n\r\t]/g, '');
+      let jsonStr = repairJson(result);
 
       const parsed = JSON.parse(jsonStr);
       const plan = parsed.editingPlan || parsed;
@@ -259,97 +264,39 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
       plan.segments = plan.segments.filter(
         (seg: { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }) => {
           if (!validSegmentIds.has(seg.segmentId)) return false;
-          if (seg.overlay?.type === 'ai-generated-image' && seg.overlay.props) {
-            delete seg.overlay.props.imageUrl;
-            delete seg.overlay.props.seed;
-          }
           return true;
         }
       );
 
-      // ═══ POST-PROCESS OVERLAYS ═══
+      // POST-PROCESS: ensure overlays have proper props
       const subtitleMap = new Map(subtitles.map(s => [s.id, s.text]));
       for (const seg of plan.segments as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }[]) {
-        if (seg.overlay?.type === 'ai-generated-image') {
-          const prompt = String(seg.overlay.props?.imagePrompt || '');
-          const hash = Math.abs(seg.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
-          const seed = hash % 1000000;
+        if (!seg.overlay) continue;
+        const text = subtitleMap.get(seg.segmentId) || '';
+
+        if (seg.overlay.type === 'ai-generated-image') {
+          // Ensure ai-generated-image has imagePrompt and caption
+          const seed = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 1000000;
+          const prompt = String(seg.overlay.props?.imagePrompt || text);
           seg.overlay.props = {
             ...seg.overlay.props,
-            imageUrl: generatePollinationsUrl(prompt, seed),
+            imagePrompt: prompt,
+            caption: seg.overlay.props?.caption || extractKeyPhrase(text),
+            color: seg.overlay.props?.color || '#6366f1',
+            seed,
+            imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt.substring(0, 120)}, cinematic`)}?width=768&height=512&nologo=true&seed=${seed}`,
+          };
+        } else {
+          // Force ai-motion-graphic
+          seg.overlay.type = 'ai-motion-graphic';
+          seg.overlay.props = {
+            ...seg.overlay.props,
+            label: seg.overlay.props?.label || extractKeyPhrase(text),
+            color: seg.overlay.props?.color || '#6366f1',
+            topic: seg.overlay.props?.topic || 'general',
+            mood: seg.overlay.props?.mood || 'energetic',
           };
         }
-      }
-
-      // ═══ GENERATE LIVE SVGs FOR AI MOTION GRAPHICS ═══
-      const motionSegs = (plan.segments as { segmentId: string; overlay?: { type: string; props?: Record<string, unknown> } }[])
-        .filter(seg => seg.overlay?.type === 'ai-motion-graphic')
-        .slice(0, 5);
-
-      if (motionSegs.length > 0) {
-        console.log(`[AgentEdit] Generating ${motionSegs.length} live motion SVGs...`);
-        const globalAbort = new AbortController();
-        const globalTimer = setTimeout(() => globalAbort.abort(), 90000);
-
-        const svgResults = await Promise.allSettled(
-          motionSegs.map(async (seg) => {
-            const text = subtitleMap.get(seg.segmentId) || '';
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 50000);
-            globalAbort.signal.addEventListener('abort', () => controller.abort());
-            try {
-              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-                || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-              const res = await fetch(`${baseUrl}/api/generate-motion-svg`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  text,
-                  mood: plan.mood || 'energetic',
-                  topic: String(seg.overlay?.props?.topic || 'general'),
-                  color: String(seg.overlay?.props?.color || '#6366f1'),
-                  label: String(seg.overlay?.props?.label || ''),
-                }),
-                signal: controller.signal,
-              });
-              clearTimeout(timer);
-              const data = await res.json();
-              return { segmentId: seg.segmentId, svgContent: data.svgContent || '', success: data.success };
-            } catch {
-              clearTimeout(timer);
-              return { segmentId: seg.segmentId, svgContent: '', success: false };
-            }
-          })
-        );
-
-        clearTimeout(globalTimer);
-
-        for (const result of svgResults) {
-          if (result.status === 'fulfilled' && result.value.success && result.value.svgContent) {
-            const seg = motionSegs.find(s => s.segmentId === result.value.segmentId);
-            if (seg?.overlay?.props) {
-              seg.overlay.props.svgContent = result.value.svgContent;
-              console.log(`[AgentEdit] Live SVG generated for ${result.value.segmentId}`);
-            }
-          } else {
-            // Downgrade to visual-illustration fallback
-            const failedId = result.status === 'fulfilled' ? result.value.segmentId : '';
-            const seg = motionSegs.find(s => s.segmentId === failedId);
-            if (seg?.overlay) {
-              const text = subtitleMap.get(seg.segmentId) || '';
-              const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
-              const sceneMap: Record<string, string> = { money: 'money-flow', growth: 'growth-chart', brain: 'brain-idea', fire: 'fire-blaze', rocket: 'rocket-launch', power: 'energy-pulse', success: 'checkmark-success' };
-              let scene = 'energy-pulse';
-              for (const w of words) { if (sceneMap[w]) { scene = sceneMap[w]; break; } }
-              seg.overlay.type = 'visual-illustration';
-              seg.overlay.props = { scene, label: seg.overlay.props?.label || '', color: seg.overlay.props?.color || '#6366f1', transition: 'fade-in' };
-              console.log(`[AgentEdit] SVG generation failed for ${seg.segmentId}, downgraded to visual-illustration`);
-            }
-          }
-        }
-
-        const successCount = svgResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
-        console.log(`[AgentEdit] Motion SVG generation: ${successCount}/${motionSegs.length} succeeded`);
       }
 
       console.log('[AgentEdit] Success! Plan has', plan.segments.length, 'segment edits, mood:', plan.mood, 'model:', usedModel);
@@ -369,59 +316,64 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  LLM Call — tries the requested model via Lightning AI gateway
+//  LLM Call — uses kimi-k2.6-precision via crof.ai (OpenAI-compatible)
 // ═══════════════════════════════════════════════════════════════
 
-const LIGHTNING_API_KEY = process.env.LIGHTNING_API_KEY || 'a136ad94-f05f-4431-b3ad-2148a0c72ac3/giggletales18/vision-model';
+const CROF_API = 'https://crof.ai/v2/chat/completions';
+const CROF_API_KEY = process.env.CROF_API_KEY || '';
+const CROF_MODEL = 'kimi-k2.6-precision';
 
 async function callLLM(
-  modelId: string,
+  _modelId: string,
   systemPrompt: string,
   userPrompt: string
 ): Promise<string | null> {
-  const url = 'https://lightning.ai/api/v1/chat/completions';
-  const headers: Record<string, string> = {
-    'Authorization': `Bearer ${LIGHTNING_API_KEY}`,
-    'Content-Type': 'application/json',
-  };
-  const body = {
-    model: 'lightning-ai/deepseek-v4-pro',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    max_tokens: 8192,
-    temperature: 0.7,
-  };
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`[AgentEdit] Calling ${CROF_MODEL} via crof.ai (attempt ${attempt}/3)`);
 
-  try {
-    console.log('[AgentEdit] Calling Lightning AI DeepSeek V4 Pro');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+      const res = await fetch(CROF_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CROF_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: CROF_MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 8192,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[AgentEdit] LLM error:', response.status, errorText.substring(0, 200));
-      return null;
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.warn(`[AgentEdit] crof.ai failed: ${res.status} ${errText.substring(0, 200)}`);
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 1500)); continue; }
+        return null;
+      }
+
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      if (!content) {
+        console.warn('[AgentEdit] crof.ai: empty content');
+        if (attempt < 3) continue;
+        return null;
+      }
+
+      console.log(`[AgentEdit] ${CROF_MODEL} response: ${content.length} chars`);
+      return content;
+    } catch (error) {
+      console.warn(`[AgentEdit] crof.ai attempt ${attempt} error:`, error);
+      if (attempt < 3) { await new Promise(r => setTimeout(r, 1500)); continue; }
     }
-
-    const data = await response.json();
-    const content = extractContent(data);
-    if (!content) {
-      console.error('[AgentEdit] LLM returned 200 but no usable content. Raw:', JSON.stringify(data).substring(0, 300));
-    }
-    return content;
-  } catch (error) {
-    console.error('[AgentEdit] LLM fetch error:', error);
-    return null;
   }
+
+  console.error('[AgentEdit] All crof.ai attempts failed');
+  return null;
 }
 
 function extractContent(data: unknown): string | null {
@@ -475,15 +427,13 @@ function scoreSegment(text: string): number {
   if (lower.length < 8) return 0;
   if (FILLER_PATTERNS.some(p => lower.includes(p))) return -1;
 
+  // ONLY keyword matches from SCENE_MAP count — no generic number/question bonuses
   let score = 0;
   const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
   for (const w of words) {
-    if (STRONG_KEYWORDS.has(w)) score += 3;
+    if (SCENE_MAP[w]) score += 3;
   }
-  if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 4;
-  if (text.includes('?')) score += 2;
-  if (text.includes('!')) score += 1;
-  return Math.max(0, score);
+  return score;
 }
 
 function extractKeyPhrase(text: string): string {
@@ -511,13 +461,133 @@ const EMOJI_MAP: Record<string, string> = {
 };
 
 const SCENE_MAP: Record<string, string> = {
-  money: 'money-flow', revenue: 'money-flow', growth: 'arrow-growth',
-  brain: 'brain-idea', code: 'code-terminal', tech: 'code-terminal',
-  world: 'globe', earth: 'globe', rocket: 'rocket-launch', launch: 'rocket-launch',
-  fire: 'fire-blaze', power: 'energy-pulse', celebrate: 'celebration',
-  goal: 'target-bullseye', love: 'heartbeat', time: 'clock-time',
-  protect: 'shield-protect', mountain: 'mountain-peak', ocean: 'water-wave',
+  money: 'money-flow', revenue: 'money-flow', profit: 'money-flow', income: 'money-flow',
+  dollar: 'money-flow', cash: 'money-flow', price: 'money-flow', cost: 'money-flow',
+  earn: 'money-flow', pay: 'money-flow', salary: 'money-flow',
+  sales: 'shopping-cart', buy: 'shopping-cart', shop: 'shopping-cart', purchase: 'shopping-cart',
+  store: 'shopping-cart', product: 'shopping-cart', order: 'shopping-cart', deal: 'shopping-cart',
+  business: 'growth-chart', company: 'growth-chart', startup: 'growth-chart',
+  stock: 'growth-chart', invest: 'growth-chart', market: 'growth-chart',
+  billion: 'growth-chart', million: 'growth-chart',
+  luxury: 'diamond-gem', premium: 'diamond-gem', expensive: 'diamond-gem',
+  growth: 'arrow-growth', grow: 'arrow-growth', increase: 'arrow-growth',
+  rise: 'arrow-growth', scale: 'arrow-growth', expand: 'arrow-growth',
+  success: 'checkmark-success', achieve: 'checkmark-success', accomplish: 'checkmark-success',
+  win: 'celebration', champion: 'celebration', winner: 'celebration',
+  celebrate: 'celebration', victory: 'celebration', awesome: 'celebration', amazing: 'celebration',
+  goal: 'target-bullseye', target: 'target-bullseye', aim: 'target-bullseye',
+  focus: 'target-bullseye', strategy: 'target-bullseye', plan: 'target-bullseye',
+  best: 'crown-royal', top: 'crown-royal', leader: 'crown-royal', greatest: 'crown-royal',
+  brain: 'brain-idea', think: 'brain-idea', idea: 'brain-idea',
+  smart: 'brain-idea', mind: 'brain-idea', learn: 'brain-idea',
+  secret: 'brain-idea', tip: 'brain-idea', trick: 'brain-idea', hack: 'brain-idea',
+  code: 'code-terminal', programming: 'code-terminal', software: 'code-terminal',
+  developer: 'code-terminal', app: 'code-terminal', website: 'code-terminal',
+  tech: 'code-terminal', digital: 'code-terminal', computer: 'code-terminal',
+  connect: 'connections', network: 'connections', social: 'connections',
+  internet: 'connections', online: 'connections', community: 'connections',
+  together: 'connections', collaborate: 'connections', share: 'connections',
+  people: 'connections', friends: 'connections', relationship: 'connections',
+  science: 'atom-science', research: 'atom-science', experiment: 'atom-science',
+  physics: 'atom-science', chemistry: 'atom-science', quantum: 'atom-science',
+  machine: 'gear-system', system: 'gear-system', engine: 'gear-system',
+  process: 'gear-system', automate: 'gear-system', build: 'gear-system',
+  tool: 'gear-system', work: 'gear-system', method: 'gear-system',
+  watch: 'eye-vision', see: 'eye-vision', look: 'eye-vision',
+  observe: 'eye-vision', view: 'eye-vision', discover: 'eye-vision',
+  reveal: 'eye-vision', vision: 'eye-vision', insight: 'eye-vision',
+  show: 'eye-vision', check: 'eye-vision', notice: 'eye-vision',
+  power: 'energy-pulse', energy: 'energy-pulse', force: 'energy-pulse',
+  strong: 'energy-pulse', charge: 'energy-pulse', activate: 'energy-pulse',
+  electric: 'lightning', shock: 'lightning', bolt: 'lightning',
+  fast: 'lightning', speed: 'lightning', quick: 'lightning', instant: 'lightning',
+  explode: 'explosion-burst', boom: 'explosion-burst', blast: 'explosion-burst',
+  massive: 'explosion-burst', huge: 'explosion-burst', incredible: 'explosion-burst',
+  impact: 'explosion-burst', crazy: 'explosion-burst', insane: 'explosion-burst',
+  launch: 'rocket-launch', rocket: 'rocket-launch', fly: 'rocket-launch',
+  moon: 'rocket-launch', space: 'rocket-launch', sky: 'rocket-launch',
+  start: 'rocket-launch', begin: 'rocket-launch', kick: 'rocket-launch',
+  fire: 'fire-blaze', hot: 'fire-blaze', burn: 'fire-blaze',
+  flame: 'fire-blaze', heat: 'fire-blaze', lit: 'fire-blaze',
+  passion: 'fire-blaze', intense: 'fire-blaze', trending: 'fire-blaze',
+  attract: 'magnet-attract', pull: 'magnet-attract', draw: 'magnet-attract',
+  earth: 'globe', world: 'globe', global: 'globe',
+  country: 'globe', international: 'globe', planet: 'globe',
+  travel: 'globe', worldwide: 'globe',
+  tree: 'nature-tree', nature: 'nature-tree', forest: 'nature-tree',
+  green: 'nature-tree', environment: 'nature-tree',
+  ocean: 'water-wave', water: 'water-wave', sea: 'water-wave',
+  wave: 'water-wave', flow: 'water-wave', river: 'water-wave',
+  mountain: 'mountain-peak', climb: 'mountain-peak', summit: 'mountain-peak',
+  peak: 'mountain-peak', challenge: 'mountain-peak', overcome: 'mountain-peak',
+  journey: 'mountain-peak', adventure: 'mountain-peak', effort: 'mountain-peak',
+  sun: 'solar-system', star: 'solar-system', universe: 'solar-system',
+  galaxy: 'solar-system', cosmic: 'solar-system',
+  city: 'city-skyline', urban: 'city-skyline', downtown: 'city-skyline',
+  building: 'city-skyline', skyline: 'city-skyline',
+  love: 'heartbeat', heart: 'heartbeat', feel: 'heartbeat',
+  care: 'heartbeat', emotion: 'heartbeat', life: 'heartbeat',
+  health: 'heartbeat', dream: 'heartbeat',
+  protect: 'shield-protect', safe: 'shield-protect', security: 'shield-protect',
+  guard: 'shield-protect', defense: 'shield-protect', trust: 'shield-protect',
+  walk: 'person-walking', step: 'person-walking', move: 'person-walking',
+  run: 'person-walking', exercise: 'person-walking', fitness: 'person-walking',
+  time: 'clock-time', hour: 'clock-time', minute: 'clock-time',
+  schedule: 'clock-time', deadline: 'clock-time', wait: 'clock-time',
+  today: 'clock-time', tomorrow: 'clock-time', years: 'clock-time',
+  music: 'music-notes', song: 'music-notes', sound: 'music-notes',
+  listen: 'music-notes', audio: 'music-notes', podcast: 'music-notes',
+  book: 'book-reading', read: 'book-reading', study: 'book-reading',
+  education: 'book-reading', course: 'book-reading', teach: 'book-reading',
+  video: 'camera', photo: 'camera', film: 'camera',
+  record: 'camera', content: 'camera', create: 'camera',
+  food: 'cooking', eat: 'cooking', recipe: 'cooking',
+  cook: 'cooking', meal: 'cooking', kitchen: 'cooking',
 };
+
+const ALL_SCENES = [
+  'solar-system', 'growth-chart', 'globe', 'rocket-launch', 'brain-idea',
+  'connections', 'clock-time', 'heartbeat', 'money-flow', 'lightning',
+  'shopping-cart', 'cooking', 'nature-tree', 'city-skyline', 'person-walking',
+  'celebration', 'music-notes', 'book-reading', 'camera', 'code-terminal',
+  'fire-blaze', 'water-wave', 'shield-protect', 'target-bullseye',
+  'explosion-burst', 'magnet-attract', 'gear-system', 'energy-pulse',
+  'eye-vision', 'arrow-growth', 'checkmark-success', 'diamond-gem',
+  'crown-royal', 'atom-science', 'mountain-peak',
+];
+
+/**
+ * Score-based scene picker for agent-edit local fallback.
+ */
+function pickBestSceneForTextAgent(text: string, lastScene?: string): { scene: string; score: number } | null {
+  const lower = text.toLowerCase();
+  const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
+  const SKIP_GENERIC = new Set([
+    'guys', 'everybody', 'hello', 'welcome', 'right', 'true', 'real',
+    'tell', 'happen', 'finally', 'literally', 'actually', 'basically',
+    'definitely', 'probably', 'going', 'different', 'new', 'old', 'next',
+    'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why',
+    'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free',
+  ]);
+
+  const sceneScores: Record<string, number> = {};
+  for (const word of words) {
+    if (SKIP_GENERIC.has(word)) continue;
+    const scene = SCENE_MAP[word];
+    if (scene) {
+      sceneScores[scene] = (sceneScores[scene] || 0) + 1;
+    }
+  }
+
+  if (Object.keys(sceneScores).length === 0) return null;
+
+  const sorted = Object.entries(sceneScores).sort((a, b) => b[1] - a[1]);
+  const bestScore = sorted[0][1];
+  const topScenes = sorted.filter(([, score]) => score === bestScore).map(([scene]) => scene);
+  const chosen = topScenes.find(s => s !== lastScene) || topScenes[0];
+
+  return { scene: chosen, score: bestScore };
+}
 
 function generateLocalEditingPlan(
   subtitles: { id: string; startTime: number; endTime: number; text: string }[],
@@ -568,6 +638,7 @@ function generateLocalEditingPlan(
   }> = [];
 
   let overlayCount = 0;
+  let lastUsedScene = '';
   const transitionTypes = ['fade', 'wipe', 'slide-left', 'zoom', 'fade', 'slide-right'];
 
   for (let i = 0; i < subtitles.length; i++) {
@@ -588,61 +659,38 @@ function generateLocalEditingPlan(
       segment.speedFactor = 1.5;
     }
 
-    // Add overlays to selected segments
+    // Add overlays to selected segments — ONLY visual-illustration for keyword matches
     if (overlayIndices.has(i)) {
-      const lower = seg.text.toLowerCase();
-      const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-      const contentHash = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
-      const color = OVERLAY_COLORS[contentHash % OVERLAY_COLORS.length];
+      const bestScene = pickBestSceneForTextAgent(seg.text, lastUsedScene);
 
-      // Content-driven type selection: visual-illustration for strong keyword matches
-      const matchedScene = (() => {
-          // Skip generic conversational words
-          const SKIP = new Set(['guys', 'hello', 'welcome', 'right', 'true', 'real', 'tell', 'happen', 'finally', 'literally', 'actually', 'basically', 'definitely', 'probably', 'going', 'different', 'new', 'old', 'next', 'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why', 'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free']);
-          for (const w of words) {
-              if (SKIP.has(w)) continue;
-              if (SCENE_MAP[w]) return SCENE_MAP[w];
-          }
-          return null;
-      })();
-
-      if (matchedScene) {
-          // Strong keyword match → animated SVG scene (instant, premium)
+      if (bestScene) {
+          const contentHash = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+          const color = OVERLAY_COLORS[contentHash % OVERLAY_COLORS.length];
+          lastUsedScene = bestScene.scene;
           segment.overlay = {
               type: 'visual-illustration',
               props: {
-                  scene: matchedScene,
+                  scene: bestScene.scene,
                   label: extractKeyPhrase(seg.text),
                   color,
                   transition: 'fade-in',
               },
           };
-      } else {
-          // No strong scene match → AI-generated image
-          const keyPhrase = extractKeyPhrase(seg.text);
-          const keyWords = words.filter(w => !new Set(['the','and','but','for','are','was','has','had','have','will','can','this','that','with','from','they','been','were','being','does','its','our','your']).has(w)).slice(0, 5).join(', ');
-          segment.overlay = {
-              type: 'ai-generated-image',
-              props: {
-                  imagePrompt: `A cinematic scene depicting: ${seg.text.substring(0, 100)}. Key elements: ${keyWords}. Dramatic composition, volumetric lighting, hyperrealistic, professional color grading, 8k, shallow depth of field`,
-                  caption: keyPhrase,
-                  displayMode: (contentHash % 5 === 0) ? 'card' : 'fullscreen',
-              },
-          };
-      }
 
-      // Add effects to some overlaid segments (every other one)
-      if (overlayCount % 3 === 0) {
-        const effectTypes = ['zoom-in', 'zoom-out', 'ken-burns', 'shake'] as const;
-        const effectType = effectTypes[overlayCount % effectTypes.length];
-        segment.effect = {
-          type: effectType,
-          intensity: effectType === 'shake' ? 0.8 : 1.2,
-          ...(effectType === 'ken-burns' ? { direction: 'left' } : {}),
-        };
-      }
+          // Add effects to some overlaid segments (every other one)
+          if (overlayCount % 3 === 0) {
+            const effectTypes = ['zoom-in', 'zoom-out', 'ken-burns', 'shake'] as const;
+            const effectType = effectTypes[overlayCount % effectTypes.length];
+            segment.effect = {
+              type: effectType,
+              intensity: effectType === 'shake' ? 0.8 : 1.2,
+              ...(effectType === 'ken-burns' ? { direction: 'left' } : {}),
+            };
+          }
 
-      overlayCount++;
+          overlayCount++;
+      }
+      // No keyword match = NO overlay (no generic fallbacks)
     }
 
     // Add transitions at topic change points

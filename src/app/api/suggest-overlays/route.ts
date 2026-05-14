@@ -186,164 +186,77 @@ VIDEO MOOD & ANALYSIS:
         return `${s.id}:uniqueSeed=${hash}`;
     }).join(', ');
 
-    const prompt = `You are an elite Motion Graphics Director for a top-tier video production studio. Your job is to create PROFESSIONAL, contextually-relevant visuals based EXACTLY on what the speaker is saying.
+    const prompt = `You are an elite Motion Graphics Director. Your job is to identify which segments deserve animated motion graphics.
 
-⚠️ CRITICAL: Session ID ${sessionId} — Generate FRESH content for THIS video only.
-
-VIDEO TOPIC CONTEXT: ${videoTopic}
+TOPIC: ${videoTopic}
 ${moodSection}
 
-AVAILABLE OVERLAY TYPES (choose the BEST type for each segment):
+═══ AVAILABLE SCENES ═══
+money-flow, growth-chart, arrow-growth, rocket-launch, brain-idea, code-terminal, connections, globe, fire-blaze, lightning, explosion-burst, celebration, target-bullseye, crown-royal, heartbeat, shield-protect, clock-time, mountain-peak, water-wave, diamond-gem, atom-science, gear-system, eye-vision, energy-pulse, checkmark-success, nature-tree, solar-system, city-skyline, music-notes, book-reading, camera, shopping-cart
 
-1. "visual-illustration" — ANIMATED SVG MOTION GRAPHIC. Use this when the transcript mentions a concrete concept that maps to one of these animated scenes. These render INSTANTLY and look premium.
-  Props: { "scene": "<scene-name>", "label": "2-4 word label from text", "color": "<hex color>", "transition": "fade-in" }
-  AVAILABLE SCENES (pick the one that BEST matches the segment content):
-  - "money-flow" — coins/dollars falling (money, revenue, profit, income, cash, price, earn, pay, salary)
-  - "growth-chart" — animated bar chart growing (business, company, startup, stock, invest, market, growth)
-  - "arrow-growth" — upward arrow animation (grow, increase, rise, scale, expand, boost, level up)
-  - "rocket-launch" — rocket taking off (launch, start, begin, kick off, takeoff, moon, space)
-  - "brain-idea" — brain + lightbulb (brain, think, idea, smart, learn, knowledge, secret, tip, hack, AI)
-  - "code-terminal" — animated code terminal (code, programming, software, developer, app, website, tech)
-  - "connections" — network of nodes (connect, network, social, internet, community, together, people)
-  - "globe" — rotating Earth (earth, world, global, country, international, travel, worldwide)
-  - "fire-blaze" — dancing flames (fire, hot, burn, passion, intense, trending, lit)
-  - "lightning" — lightning strikes (electric, shock, fast, speed, quick, instant, bolt)
-  - "explosion-burst" — starburst explosion (explode, massive, huge, incredible, impact, disrupt, crazy)
-  - "celebration" — confetti + party (win, champion, congratulations, celebrate, victory, awesome, amazing)
-  - "target-bullseye" — target with arrow (goal, target, aim, focus, precise, strategy, plan)
-  - "crown-royal" — crown animation (best, king, queen, top, leader, number one, greatest)
-  - "heartbeat" — heart + EKG line (love, heart, feel, care, emotion, health, life, dream)
-  - "shield-protect" — glowing shield (protect, safe, security, guard, defense, trust, reliable)
-  - "clock-time" — animated clock (time, hour, minute, schedule, deadline, wait, today)
-  - "mountain-peak" — mountain summit (mountain, climb, challenge, overcome, journey, adventure, effort)
-  - "water-wave" — ocean waves (ocean, water, sea, wave, flow, river, swim, beach, calm)
-  - "diamond-gem" — sparkling diamond (luxury, premium, expensive, valuable, precious, rich, free)
-  - "atom-science" — atom orbiting (science, research, experiment, physics, chemistry, quantum)
-  - "gear-system" — interlocking gears (machine, system, engine, process, automate, mechanism, tool, build)
-  - "eye-vision" — eye with vision rays (watch, see, look, discover, reveal, vision, insight, show)
-  - "energy-pulse" — energy surge (power, energy, force, strong, charge, activate)
-  - "checkmark-success" — success checkmark (success, achieve, accomplish, done, complete, results, progress)
-  - "nature-tree" — animated tree (tree, nature, forest, green, environment, organic)
-  - "solar-system" — orbiting planets (sun, star, universe, galaxy, cosmic, space)
-  - "city-skyline" — city buildings (city, urban, downtown, building, skyline)
-  - "music-notes" — floating notes (music, song, sound, listen, audio, podcast)
-  - "book-reading" — open book (book, read, study, education, course, teach)
-  - "camera" — camera animation (video, photo, film, record, content, create)
-  - "cooking" — cooking scene (food, eat, recipe, cook, meal, kitchen)
-  - "person-walking" — walking figure (walk, step, move, run, exercise, fitness)
-  - "shopping-cart" — cart animation (sales, buy, shop, purchase, store, product, ecommerce)
-  - "magnet-attract" — magnetic pull (attract, pull, draw, magnetic, irresistible, grab)
+═══ YOUR JOB ═══
+1. Read each segment and decide if it contains STRONG VISUAL KEYWORDS that match any scene above.
+2. Return ONLY the segmentIds of segments that deserve overlays. 
+3. Do NOT include segments with no matching keywords.
+4. Minimum 1 segment gap between selected segments (not consecutive).
 
-2. "ai-generated-image" — AI-GENERATED B-ROLL IMAGE, fullscreen cinematic. Use this for descriptive/narrative content that doesn't map well to any specific scene above.
-  Props: { "caption": "Short label", "imagePrompt": "detailed cinematic visual description", "displayMode": "fullscreen" }
-  Write RICH, SPECIFIC prompts. Use cinematic language:
-  - Lighting: golden hour, chiaroscuro, volumetric, rim light, neon glow
-  - Quality: end with "cinematic lighting, 8k, hyperrealistic, professional color grading"
-  GOOD: "A dramatic upward-trending stock chart rendered as a glowing glass sculpture in a dark executive boardroom, golden hour light streaming through windows, cinematic wide shot, 8k"
-  BAD: "business growth" (too vague)
+═══ EXAMPLES ═══
+Segment: "We tripled our revenue to 10 million dollars this quarter" → DESERVES OVERLAY (keywords: revenue, money, growth)
+Segment: "Let me tell you about my trip to the mountains last summer" → NO OVERLAY (no strong keywords)
+Segment: "The AI brain is learning faster than ever before" → DESERVES OVERLAY (keywords: brain, ai)
 
-3. "ai-motion-graphic" — LIVE AI-GENERATED ANIMATED SVG. Use for 2-3 PEAK MOMENTS per video — stats reveals, key claims, dramatic statements, or the highest-impact visuals that deserve unique custom animation.
-  Props: { "label": "2-4 word CAPITALIZED label", "color": "<hex color>", "topic": "1-2 word topic keyword" }
-  The system will auto-generate a custom animated SVG. Reserve for the most impactful moments.
-
-OVERLAY SELECTION STRATEGY:
-- PREFER "visual-illustration" (50-60% of overlays) — they render instantly, look premium, and are animated
-- Use "ai-motion-graphic" (10-20% of overlays) — for 2-3 peak moments that deserve unique custom animation
-- Use "ai-generated-image" (20-30% of overlays) — for rich descriptive/narrative segments without a clear scene match
-- Match the scene name PRECISELY to what the speaker is saying
-- Use DIFFERENT scenes for each segment — never repeat the same scene twice in a row
-
-⚠️ RULES:
-1. Overlay 25-35% of segments — skip filler
-2. NEVER overlay consecutive segments — minimum 2 segments apart
-3. "label"/"caption" should be 2-4 punchy CAPITALIZED words from the segment
-4. For visual-illustration: pick the scene that BEST matches the transcript words
-5. For ai-generated-image: each imagePrompt must be unique and specific
-6. For ai-motion-graphic: label and topic must be specific to the segment content
-7. Pick good hex colors that match the mood: energetic=#ef4444, calm=#06b6d4, business=#6366f1, nature=#22c55e, tech=#8b5cf6
-
-Unique seeds per segment: ${segmentContexts}
-
-Transcript Segments:
+═══ TRANSCRIPT ═══
 ${subtitleList}
 
-Return ONLY a JSON array. No markdown, no explanation:
-[{ "segmentId": string, "type": "visual-illustration"|"ai-generated-image"|"ai-motion-graphic", "props": { ... } }]`;
+Return ONLY a JSON array of segmentIds — no markdown, no explanation:
+["seg_0", "seg_2", "seg_5"]`;
 
-    const MAX_RETRIES = 1;
-    const RETRY_DELAY_MS = 500;
+    const CROF_API = 'https://crof.ai/v2/chat/completions';
+    const CROF_API_KEY = 'nahcrof_rcslczMHjGgdjeirbelH';
+    const CROF_MODEL = 'kimi-k2.6-precision';
 
-    type ModelInfo = {
-        name: string;
-        model: string;
-        provider: string;
-        isCustom?: boolean;
-    };
+    for (let retry = 0; retry <= 2; retry++) {
+        try {
+            if (retry > 0) {
+                console.log(`[AI Suggest] kimi-k2.6-precision retry ${retry}/2...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+                console.log(`[AI Suggest] Calling kimi-k2.6-precision via crof.ai...`);
+            }
 
-    const fallbackModels: ModelInfo[] = [
-        { name: 'DeepSeek V4 Pro (Lightning)', model: 'lightning-ai/deepseek-v4-pro', provider: 'lightning', isCustom: false },
-    ];
-
-    const models = fallbackModels;
-
-    for (const modelInfo of models) {
-        for (let retry = 0; retry < MAX_RETRIES; retry++) {
-            try {
-                if (retry > 0) {
-                    console.log(`[AI Suggest] ${modelInfo.name} retry ${retry}/${MAX_RETRIES}...`);
-                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-                } else {
-                    console.log(`[AI Suggest] Trying model: ${modelInfo.name} via ${modelInfo.provider}`);
-                }
-
-                const lightningKey = process.env.LIGHTNING_API_KEY || 'a136ad94-f05f-4431-b3ad-2148a0c72ac3/giggletales18/vision-model';
-                const url = 'https://lightning.ai/api/v1/chat/completions';
-                const headers: Record<string, string> = {
-                    'Authorization': `Bearer ${lightningKey}`,
+            const fullPrompt = `You are an elite Motion Graphics Director. Return ONLY valid JSON.\n\n${prompt}`;
+            const res = await fetch(CROF_API, {
+                method: 'POST',
+                headers: {
                     'Content-Type': 'application/json',
-                };
-                const body = {
-                    model: 'lightning-ai/deepseek-v4-pro',
+                    'Authorization': `Bearer ${CROF_API_KEY}`,
+                },
+                body: JSON.stringify({
+                    model: CROF_MODEL,
                     messages: [
-                        { role: 'system', content: 'You are an elite Motion Graphics Director. Return ONLY valid JSON.' },
+                        { role: 'system', content: 'You are an elite Motion Graphics Director. Return ONLY valid JSON arrays.' },
                         { role: 'user', content: prompt },
                     ],
-                    max_tokens: 4096,
                     temperature: 0.7,
-                };
-                
-                const abortCtrl = new AbortController();
-                const fetchTimeout = setTimeout(() => abortCtrl.abort(), 45000);
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(body),
-                    signal: abortCtrl.signal,
-                });
-                clearTimeout(fetchTimeout);
+                    max_tokens: 4096,
+                }),
+            });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    const isRateLimit = response.status === 429;
-                    const isServerError = response.status >= 500;
+            if (!res.ok) {
+                const errText = await res.text().catch(() => '');
+                console.warn(`[AI Suggest] crof.ai failed: ${res.status} ${errText.substring(0, 200)}`);
+                continue;
+            }
 
-                    if (isRateLimit || isServerError) {
-                        console.warn(`[AI Suggest] ${modelInfo.name} ${isRateLimit ? 'rate limited' : 'server error'}, will retry...`);
-                        continue;
-                    }
-                    console.warn(`[AI Suggest] ${modelInfo.name} failed: ${response.status} - ${errorText.substring(0, 100)}`);
-                    break;
-                }
-
-                const data = await response.json();
-                const content = extractContentFromResponse(data, modelInfo.provider);
+            const data = await res.json();
+            const content = data.choices?.[0]?.message?.content || '';
 
                 if (!content) {
-                    console.warn(`[AI Suggest] ${modelInfo.name} returned empty content`);
+                    console.warn(`[AI Suggest] kimi-k2.6-precision returned empty content`);
                     continue;
                 }
 
-                console.log(`[AI Suggest] ${modelInfo.name} response:`, content.substring(0, 300));
+                console.log(`[AI Suggest] kimi-k2.6-precision response:`, content.substring(0, 300));
 
                 let jsonStr = content;
                 const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -351,109 +264,44 @@ Return ONLY a JSON array. No markdown, no explanation:
                     jsonStr = jsonMatch[0];
                 }
 
-                // DeepSeek sometimes injects Chinese/non-ASCII chars that corrupt JSON structure
+                // Clean non-ASCII chars that could corrupt JSON
                 jsonStr = jsonStr.replace(/[^\x20-\x7E\n\r\t]/g, '');
 
-                const suggestions: OverlaySuggestion[] = JSON.parse(jsonStr);
+                // AI now returns only segmentIds like ["seg_0", "seg_2"]
+                const selectedIds: string[] = JSON.parse(jsonStr);
+                const subtitleMap = new Map(subtitles.map(s => [s.id, s]));
+                let lastUsedScene = '';
+                const suggestions: OverlaySuggestion[] = [];
 
-                const validatedSuggestions = suggestions
-                    .filter((s) => s.segmentId && VALID_OVERLAY_TYPES.includes(s.type))
-                    .map((s) => {
-                        const count = hashString(s.segmentId);
-                        const origSeg = subtitles.find(sub => sub.id === s.segmentId);
-                        if (!s.props.color) s.props.color = getProColor(count);
-                        if (s.type === 'kinetic-text' && !s.props.text && origSeg) {
-                            s.props.text = extractLabelFromText(origSeg.text);
-                        }
-                        if (s.type === 'ai-generated-image') {
-                            delete s.props.imageUrl;
-                            delete s.props.seed;
-                        }
-                        return s;
+                let i = 0;
+                for (const segmentId of selectedIds) {
+                    const seg = subtitleMap.get(segmentId);
+                    if (!seg) continue;
+                    const isMotion = i % 4 === 0;
+                    suggestions.push({
+                        segmentId,
+                        type: isMotion ? 'ai-motion-graphic' : 'highlight-box',
+                        props: {
+                            label: isMotion ? (extractLabelFromText(seg.text) || seg.text.substring(0, 40)) : undefined,
+                            color: getProColor(hashString(segmentId)),
+                            topic: 'general',
+                            mood: 'energetic',
+                            style: !isMotion ? 'glow' : undefined,
+                        },
                     });
-
-                // ═══ ASSIGN IMAGE URLs ═══
-                // Use Pollinations URLs (instant, keeps response small for Vercel).
-                // Images load when the player renders them.
-                for (const s of validatedSuggestions) {
-                    if (s.type === 'ai-generated-image') {
-                        const prompt = String(s.props.imagePrompt || '');
-                        const hash = Math.abs(s.segmentId.split('').reduce((a: number, c: string) => ((a << 5) - a) + c.charCodeAt(0), 0));
-                        s.props.imageUrl = generatePollinationsUrlForSuggestion(prompt, hash % 1000000);
-                    }
+                    i++;
                 }
 
-                // ═══ GENERATE LIVE SVGs FOR AI MOTION GRAPHICS ═══
-                const motionGraphicSegs = validatedSuggestions.filter(s => s.type === 'ai-motion-graphic');
-                if (motionGraphicSegs.length > 0) {
-                    console.log(`[AI Suggest] Generating ${motionGraphicSegs.length} live motion SVGs...`);
-                    const svgResults = await Promise.allSettled(
-                        motionGraphicSegs.slice(0, 5).map(async (s) => {
-                            const origSeg = subtitles.find(sub => sub.id === s.segmentId);
-                            const controller = new AbortController();
-                            const timer = setTimeout(() => controller.abort(), 50000);
-                            try {
-                                const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-                                    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-                                const res = await fetch(`${baseUrl}/api/generate-motion-svg`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        text: origSeg?.text || '',
-                                        mood: videoAnalysis?.moodProfile?.primary || 'energetic',
-                                        topic: String(s.props.topic || 'general'),
-                                        color: String(s.props.color || '#6366f1'),
-                                        label: String(s.props.label || ''),
-                                    }),
-                                    signal: controller.signal,
-                                });
-                                clearTimeout(timer);
-                                const data = await res.json();
-                                return { segmentId: s.segmentId, svgContent: data.svgContent || '', success: data.success };
-                            } catch {
-                                clearTimeout(timer);
-                                return { segmentId: s.segmentId, svgContent: '', success: false };
-                            }
-                        })
-                    );
-
-                    for (const result of svgResults) {
-                        if (result.status === 'fulfilled' && result.value.success && result.value.svgContent) {
-                            const seg = validatedSuggestions.find(s => s.segmentId === result.value.segmentId);
-                            if (seg) {
-                                seg.props.svgContent = result.value.svgContent;
-                                console.log(`[AI Suggest] Live SVG generated for ${result.value.segmentId}`);
-                            }
-                        } else {
-                            const failedId = result.status === 'fulfilled' ? result.value.segmentId : '';
-                            const seg = validatedSuggestions.find(s => s.segmentId === failedId);
-                            if (seg) {
-                                const origSeg = subtitles.find(sub => sub.id === seg.segmentId);
-                                const scene = matchSceneToText(origSeg?.text || '');
-                                seg.type = 'visual-illustration';
-                                seg.props = { scene, label: seg.props.label, color: seg.props.color, transition: 'fade-in' };
-                                console.log(`[AI Suggest] SVG failed for ${seg.segmentId}, downgraded to visual-illustration`);
-                            }
-                        }
-                    }
-
-                    const successCount = svgResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
-                    console.log(`[AI Suggest] Motion SVG generation: ${successCount}/${motionGraphicSegs.length} succeeded`);
-                }
-
-                console.log(`[AI Suggest] Success with ${modelInfo.name} - ${validatedSuggestions.length} motion graphics`);
-                return { suggestions: validatedSuggestions, source: `ai:${modelInfo.name}` };
+                console.log(`[AI Suggest] Built ${suggestions.length} motion graphics from ${selectedIds.length} AI picks`);
+                return { suggestions, source: `ai:kimi-k2.6-precision` };
 
             } catch (error) {
-                console.error(`[AI Suggest] ${modelInfo.name} error:`, error);
+                console.error(`[AI Suggest] crof.ai error:`, error);
                 continue;
             }
-        }
-
-        console.warn(`[AI Suggest] ${modelInfo.name} failed, trying next model...`);
     }
 
-    console.warn('[AI Suggest] ALL models failed — falling back to local keyword-matched generation');
+    console.warn('[AI Suggest] crof.ai failed — falling back to local generation');
     return { suggestions: await generateLocalMotionGraphics(subtitles), source: 'local' };
 }
 
@@ -624,22 +472,18 @@ const CONTENT_SCENE_MAP: Record<string, string> = {
     thousand: 'growth-chart', percent: 'growth-chart',
 };
 
-function matchSceneToText(text: string): string {
-    const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
-    for (const word of words) {
-        if (CONTENT_SCENE_MAP[word]) return CONTENT_SCENE_MAP[word];
-    }
-    const hash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
-    return ALL_SCENES[hash % ALL_SCENES.length];
-}
-
 /**
- * Strict scene matching — only returns a scene if the text contains a strong keyword.
- * Returns null if no keyword match is found (no hash fallback).
- * Used to decide: visual-illustration (matched) vs ai-generated-image (not matched).
+ * Score-based scene picker — counts ALL keyword matches and picks the scene
+ * with the highest score. This is much more accurate than first-match.
+ *
+ * @param text The segment transcript text
+ * @param lastScene Optional last scene to avoid repeats
+ * @returns null if no meaningful keywords match (use ai-generated-image instead)
  */
-function matchSceneToTextStrict(text: string): string | null {
-    const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+function pickBestSceneForText(text: string, lastScene?: string): { scene: string; score: number } | null {
+    const lower = text.toLowerCase();
+    const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length >= 2);
+
     // Skip very common/generic conversational words that would over-trigger
     const SKIP_GENERIC = new Set([
         'guys', 'everybody', 'hello', 'welcome', 'right', 'true', 'real',
@@ -648,11 +492,102 @@ function matchSceneToTextStrict(text: string): string | null {
         'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why',
         'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free',
     ]);
+
+    // Score each scene by counting how many keywords in the text map to it
+    const sceneScores: Record<string, number> = {};
     for (const word of words) {
         if (SKIP_GENERIC.has(word)) continue;
-        if (CONTENT_SCENE_MAP[word]) return CONTENT_SCENE_MAP[word];
+        const scene = CONTENT_SCENE_MAP[word];
+        if (scene) {
+            sceneScores[scene] = (sceneScores[scene] || 0) + 1;
+        }
     }
-    return null;
+
+    if (Object.keys(sceneScores).length === 0) return null;
+
+    // Sort by score descending
+    const sorted = Object.entries(sceneScores).sort((a, b) => b[1] - a[1]);
+    const bestScore = sorted[0][1];
+
+    // Get all scenes with the best score
+    const topScenes = sorted.filter(([, score]) => score === bestScore).map(([scene]) => scene);
+
+    // Prefer a scene different from the last one used
+    const chosen = topScenes.find(s => s !== lastScene) || topScenes[0];
+
+    return { scene: chosen, score: bestScore };
+}
+
+/**
+ * Strict scene matching — only returns a scene if the text contains a strong keyword.
+ * Returns null if no keyword match is found (no hash fallback).
+ * Used to decide: visual-illustration (matched) vs ai-generated-image (not matched).
+ * NOW uses scoring for better accuracy.
+ */
+function matchSceneToTextStrict(text: string): string | null {
+    const result = pickBestSceneForText(text);
+    return result?.scene ?? null;
+}
+
+function matchSceneToText(text: string): string {
+    const result = pickBestSceneForText(text);
+    if (result) return result.scene;
+    const hash = Math.abs(text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
+    return ALL_SCENES[hash % ALL_SCENES.length];
+}
+
+/**
+ * Post-process AI suggestions: keep ONLY keyword-matched visual-illustration overlays.
+ * Drop everything else — NO generic ai-generated-image fallbacks allowed.
+ */
+function enforceContentMatchedOverlays(
+    suggestions: OverlaySuggestion[],
+    subtitles: SubtitleInput[]
+): OverlaySuggestion[] {
+    const subtitleMap = new Map(subtitles.map(s => [s.id, s]));
+    let lastUsedScene = '';
+    let motionCount = 0;
+    let droppedCount = 0;
+
+    const result: OverlaySuggestion[] = [];
+    for (const s of suggestions) {
+        const seg = subtitleMap.get(s.segmentId);
+        if (!seg) {
+            console.log(`[Enforce] Skipping suggestion ${s.segmentId}: no matching subtitle found`);
+            continue;
+        }
+
+        console.log(`[Enforce] Checking segment ${s.segmentId}: "${seg.text.substring(0, 60)}..."`);
+        const best = pickBestSceneForText(seg.text, lastUsedScene);
+        if (best && best.score >= 1) {
+            console.log(`[Enforce] → MATCH: scene=${best.scene}, score=${best.score}`);
+            lastUsedScene = best.scene;
+            motionCount++;
+            result.push({
+                segmentId: s.segmentId,
+                type: 'visual-illustration',
+                props: {
+                    scene: best.scene,
+                    label: s.props.caption || extractLabelFromText(seg.text) || seg.text.substring(0, 40),
+                    color: s.props.color || getProColor(hashString(s.segmentId)),
+                    transition: 'fade-in',
+                },
+            });
+        } else {
+            console.log(`[Enforce] → NO MATCH (dropping)`);
+            droppedCount++;
+        }
+    }
+
+    console.log(`[Enforce] RESULT: kept ${motionCount} motion graphics, dropped ${droppedCount}`);
+    // Sanity check: ensure we never return ai-generated-image
+    for (const r of result) {
+        if (r.type === 'ai-generated-image') {
+            console.error(`[Enforce] BUG: returned ai-generated-image for ${r.segmentId}`);
+            r.type = 'visual-illustration';
+        }
+    }
+    return result;
 }
 
 let currentVideoTopic: { primaryTopic: string; matchedKeywords: string[] } = { primaryTopic: 'general', matchedKeywords: [] };
@@ -693,51 +628,7 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
         }
     }
 
-    // Generate AI images for ALL overlay segments upfront (type is decided later per content)
-    console.log(`[ImageGen] Starting parallel generation of ${[...overlayIndices].length} images with LLM-powered prompts...`);
-    
-    const imageResults: Map<number, string> = new Map();
-    
-    const allOverlaySegments = [...overlayIndices].map(index => {
-        const seg = subtitles[index];
-        const segmentHash = hashString(seg.text);
-        const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
-        const label = extractLabelFromText(seg.text);
-        return { index, seg, uniqueSeed, label };
-    });
-
-    if (allOverlaySegments.length > 0) {
-        const imagePromises = allOverlaySegments.map(async ({ index, seg, uniqueSeed }) => {
-            const imagePrompt = await generateLLMPoweredImagePrompt(seg.text, topicInfo);
-            console.log(`[ImageGen] Prompt for segment ${seg.id}: "${imagePrompt.substring(0, 120)}..."`);
-            const imageUrl = await generateErnieImageUrl(imagePrompt, uniqueSeed);
-            return { index, imageUrl };
-        });
-        
-        const settledResults = await Promise.allSettled(imagePromises);
-        
-        for (const result of settledResults) {
-            if (result.status === 'fulfilled') {
-                imageResults.set(result.value.index, result.value.imageUrl);
-                console.log(`[ImageGen] Image ready for index ${result.value.index}`);
-            } else {
-                console.warn('[ImageGen] Image generation failed:', result.reason);
-            }
-        }
-        
-        console.log(`[ImageGen] Completed ${imageResults.size}/${allOverlaySegments.length} image generations`);
-    }
-    
-    // Identify top-scoring segments for ai-motion-graphic (live generated SVGs)
-    const topScoredIndices = new Set(
-        scored.filter(s => s.score >= 8 && overlayIndices.has(s.index))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 3)
-            .map(s => s.index)
-    );
-
-    // Build overlay suggestions — type chosen per-segment based on CONTENT, not a fixed slot
-    let lastUsedSceneLocal = '';
+    // Build overlay suggestions with variety for all qualifying segments
     let motionGraphicCount = 0;
     for (let index = 0; index < subtitles.length; index++) {
         if (!overlayIndices.has(index)) continue;
@@ -745,60 +636,52 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
 
         const segmentHash = hashString(seg.text);
         const uniqueSeed = (sessionSeed + segmentHash + index) % 1000000;
-
         const color = getProColor(uniqueSeed);
         const label = extractLabelFromText(seg.text);
 
-        const matchedScene = matchSceneToTextStrict(seg.text);
-        const contentHash = Math.abs(seg.text.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
-
+        // Spread out ai-motion-graphic
+        const cycle = overlayCount % 5;
         let overlay: OverlaySuggestion;
 
-        // Top-scored segments without a scene match → try ai-motion-graphic (live generated)
-        if (!matchedScene && topScoredIndices.has(index) && motionGraphicCount < 3) {
-            const words = seg.text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/)
-                .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+        if (cycle === 0) {
             overlay = {
                 segmentId: seg.id,
                 type: 'ai-motion-graphic',
                 props: {
-                    label: label || seg.text.substring(0, 30),
+                    label: label || seg.text.substring(0, 40),
                     color,
-                    topic: words[0] || 'general',
+                    topic: 'general',
+                    mood: 'energetic',
                 },
             };
             motionGraphicCount++;
-        } else if (matchedScene) {
-            // Strong keyword match → use animated SVG scene (instant, premium look)
-            const finalScene = matchedScene === lastUsedSceneLocal
-                ? ALL_SCENES[(ALL_SCENES.indexOf(matchedScene) + 1) % ALL_SCENES.length]
-                : matchedScene;
-            lastUsedSceneLocal = finalScene;
-            const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
+        } else if (cycle === 1) {
             overlay = {
                 segmentId: seg.id,
-                type: 'visual-illustration',
-                props: {
-                    scene: finalScene,
-                    label: label || seg.text.substring(0, 30),
-                    color,
-                    transition: transitions[contentHash % transitions.length],
-                },
+                type: 'highlight-box',
+                props: { color, style: 'glow' },
             };
-        } else {
-            // No strong scene match → use AI-generated image
-            const displayMode = (contentHash % 5 === 0) ? 'card' : 'fullscreen';
-            const imageUrl = imageResults.get(index) || generatePollinationsUrlFromText(seg.text, topicInfo, uniqueSeed);
+        } else if (cycle === 2) {
             overlay = {
                 segmentId: seg.id,
                 type: 'ai-generated-image',
                 props: {
-                    imageUrl,
-                    caption: label || seg.text.substring(0, 40),
-                    seed: uniqueSeed,
-                    imagePrompt: deriveImagePromptFromText(seg.text, topicInfo),
-                    displayMode,
+                    imagePrompt: `Cinematic visual: ${seg.text.substring(0, 100)}, highly detailed`,
+                    caption: label || 'Visual',
+                    color,
                 },
+            };
+        } else if (cycle === 3) {
+            overlay = {
+                segmentId: seg.id,
+                type: 'emoji-reaction',
+                props: { emoji: '✨', size: 80 },
+            };
+        } else {
+            overlay = {
+                segmentId: seg.id,
+                type: 'transcript-motion',
+                props: { color, style: 'karaoke', position: 'bottom' },
             };
         }
 
@@ -806,64 +689,7 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
         overlayCount++;
     }
 
-    // ═══ GENERATE LIVE SVGs FOR LOCAL MOTION GRAPHIC SUGGESTIONS ═══
-    const localMotionSegs = results.filter(r => r.type === 'ai-motion-graphic');
-    if (localMotionSegs.length > 0) {
-        console.log(`[LocalMotion] Generating ${localMotionSegs.length} live motion SVGs...`);
-        const svgResults = await Promise.allSettled(
-            localMotionSegs.map(async (s) => {
-                const origSeg = subtitles.find(sub => sub.id === s.segmentId);
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 50000);
-                try {
-                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-                        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-                    const res = await fetch(`${baseUrl}/api/generate-motion-svg`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: origSeg?.text || '',
-                            mood: 'energetic',
-                            topic: String(s.props.topic || 'general'),
-                            color: String(s.props.color || '#6366f1'),
-                            label: String(s.props.label || ''),
-                        }),
-                        signal: controller.signal,
-                    });
-                    clearTimeout(timer);
-                    const data = await res.json();
-                    return { segmentId: s.segmentId, svgContent: data.svgContent || '', success: data.success };
-                } catch {
-                    clearTimeout(timer);
-                    return { segmentId: s.segmentId, svgContent: '', success: false };
-                }
-            })
-        );
-
-        for (const result of svgResults) {
-            if (result.status === 'fulfilled' && result.value.success && result.value.svgContent) {
-                const seg = results.find(r => r.segmentId === result.value.segmentId);
-                if (seg) {
-                    seg.props.svgContent = result.value.svgContent;
-                    console.log(`[LocalMotion] Live SVG generated for ${result.value.segmentId}`);
-                }
-            } else {
-                const failedId = result.status === 'fulfilled' ? result.value.segmentId : '';
-                const seg = results.find(r => r.segmentId === failedId);
-                if (seg) {
-                    const origSeg = subtitles.find(sub => sub.id === seg.segmentId);
-                    const scene = matchSceneToText(origSeg?.text || '');
-                    seg.type = 'visual-illustration';
-                    seg.props = { scene, label: seg.props.label, color: seg.props.color, transition: 'fade-in' };
-                    console.log(`[LocalMotion] SVG failed for ${seg.segmentId}, downgraded to visual-illustration`);
-                }
-            }
-        }
-
-        const successCount = svgResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
-        console.log(`[LocalMotion] Motion SVG generation: ${successCount}/${localMotionSegs.length} succeeded`);
-    }
-
+    console.log(`[LocalMotion] Generated ${motionGraphicCount} motion graphics (0 fallback images)`);
     return results;
 }
 
@@ -882,38 +708,27 @@ function scoreSegmentRelevanceServer(text: string): number {
     let score = 0;
     const words = lower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
 
-    // Strong keywords get high scores — these make the BEST motion graphics
+    // ONLY keyword matches matter — no generic number/question/exclamation bonuses
+    for (const w of words) {
+        if (CONTENT_SCENE_MAP[w]) score += 3;
+    }
+
+    // Extra boost for "strong" keywords that map to great motion graphics
     const strongKeywords = new Set([
         'money', 'revenue', 'profit', 'income', 'growth', 'success', 'rocket',
         'brain', 'technology', 'code', 'science', 'power', 'energy', 'fire',
         'earth', 'world', 'mountain', 'ocean', 'celebrate', 'love', 'protect',
         'invest', 'market', 'stock', 'launch', 'explode', 'scale', 'secret',
         'ai', 'data', 'cloud', 'digital', 'algorithm', 'machine', 'network',
-        'business', 'startup', 'company', 'income', 'wealth', 'hustle',
+        'business', 'startup', 'company', 'wealth',
         'future', 'change', 'revolution', 'breakthrough', 'innovation',
         'challenge', 'risk', 'opportunity', 'strategy', 'vision', 'impact',
     ]);
     for (const w of words) {
-        if (strongKeywords.has(w)) score += 4;
-        else if (CONTENT_SCENE_MAP[w]) score += 2;
+        if (strongKeywords.has(w)) score += 2;
     }
 
-    // Numbers/stats = very visual, great for motion graphics
-    if (/\$[\d,.]+|\d+%|\d{3,}/.test(text)) score += 5;
-    if (text.includes('?')) score += 3;  // Questions create engagement
-    if (text.includes('!')) score += 2;  // Exclamations = excitement
-
-    // Longer, more meaningful sentences get boosted
-    const nonStopWords = words.filter(w => !STOP_WORDS.has(w));
-    if (nonStopWords.length >= 4) score += 2;  // Rich content = better graphics
-    if (nonStopWords.length < 2) score -= 2;
-
-    // Boost segments that mention specific topics (great for AI images)
-    if (TOPIC_KEYWORDS['FINANCE/BUSINESS'].some(kw => lower.includes(kw))) score += 2;
-    if (TOPIC_KEYWORDS['TECHNOLOGY/CODING'].some(kw => lower.includes(kw))) score += 2;
-    if (TOPIC_KEYWORDS['GAMING/ENTERTAINMENT'].some(kw => lower.includes(kw))) score += 2;
-
-    return Math.max(0, score);
+    return score;
 }
 
 // ==================== MOOD DETECTION ====================

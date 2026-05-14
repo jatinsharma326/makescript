@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import { User as SupabaseUser, AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { features, isDevelopment } from './config';
+import { features, isDevelopment, getCallbackUrl } from './config';
 
 export interface User {
     id: string;
@@ -146,11 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return { success: false, error: 'Invalid email or password. Please try again.' };
                 }
                 if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many requests') || (error as any).status === 429) {
-                    return { success: false, error: 'Too many attempts. Please wait a few minutes and try again.' };
+                    return { success: false, error: 'Too many login attempts. Please wait a few minutes and try again.' };
                 }
                 return { success: false, error: error.message };
             }
-            
+
             // Check if email is verified
             if (data.user && !data.user.email_confirmed_at && features.requireEmailVerification) {
                 return { 
@@ -194,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     data: {
                         full_name: name.trim(),
                     },
+                    emailRedirectTo: getCallbackUrl(),
                 },
             });
 
@@ -205,18 +206,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (error.message.includes('Password')) {
                     return { success: false, error: 'Password does not meet requirements. Please use at least 6 characters.' };
                 }
-                if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many requests') || error.status === 429) {
-                    return { success: false, error: 'Too many attempts. Please wait a few minutes and try again.' };
+                if (error.message.toLowerCase().includes('rate limit') || error.message.toLowerCase().includes('too many requests') || error.message.toLowerCase().includes('email rate limit') || (error as any).status === 429) {
+                    return { success: false, error: 'Email rate limit reached. Supabase allows ~2 emails per hour on the free tier. Please wait at least 60 minutes before trying again.' };
                 }
                 return { success: false, error: error.message };
             }
 
             // Check if user was created and needs verification
             if (data.user) {
+                // Supabase returns a user with no identities when the email is already registered
+                // (to prevent email enumeration). Detect this and show appropriate message.
+                if (data.user.identities && data.user.identities.length === 0) {
+                    return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+                }
                 if (!data.user.email_confirmed_at) {
-                    return { 
-                        success: true, 
-                        needsVerification: true 
+                    return {
+                        success: true,
+                        needsVerification: true
                     };
                 }
             }

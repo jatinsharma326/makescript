@@ -57,3 +57,8 @@ debug-rogue.ps1
 debug-rogue-v2.ps1
 temp_diff.txt
 scripts/
+scratch.js
+*.test.txt
+svg_raw.txt
+.vscode/
+src/app/api/generate-live-remotion/

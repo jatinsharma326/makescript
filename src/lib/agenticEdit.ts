@@ -578,7 +578,7 @@ function runVisualAgent(
 
   let overlayCount = 0;
 
-  for (const a of analyses) {
+    for (const a of analyses) {
     const isCut = cutDecisions.find(d => d.segmentId === a.segmentId)?.shouldCut;
     if (isCut) {
       decisions.push({ segmentId: a.segmentId });
@@ -587,43 +587,56 @@ function runVisualAgent(
 
     const decision: VisualDecision = { segmentId: a.segmentId };
 
-    // Overlay
+    // Overlay: generate ai-motion-graphic or ai-generated-image
     if (overlayIds.has(a.segmentId)) {
       const color = OVERLAY_COLORS[overlayCount % OVERLAY_COLORS.length];
 
-      // Content-driven type selection: visual-illustration for strong keyword matches
+      // Determine topic from text keywords
       const words = a.text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-      const SKIP_GENERIC = new Set(['guys', 'hello', 'welcome', 'right', 'true', 'real', 'tell', 'happen', 'finally', 'literally', 'actually', 'basically', 'definitely', 'probably', 'going', 'different', 'new', 'old', 'next', 'first', 'help', 'need', 'absolutely', 'exactly', 'because', 'why', 'question', 'answer', 'explain', 'reason', 'story', 'follow', 'free']);
-      let matchedScene: string | null = null;
+      let topic = 'general';
       for (const w of words) {
-        if (SKIP_GENERIC.has(w)) continue;
-        if (SCENE_MAP[w]) { matchedScene = SCENE_MAP[w]; break; }
+        if (SCENE_MAP[w]) { topic = w; break; }
       }
 
-      if (matchedScene) {
-        // Strong keyword match → animated SVG scene (instant, premium look)
+      // Distribute overlay types more evenly so ai-motion-graphic isn't overwhelming
+      // E.g. in a 2 minute video with 12 overlays, we only want 2-3 ai-motion-graphics
+      const cycle = overlayCount % 6;
+      if (cycle === 0) {
+        // ai-motion-graphic (1 out of 6 times)
         decision.overlay = {
-          type: 'visual-illustration',
-          props: {
-            scene: matchedScene,
-            label: extractKeyPhrase(a.text),
-            color,
-            transition: 'fade-in',
-          },
+          type: 'ai-motion-graphic',
+          props: { label: extractKeyPhrase(a.text), color, topic, mood: 'energetic' },
         };
-      } else {
-        // No strong scene match → AI-generated image B-roll
-        const keyPhrase = extractKeyPhrase(a.text);
+      } else if (cycle === 1 || cycle === 4) {
+        // ai-generated-image (2 out of 6 times)
         decision.overlay = {
           type: 'ai-generated-image',
           props: {
-            imagePrompt: `${a.text.substring(0, 120)}, cinematic, professional, high quality`,
-            caption: keyPhrase,
+            imagePrompt: `Cinematic visual: ${a.text.substring(0, 100)}, professional photography, dramatic lighting`,
+            caption: extractKeyPhrase(a.text),
+            color,
           },
         };
+      } else if (cycle === 2) {
+        // highlight-box
+        decision.overlay = {
+          type: 'highlight-box',
+          props: { color: '#f59e0b', style: 'glow' },
+        };
+      } else if (cycle === 3) {
+        // emoji-reaction
+        decision.overlay = {
+          type: 'emoji-reaction',
+          props: { emoji: a.sentiment === 'excited' ? '🔥' : a.sentiment === 'serious' ? '👀' : '✨', size: 80 },
+        };
+      } else {
+        // transcript-motion
+        decision.overlay = {
+          type: 'transcript-motion',
+          props: { color, style: 'karaoke', position: 'bottom' },
+        };
       }
-
-      // Effect for peak moments (zoom/ken-burns/shake)
+      // Effect for peak moments
       if (a.isPeakMoment || a.hasStats) {
         const effects: Array<{ type: SegmentEffect['type']; intensity: number; direction?: string }> = [
           { type: 'zoom-in', intensity: 1.25 },
