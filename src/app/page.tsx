@@ -680,37 +680,62 @@ export default function LandingPage() {
               </div>
 
               {/* Center: Video canvas */}
-              <div className="flex-1 aspect-video relative bg-black">
-                {/* Demo video image */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://image.pollinations.ai/prompt/A_professional_video_editing_interface_showing_a_talking_head_video_with_overlays_and_effects_modern_dark_UI?width=960&height=540&nologo=true&seed=500"
-                  alt="MakeScript Editor Demo"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                {/* Animated lower third overlay */}
-                <div className="absolute bottom-8 left-4" style={{ animation: 'demoLowerThird 4s ease-in-out infinite' }}>
-                  <div style={{ background: 'rgba(10,10,14,0.8)', backdropFilter: 'blur(12px)', padding: '8px 16px 8px 12px', borderLeft: `3px solid ${C.purple}`, borderRadius: '0 8px 8px 0' }}>
-                    <div className="text-[14px] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>Sarah Chen</div>
-                    <div className="text-[8px] font-semibold uppercase tracking-wider" style={{ color: C.purple }}>Product Designer · MakeScript</div>
+              <div className="flex-1 aspect-video relative bg-black overflow-hidden">
+                {/* Rich animated background gradient */}
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(145deg, #0a0a0e 0%, #0d0221 30%, #1a0533 60%, #0d0221 100%)' }} />
+                {/* Glow orbs */}
+                <div className="absolute top-[20%] left-[25%] w-[300px] h-[300px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(157,78,221,0.08) 0%, transparent 70%)', animation: 'slowZoom 8s ease-in-out infinite alternate' }} />
+                <div className="absolute bottom-[30%] right-[20%] w-[200px] h-[200px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(0,245,212,0.06) 0%, transparent 70%)', animation: 'slowZoom 6s ease-in-out infinite alternate-reverse' }} />
+                
+                {/* Video frame border */}
+                <div className="absolute inset-[6%] rounded-lg overflow-hidden" style={{ border: '1px solid rgba(157,78,221,0.15)', boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5), 0 0 40px rgba(157,78,221,0.05)' }}>
+                  {/* Cinematic scene - talking head silhouette */}
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[18%] h-[65%] rounded-t-full" style={{ background: 'linear-gradient(180deg, rgba(60,40,80,0.5) 0%, rgba(40,25,60,0.3) 100%)' }} />
+                  {/* Professional lighting glow */}
+                  <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[40%] h-[35%]" style={{ background: 'radial-gradient(ellipse, rgba(120,80,180,0.12) 0%, transparent 70%)' }} />
+                  {/* Cinematic bars */}
+                  <div className="absolute top-0 left-0 right-0 h-[12%]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.6), transparent)' }} />
+                  <div className="absolute bottom-0 left-0 right-0 h-[12%]" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.6), transparent)' }} />
+                  
+                  {/* Animated lower third */}
+                  <div className="absolute bottom-8 left-6" style={{ animation: 'demoLowerThird 4s ease-in-out infinite' }}>
+                    <div style={{ background: 'rgba(10,10,14,0.85)', backdropFilter: 'blur(16px)', padding: '10px 20px 10px 14px', borderLeft: `3px solid ${C.purple}`, borderRadius: '0 10px 10px 0', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="text-[clamp(10px,1.5vw,16px)] font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>Sarah Chen</div>
+                      <div className="text-[7px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: C.purple }}>Product Designer · MakeScript</div>
+                    </div>
+                  </div>
+                  
+                  {/* Floating stats card */}
+                  <div className="absolute top-6 right-6" style={{ animation: 'demoCaption 5s ease-in-out 1s infinite' }}>
+                    <div style={{ background: 'rgba(0,245,212,0.08)', border: `1px solid ${C.cyan}25`, padding: '10px 16px', borderRadius: '12px', backdropFilter: 'blur(8px)' }}>
+                      <span className="text-[clamp(16px,2.5vw,28px)] font-black" style={{ color: C.cyan, fontFamily: "'Space Grotesk', sans-serif" }}>50K+</span>
+                      <div className="text-[7px] font-semibold uppercase tracking-widest mt-0.5" style={{ color: `${C.cyan}99` }}>Active Users</div>
+                    </div>
+                  </div>
+
+                  {/* Caption overlay at bottom */}
+                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 px-6 py-2 rounded-lg" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+                    <span className="text-[clamp(9px,1.2vw,14px)] font-semibold tracking-wide" style={{ color: C.cyan, fontFamily: "'Space Grotesk', sans-serif" }}>THIS IS HIGH RETENTION CONTENT</span>
+                  </div>
+
+                  {/* Loading dots */}
+                  <div className="absolute bottom-4 right-6 flex gap-1">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: C.purple, animation: `clackDot ${0.6 + i * 0.15}s ease-in-out ${i * 0.15}s infinite alternate`, opacity: 0.4 }} />
+                    ))}
                   </div>
                 </div>
-                {/* Floating caption */}
-                <div className="absolute top-6 right-4" style={{ animation: 'demoCaption 5s ease-in-out 1s infinite' }}>
-                  <div style={{ background: 'rgba(0,245,212,0.12)', border: `1px solid ${C.cyan}33`, padding: '6px 12px', borderRadius: '8px' }}>
-                    <span className="text-[20px] font-black" style={{ color: C.cyan, fontFamily: "'Space Grotesk', sans-serif" }}>50K+</span>
-                    <div className="text-[7px] font-semibold uppercase tracking-widest" style={{ color: C.cyan + '99' }}>Active Users</div>
-                  </div>
-                </div>
+                
                 {/* Play button overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110" style={{ background: 'rgba(157,78,221,0.2)', backdropFilter: 'blur(8px)', border: '1px solid rgba(157,78,221,0.3)' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill={C.white}><polygon points="6 3 20 12 6 21 6 3" /></svg>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[clamp(40px,6vw,70px)] h-[clamp(40px,6vw,70px)] rounded-full flex items-center justify-center" style={{ background: 'rgba(157,78,221,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(157,78,221,0.2)', boxShadow: '0 0 40px rgba(157,78,221,0.1)' }}>
+                    <svg width="clamp(16px,2.5vw,30px)" height="clamp(16px,2.5vw,30px)" viewBox="0 0 24 24" fill={C.white}><polygon points="6 3 20 12 6 21 6 3" /></svg>
                   </div>
                 </div>
-                {/* Scrubbing progress */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5">
-                  <div className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})`, width: '35%' }} />
+                
+                {/* Scrubbing progress bar */}
+                <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="h-full rounded-full" style={{ background: `linear-gradient(90deg, ${C.purple}, ${C.cyan})`, width: '35%', animation: 'mgTimelineScrub 4s ease-in-out infinite' }} />
                 </div>
               </div>
 
