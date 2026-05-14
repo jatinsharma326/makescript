@@ -10,11 +10,10 @@ import {
     useVideoConfig,
 } from 'remotion';
 import { LowerThird } from './overlays/LowerThird';
-import { HighlightBox } from './overlays/HighlightBox';
+import { ProTextGraphic } from './overlays/ProTextGraphic';
 import { EmojiReaction } from './overlays/EmojiReaction';
 import { SceneTransition } from './overlays/SceneTransition';
 import { GlowingParticles } from './overlays/GlowingParticles';
-import { KineticText } from './overlays/KineticText';
 import { VisualIllustration } from './overlays/VisualIllustration';
 import { ImageCard } from './overlays/ImageCard';
 import { BrollVideo } from './overlays/BrollVideo';
@@ -264,15 +263,12 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                             />
                         );
                     case 'highlight-box': {
-                        const rawStyle = String(seg.overlay.props.style || 'glow');
-                        const validStyles = ['glow', 'solid', 'outline'];
-                        const style = validStyles.includes(rawStyle) ? rawStyle : 'glow';
                         return (
-                            <HighlightBox
+                            <ProTextGraphic
                                 key={seg.id}
                                 text={seg.text}
                                 color={String(seg.overlay.props.color || '#f59e0b')}
-                                style={style as 'glow' | 'solid' | 'outline'}
+                                style="highlight"
                                 startFrame={startFrame}
                                 endFrame={endFrame}
                             />
@@ -325,7 +321,7 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                         const validPos = ['center', 'top', 'bottom'];
                         const kPos = validPos.includes(rawPos) ? rawPos : 'center';
                         return (
-                            <KineticText
+                            <ProTextGraphic
                                 key={seg.id}
                                 text={String(seg.overlay.props.text || seg.text)}
                                 color={String(seg.overlay.props.color || '#6366f1')}
