@@ -83,6 +83,8 @@ export default function EditorPage() {
         if (user?.id) {
             setCurrentUser(user.id);
             console.log('[Editor] Set storage user ID:', user.id);
+            // Refresh project list now that user ID is available
+            setProjectList(getProjectList());
             // Clear any legacy global usage counter so it doesn't leak into this user's limit
             clearLegacyUsage();
         } else {
