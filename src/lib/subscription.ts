@@ -1,26 +1,25 @@
 import { createClient } from './supabase/server';
+import { ModelTier } from './models';
 
-export type UserTier = 'free' | 'pro' | 'max';
-
-type ProfilePlan = 'free' | 'creator' | 'studio' | 'pro' | 'max';
+export type UserTier = 'free' | 'creator' | 'studio';
 
 export interface SubscriptionInfo {
     tier: UserTier;
-    isPro: boolean;
-    isMax: boolean;
+    isCreator: boolean;
+    isStudio: boolean;
     isAuthenticated: boolean;
 }
 
 export function normalizePlanToTier(plan: string | null | undefined): UserTier {
-    const normalized = (plan ?? 'free').toLowerCase().trim() as ProfilePlan;
+    const normalized = (plan ?? 'free').toLowerCase().trim();
 
     switch (normalized) {
         case 'studio':
         case 'max':
-            return 'max';
+            return 'studio';
         case 'creator':
         case 'pro':
-            return 'pro';
+            return 'creator';
         case 'free':
         default:
             return 'free';
@@ -33,7 +32,7 @@ export async function getUserSubscription(): Promise<SubscriptionInfo> {
         supabase = await createClient();
     } catch {
         // Supabase unreachable — give full access in dev mode
-        return { tier: 'max', isPro: true, isMax: true, isAuthenticated: true };
+        return { tier: 'studio', isCreator: true, isStudio: true, isAuthenticated: true };
     }
 
     let user;
@@ -41,12 +40,11 @@ export async function getUserSubscription(): Promise<SubscriptionInfo> {
         const { data } = await supabase.auth.getUser();
         user = data?.user;
     } catch {
-        // Supabase unreachable — give full access in dev mode
-        return { tier: 'max', isPro: true, isMax: true, isAuthenticated: true };
+        return { tier: 'studio', isCreator: true, isStudio: true, isAuthenticated: true };
     }
 
     if (!user) {
-        return { tier: 'free', isPro: false, isMax: false, isAuthenticated: false };
+        return { tier: 'free', isCreator: false, isStudio: false, isAuthenticated: false };
     }
 
     try {
@@ -60,28 +58,37 @@ export async function getUserSubscription(): Promise<SubscriptionInfo> {
 
         return {
             tier,
-            isPro: tier === 'pro' || tier === 'max',
-            isMax: tier === 'max',
+            isCreator: tier === 'creator' || tier === 'studio',
+            isStudio: tier === 'studio',
             isAuthenticated: true,
         };
     } catch (e) {
         console.error('Error fetching user subscription:', e);
-        return { tier: 'free', isPro: false, isMax: false, isAuthenticated: true };
+        return { tier: 'free', isCreator: false, isStudio: false, isAuthenticated: true };
     }
 }
 
-// Maps the user's tier to an appropriate AI model ID
+// Map user tier to the best AI model ID for overlay generation
 export function getModelForTier(tier: UserTier): string {
     switch (tier) {
-        case 'max':
-            // Best available model
-            return 'anthropic/claude-sonnet-4-6';
-        case 'pro':
-            // High-quality model — MiniMax M2.5 via ModelScope (reliable, fast)
-            return 'modelscope-minimaxtwo';
+        case 'studio':
+            return 'anthropic/claude-opus-4-6';
+        case 'creator':
+            return 'anthropic/claude-sonnet-4-20250514';
         case 'free':
         default:
-            // Default: MiniMax M2.5 for motion graphics & all AI features
-            return 'modelscope-minimaxtwo';
+            return 'minimax-m2.7';
+    }
+}
+
+// Get the Stripe price ID for a given tier
+export function getStripePriceId(tier: UserTier): string | null {
+    switch (tier) {
+        case 'creator':
+            return process.env.STRIPE_PRICE_CREATOR || '';
+        case 'studio':
+            return process.env.STRIPE_PRICE_STUDIO || '';
+        default:
+            return null;
     }
 }

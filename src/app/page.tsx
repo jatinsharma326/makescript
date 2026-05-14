@@ -494,67 +494,140 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════ THE ENGINE ═══════════════════ */}
-      <section id="engine" className="py-28 px-6 relative overflow-hidden">
-        <ParticleField count={20} color={C.cyan} />
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.cyan, border: `1px solid ${C.cyan}33`, fontFamily: "'JetBrains Mono', monospace" }}>THE ENGINE</span>
+      <GlitchDivider />
+
+      {/* ═══════════════════ PRICING ═══════════════════ */}
+      <section id="pricing" className="py-28 px-6 relative overflow-hidden">
+        <ParticleField count={25} color={C.purple} />
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full" style={{ color: C.purple, border: `1px solid ${C.purple}33`, fontFamily: "'JetBrains Mono', monospace" }}>PRICING</span>
             <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] mt-6 mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Three moves. <span style={{ color: C.purple }}>Zero effort.</span>
+              One price. <span style={{ color: C.cyan }}>Everything included.</span>
             </h2>
-            <p className="text-[15px] max-w-xl mx-auto" style={{ color: 'rgba(248,249,250,0.5)' }}>
-              From raw timeline to finished cut — the engine does the heavy lifting in silence.
+            <p className="text-[14px] max-w-xl mx-auto" style={{ color: 'rgba(248,249,250,0.5)' }}>
+              No hidden fees, no per-video charges. All AI models are included in your plan.
             </p>
           </div>
 
-          {/* Bento grid */}
-          <div className="grid md:grid-cols-3 gap-4">
-            {ENGINE_CARDS.map((card, i) => (
-              <NeonBorder key={i}>
-                <div
-                  className="relative rounded-2xl p-8 overflow-hidden h-[420px] flex flex-col justify-between group"
-                  style={{
-                    background: `linear-gradient(180deg, ${card.gradient})`,
-                    border: `1px solid ${card.border}22`,
-                  }}
-                >
-                  {/* 3D animation simulation */}
-                  <div className="absolute top-6 right-6 w-20 h-20 opacity-30">
-                    <div className="w-full h-full rounded-full border-2" style={{ borderColor: card.border, animation: `orbit3d ${6 - i * 1.5}s linear infinite` }}>
-                      <div className="w-3 h-3 rounded-full absolute -top-1 left-1/2 -translate-x-1/2" style={{ background: card.border, boxShadow: `0 0 12px ${card.border}` }} />
+          <div className="grid md:grid-cols-3 gap-5">
+            {/* Free */}
+            <div className="relative rounded-2xl p-8 flex flex-col transition-all duration-300 hover:scale-[1.02]" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{ background: 'rgba(107,114,128,0.15)', color: '#6b7280', fontFamily: "'JetBrains Mono', monospace" }}>Free</span>
+              </div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-[40px] font-black tracking-[-0.03em]" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>$0</span>
+                <span className="text-[13px]" style={{ color: 'rgba(248,249,250,0.3)' }}>/mo</span>
+              </div>
+              <p className="text-[12px] mb-6" style={{ color: 'rgba(248,249,250,0.4)' }}>Get started with powerful open models</p>
+              <div className="flex-1 space-y-3 mb-8">
+                {[
+                  { label: '10 videos / month', included: true },
+                  { label: 'Open-source AI models', included: true },
+                  { label: 'Basic motion graphics', included: true },
+                  { label: '1080p export', included: true },
+                  { label: 'Claude Sonnet 4 & Gemini Pro', included: false },
+                  { label: 'AI image generation', included: false },
+                  { label: '4K export', included: false },
+                ].map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 text-[12px]">
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${f.included ? 'opacity-100' : 'opacity-20'}`}>
+                      {f.included ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
                     </div>
-                    <div className="absolute inset-[20%] rounded-full border" style={{ borderColor: `${card.border}44`, animation: `orbit3dReverse ${8 - i * 1.5}s linear infinite` }}>
-                      <div className="w-2 h-2 rounded-full absolute top-0 left-1/2 -translate-x-1/2" style={{ background: card.border === '#FEE440' ? C.purple : card.border === '#00F5D4' ? C.yellow : C.cyan }} />
+                    <span style={{ color: f.included ? 'rgba(248,249,250,0.6)' : 'rgba(248,249,250,0.2)' }}>{f.label}</span>
+                  </div>
+                ))}
+              </div>
+              <a href="/editor" className="block w-full text-center py-3 rounded-xl text-[13px] font-semibold transition-all hover:brightness-110" style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>
+                Get Started
+              </a>
+            </div>
+
+            {/* Creator — $20/mo */}
+            <div className="relative rounded-2xl p-8 flex flex-col transition-all duration-300 hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${C.purple}08, rgba(10,10,14,1))`, border: `1px solid ${C.purple}22`, boxShadow: `0 0 40px ${C.purple}11` }}>
+              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider" style={{ background: `linear-gradient(135deg, ${C.purple}, #7c3aed)`, color: '#fff' }}>Most Popular</div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{ background: `${C.purple}22`, color: C.purple, fontFamily: "'JetBrains Mono', monospace" }}>Creator</span>
+              </div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-[40px] font-black tracking-[-0.03em]" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>$20</span>
+                <span className="text-[13px]" style={{ color: 'rgba(248,249,250,0.3)' }}>/mo</span>
+              </div>
+              <p className="text-[12px] mb-6" style={{ color: 'rgba(248,249,250,0.4)' }}>Premium AI — motion graphics, images, captions</p>
+              <div className="flex-1 space-y-3 mb-8">
+                {[
+                  { label: '60 videos / month', included: true, accent: true },
+                  { label: 'Claude Sonnet 4 & GPT-5', included: true },
+                  { label: 'AI motion graphics + B-roll', included: true },
+                  { label: 'Google Imagen + Seedance models', included: true },
+                  { label: '4K export & priority queue', included: true },
+                  { label: 'Claude Opus 4.6 & GPT-5.2', included: false },
+                  { label: 'Unlimited videos', included: false },
+                ].map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 text-[12px]">
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0`}>
+                      {f.included ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={f.accent ? C.purple : '#6b7280'} strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
                     </div>
+                    <span style={{ color: f.included ? 'rgba(248,249,250,0.6)' : 'rgba(248,249,250,0.2)' }}>{f.label}</span>
                   </div>
+                ))}
+              </div>
+              <a href="/editor" className="block w-full text-center py-3 rounded-xl text-[13px] font-semibold transition-all" style={{ background: `linear-gradient(135deg, ${C.purple}, #7c3aed)`, color: '#fff', boxShadow: `0 0 24px ${C.purple}33` }}>
+                Start Free Trial →
+              </a>
+            </div>
 
-                  <div>
-                    <span className="text-[40px] font-black opacity-20" style={{ fontFamily: "'Space Grotesk', sans-serif", color: card.border }}>{card.step}</span>
-                    <h3 className="text-[22px] font-bold mt-2 mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{card.title}</h3>
-                    <p className="text-[13px] leading-relaxed" style={{ color: 'rgba(248,249,250,0.55)' }}>{card.desc}</p>
+            {/* Studio — $50/mo */}
+            <div className="relative rounded-2xl p-8 flex flex-col transition-all duration-300 hover:scale-[1.02]" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.cyan}22` }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{ background: `${C.cyan}22`, color: C.cyan, fontFamily: "'JetBrains Mono', monospace" }}>Studio</span>
+              </div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-[40px] font-black tracking-[-0.03em]" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>$50</span>
+                <span className="text-[13px]" style={{ color: 'rgba(248,249,250,0.3)' }}>/mo</span>
+              </div>
+              <p className="text-[12px] mb-6" style={{ color: 'rgba(248,249,250,0.4)' }}>Unlimited access — the absolute best AI</p>
+              <div className="flex-1 space-y-3 mb-8">
+                {[
+                  { label: 'Unlimited videos', included: true, accent: true },
+                  { label: 'Claude Opus 4.6 & GPT-5.2', included: true, accent: true },
+                  { label: 'All image/video generation models', included: true },
+                  { label: 'Google Veo 3 + Runway Gen-4', included: true },
+                  { label: 'Priority processing queue', included: true },
+                  { label: 'Early access to new features', included: true },
+                  { label: 'Dedicated support', included: true },
+                ].map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 text-[12px]">
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0`}>
+                      {f.included ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={f.accent ? C.cyan : '#6b7280'} strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
+                    </div>
+                    <span style={{ color: f.included ? 'rgba(248,249,250,0.6)' : 'rgba(248,249,250,0.2)' }}>{f.label}</span>
                   </div>
-
-                  {/* Animated particles inside card */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    {Array.from({ length: 8 }).map((_, j) => (
-                      <div
-                        key={j}
-                        className="absolute w-1 h-1 rounded-full"
-                        style={{
-                          background: card.border,
-                          left: `${10 + Math.random() * 80}%`,
-                          top: `${50 + Math.random() * 40}%`,
-                          opacity: 0.1 + Math.random() * 0.3,
-                          animation: `particleRise ${2 + Math.random() * 4}s ease-in-out ${j * 0.3}s infinite`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </NeonBorder>
-            ))}
+                ))}
+              </div>
+              <a href="/editor" className="block w-full text-center py-3 rounded-xl text-[13px] font-semibold transition-all" style={{ border: `1px solid ${C.cyan}33`, color: C.cyan }}>
+                Start Free Trial →
+              </a>
+            </div>
           </div>
+
+          {/* Footer note */}
+          <p className="text-center text-[11px] mt-8" style={{ color: 'rgba(248,249,250,0.2)' }}>
+            All plans include a 7-day free trial. No credit card required to start.
+          </p>
         </div>
       </section>
 
