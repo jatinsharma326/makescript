@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const CROF_API = 'https://crof.ai/v2/chat/completions';
+const CROF_API = process.env.CROF_API_URL || 'https://crof.ai/v2/chat/completions';
 const CROF_API_KEY = process.env.CROF_API_KEY || '';
-const CROF_MODEL = 'kimi-k2.6-precision';
+const CROF_MODEL = process.env.CROF_MODEL || 'kimi-k2.6-precision';
 
 interface MotionSvgRequest {
   text: string;
