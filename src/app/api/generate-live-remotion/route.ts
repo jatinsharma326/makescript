@@ -105,15 +105,10 @@ Return only the raw code.`;
     code = code.replace(/```\n?/g, '');
     code = code.trim();
 
-    // Find where actual code starts (import statement)
-    const importIndex = code.indexOf('import React');
-    if (importIndex === -1) {
-      const anyImportIndex = code.indexOf('import ');
-      if (anyImportIndex > 0) {
-        code = code.substring(anyImportIndex);
-      }
-    } else if (importIndex > 0) {
-      code = code.substring(importIndex);
+    // Find where actual code starts (first import statement)
+    const firstImportIndex = code.indexOf('import ');
+    if (firstImportIndex > 0) {
+      code = code.substring(firstImportIndex);
     }
 
     // Safe interpolate helper function
@@ -140,11 +135,18 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
 };
 `;
 
-    // Insert helper after remotion import
-    const remotionImportMatch = code.match(/from\s+['"]remotion['"];?/);
-    if (remotionImportMatch) {
-      const insertPos = code.indexOf(remotionImportMatch[0]) + remotionImportMatch[0].length;
-      code = code.slice(0, insertPos) + '\n' + safeInterpolateHelper + code.slice(insertPos);
+    // Insert helper after the last import statement
+    const lastImportIndex = code.lastIndexOf('import ');
+    if (lastImportIndex !== -1) {
+      const endOfLastImport = code.indexOf(';', lastImportIndex);
+      const insertPos = endOfLastImport !== -1 ? endOfLastImport + 1 : code.indexOf('\n', lastImportIndex);
+      if (insertPos !== -1) {
+        code = code.slice(0, insertPos) + '\n' + safeInterpolateHelper + code.slice(insertPos);
+      } else {
+        code = safeInterpolateHelper + '\n' + code;
+      }
+    } else {
+      code = safeInterpolateHelper + '\n' + code;
     }
 
     // Replace interpolate calls with safeInterpolate (except inside helper)
