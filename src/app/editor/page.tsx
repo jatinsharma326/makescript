@@ -547,8 +547,9 @@ export default function EditorPage() {
     };
 
     const preGenerateMotionSVGs = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
+        // Find segments that request motion graphics but haven't been upgraded to the global version yet
         const motionSegs = subs.filter(
-            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.imageUrl && !s.overlay?.props?.reactCode
+            s => s.overlay?.type === 'ai-motion-graphic' && (!s.overlay?.props?.reactCode || !s.overlay?.props?.global)
         );
         if (motionSegs.length === 0) return subs;
 
