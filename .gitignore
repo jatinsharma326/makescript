@@ -61,7 +61,6 @@ scratch.js
 *.test.txt
 svg_raw.txt
 .vscode/
-src/app/api/generate-live-remotion/
 # Temp and scratch files
 *.tmp
 tmp/
