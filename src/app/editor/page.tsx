@@ -548,13 +548,13 @@ export default function EditorPage() {
 
     const preGenerateMotionSVGs = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
         const motionSegs = subs.filter(
-            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.imageUrl && !s.overlay?.props?.reactCode && !s.overlay?.props?.svgContent
+            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.imageUrl && !s.overlay?.props?.reactCode
         );
         if (motionSegs.length === 0) return subs;
 
         addLog(`Generating ${motionSegs.length} motion graphic components...`);
 
-        const svgMap = new Map<string, string>();
+        const reactCodeMap = new Map<string, string>();
 
         const results = await Promise.allSettled(
             motionSegs.slice(0, 6).map(async (seg) => {
@@ -564,7 +564,7 @@ export default function EditorPage() {
                 const mood = String(seg.overlay!.props.mood || 'energetic');
                 
                 try {
-                    const res = await fetch('/api/generate-motion-svg', {
+                    const res = await fetch('/api/generate-live-remotion', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -573,35 +573,36 @@ export default function EditorPage() {
                             topic,
                             color,
                             label,
+                            durationInSeconds: seg.endTime - seg.startTime
                         }),
                     });
                     
                     const data = await res.json();
-                    if (data.success && data.svgContent) {
+                    if (data.success && data.reactCode) {
                         addLog(`Motion Graphic ready: ${label}`);
-                        return { id: seg.id, svgContent: data.svgContent };
+                        return { id: seg.id, reactCode: data.reactCode };
                     }
                     
                     addLog(`Motion Graphic failed for: ${label}`);
-                    return { id: seg.id, svgContent: null };
+                    return { id: seg.id, reactCode: null };
                 } catch (err) {
                     console.error('[preGenerateMotionGraphics] Error:', err);
-                    return { id: seg.id, svgContent: null };
+                    return { id: seg.id, reactCode: null };
                 }
             })
         );
 
         for (const r of results) {
-            if (r.status === 'fulfilled' && r.value && r.value.svgContent) {
-                svgMap.set(r.value.id, r.value.svgContent);
+            if (r.status === 'fulfilled' && r.value && r.value.reactCode) {
+                reactCodeMap.set(r.value.id, r.value.reactCode);
             }
         }
 
-        addLog(`Motion graphics: ${svgMap.size}/${motionSegs.length} components generated`);
+        addLog(`Motion graphics: ${reactCodeMap.size}/${motionSegs.length} components generated`);
 
         return subs.map(s => {
-            if (svgMap.has(s.id) && s.overlay) {
-                s.overlay.props = { ...s.overlay.props, svgContent: svgMap.get(s.id) };
+            if (reactCodeMap.has(s.id) && s.overlay) {
+                s.overlay.props = { ...s.overlay.props, reactCode: reactCodeMap.get(s.id) };
             }
             return s;
         });
