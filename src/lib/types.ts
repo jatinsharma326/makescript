@@ -52,7 +52,7 @@ export interface SubtitleSegment {
   speedFactor?: number;          // Agentic: per-segment speed multiplier
 }
 
-export type SmartCutTier = 'free' | 'pro' | 'max';
+export type SmartCutTier = 'free' | 'creator' | 'studio';
 
 export interface SmartCutRequestSegment {
   id: string;
