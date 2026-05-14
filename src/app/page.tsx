@@ -339,13 +339,8 @@ export default function LandingPage() {
             }}
           >
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${C.purple}, ${C.cyan})` }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
-              </div>
-                            <span className="font-bold text-[15px] tracking-[-0.02em]" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>MakeScript</span>
+              <img src="/makescript-logo.jpg" alt="MakeScript" className="w-7 h-7 rounded-lg object-cover" />
+              <span className="font-bold text-[15px] tracking-[-0.02em] group-hover:opacity-80 transition-opacity" style={{ fontFamily: "'Space Grotesk', sans-serif", color: C.white }}>MakeScript</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-1" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '2px' }}>

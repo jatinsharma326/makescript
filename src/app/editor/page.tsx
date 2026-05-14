@@ -998,10 +998,7 @@ export default function EditorPage() {
                     <header className="h-11 flex items-center justify-between px-3 border-b z-20 shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(10,10,14,0.9)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' }}>
                         <div className="flex items-center gap-3">
                             <Link href="/" className="flex items-center gap-2 group">
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black shrink-0"
-                                    style={{ background: 'linear-gradient(135deg, #9d4edd, #00f5d4)', boxShadow: '0 0 12px rgba(157,78,221,0.3)' }}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
-                                </div>
+                                <img src="/makescript-logo.jpg" alt="MakeScript" className="w-7 h-7 rounded-lg object-cover shrink-0" style={{ boxShadow: '0 0 12px rgba(157,78,221,0.3)' }} />
                                 <span className="text-[13px] font-bold tracking-[-0.02em] text-white/80 group-hover:text-white transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>MakeScript</span>
                             </Link>
                             {user && (
