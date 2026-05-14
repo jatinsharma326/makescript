@@ -182,7 +182,7 @@ async function searchPixabay(query: string, type: string, limit: number): Promis
     }
 
     try {
-        const apiKey = PIXABAY_API_KEY || '43684696-08e1e4b6fa6d48d83b27a7c8c'; // Public demo key
+        const apiKey = PIXABAY_API_KEY || '';
         const typeParam = type === 'gif' ? 'animation' : type === 'video' ? 'videos' : 'photo';
         
         const allResults: MediaResult[] = [];

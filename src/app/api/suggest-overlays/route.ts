@@ -212,7 +212,7 @@ Return ONLY a JSON array of segmentIds — no markdown, no explanation:
 ["seg_0", "seg_2", "seg_5"]`;
 
     const CROF_API = 'https://crof.ai/v2/chat/completions';
-    const CROF_API_KEY = 'nahcrof_rcslczMHjGgdjeirbelH';
+    const CROF_API_KEY = process.env.CROF_API_KEY || '';
     const CROF_MODEL = 'kimi-k2.6-precision';
 
     for (let retry = 0; retry <= 2; retry++) {
