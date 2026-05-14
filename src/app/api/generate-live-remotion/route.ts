@@ -19,7 +19,7 @@ export const maxDuration = 60; // Prevent Vercel timeouts for LLM code generatio
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, mood, topic, color, label, durationInSeconds = 2, fullTranscript = "" } = (await request.json()) as MotionReactRequest;
+    const { text, mood, topic, color, label, durationInSeconds = 2, fullTranscript = "", title = "" } = (await request.json()) as MotionReactRequest;
 
     if (!text) {
       return NextResponse.json({ reactCode: '', success: false, error: 'No text provided' });
