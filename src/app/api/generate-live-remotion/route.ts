@@ -11,11 +11,14 @@ interface MotionReactRequest {
   color: string;
   label: string;
   durationInSeconds: number;
+  fullTranscript?: string;
 }
+
+export const maxDuration = 60; // Prevent Vercel timeouts for LLM code generation
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, mood, topic, color, label, durationInSeconds = 2 } = (await request.json()) as MotionReactRequest;
+    const { text, mood, topic, color, label, durationInSeconds = 2, fullTranscript = "" } = (await request.json()) as MotionReactRequest;
 
     if (!text) {
       return NextResponse.json({ reactCode: '', success: false, error: 'No text provided' });
@@ -47,7 +50,9 @@ OUTPUT RULES:
 
     const userPrompt = `Create a Remotion animation component for this video segment:
 
-SCRIPT CONTENT: "${text}"
+FULL VIDEO SCRIPT CONTEXT: "${fullTranscript.substring(0, 1500)}"
+
+THIS SPECIFIC SCENE SCRIPT: "${text}"
 
 The video MUST:
 - Match ${durationInSeconds}s duration perfectly

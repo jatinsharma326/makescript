@@ -555,6 +555,7 @@ export default function EditorPage() {
         addLog(`Generating ${motionSegs.length} motion graphic components...`);
 
         const reactCodeMap = new Map<string, string>();
+        const fullTranscript = subs.map(s => s.text).join(' ');
 
         const results = await Promise.allSettled(
             motionSegs.slice(0, 6).map(async (seg) => {
@@ -573,7 +574,8 @@ export default function EditorPage() {
                             topic,
                             color,
                             label,
-                            durationInSeconds: seg.endTime - seg.startTime
+                            durationInSeconds: seg.endTime - seg.startTime,
+                            fullTranscript
                         }),
                     });
                     
