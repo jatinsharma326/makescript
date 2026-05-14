@@ -479,6 +479,7 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                             <AiMotionGraphic
                                 key={seg.id}
                                 reactCode={seg.overlay.props.reactCode ? String(seg.overlay.props.reactCode) : undefined}
+                                svgContent={seg.overlay.props.svgContent ? String(seg.overlay.props.svgContent) : undefined}
                                 text={seg.text}
                                 imageUrl={seg.overlay.props.imageUrl ? String(seg.overlay.props.imageUrl) : undefined}
                                 label={seg.overlay.props.label ? String(seg.overlay.props.label) : undefined}

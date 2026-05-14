@@ -5,6 +5,7 @@ import { CanvasMotionGraphic } from './CanvasMotionGraphic';
 
 interface AiMotionGraphicProps {
     reactCode?: string;
+    svgContent?: string;
     text?: string;
     imageUrl?: string;
     label?: string;
@@ -34,6 +35,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallbac
 import * as Remotion from 'remotion';
 export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     reactCode,
+    svgContent,
     text,
     imageUrl,
     label,
@@ -103,7 +105,36 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
         );
     }
 
-    // PRIORITY 2: Canvas-based motion graphic (professional GPU-accelerated rendering)
+    // PRIORITY 2: AI-generated SVG content (from preGenerateMotionSVGs)
+    if (svgContent && svgContent.includes('<svg')) {
+        let cleanSvg = svgContent
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+            .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/javascript\s*:/gi, 'blocked:');
+        // Inject responsive dimensions
+        cleanSvg = cleanSvg.replace(/<svg([^>]*)>/i, (_match, p1) => {
+            let attrs = p1;
+            if (!attrs.includes('width=')) attrs += ' width="100%"';
+            if (!attrs.includes('height=')) attrs += ' height="100%"';
+            return `<svg${attrs} style="overflow:visible;">`;
+        });
+        return (
+            <AbsoluteFill style={{ opacity, pointerEvents: 'none', zIndex: 20 }}>
+                <AbsoluteFill style={{ background: `linear-gradient(135deg, ${color}22 0%, #0a0a0f 50%, ${color}11 100%)` }} />
+                <div style={{
+                    width: '100%', height: '100%',
+                    transform: `scale(${1 + enterProgress * 0.6})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    filter: `drop-shadow(0 0 60px ${color}99)`,
+                }}
+                    dangerouslySetInnerHTML={{ __html: cleanSvg }}
+                />
+            </AbsoluteFill>
+        );
+    }
+
+    // PRIORITY 3: Canvas-based motion graphic (fallback when no SVG)
     if (label || text) {
         return (
             <CanvasMotionGraphic

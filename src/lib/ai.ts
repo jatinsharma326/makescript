@@ -650,9 +650,9 @@ export async function suggestOverlaysWithAI(
             const src = data.source || tryModel;
             log(`AI responded — ${data.suggestions.length} suggestions (source: ${src})`);
 
-            // Server now returns only visual-illustration — trust it
+            // Server returns ai-motion-graphic + highlight-box
             const suggestions = data.suggestions || [];
-            const motionCount = suggestions.filter((s: { type: string }) => s.type === 'visual-illustration').length;
+            const motionCount = suggestions.filter((s: { type: string }) => s.type === 'ai-motion-graphic').length;
             const imgCount = suggestions.filter((s: { type: string }) => s.type === 'ai-generated-image').length;
             log(`Applied: ${motionCount} motion graphics, ${imgCount} AI images`);
 
