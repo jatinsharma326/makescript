@@ -130,7 +130,6 @@ export default function EditorPage() {
     } | null>(null);
     const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
     const [userTier, setUserTier] = useState<ModelTier>('free');
-    const [showModelPicker, setShowModelPicker] = useState(false);
     const [genLogs, setGenLogs] = useState<{ time: string; msg: string }[]>([]);
     const { toast } = useToast();
     const { pushSnapshot, undo, redo, pushToFuture, resetHistory } = useUndoRedo();
@@ -1050,69 +1049,32 @@ export default function EditorPage() {
                                         onClick={handleAutoSuggest} disabled={state.isGenerating}>
                                         {state.isGenerating ? <><span className="spinner w-3 h-3" /> Generating…</> : <><Sparkles className="w-3 h-3" /> AI Suggest</>}
                                     </button>
-                                    {/* Model Selector */}
+                                    {/* Model badge — click to switch between tier-available models */}
                                     <div className="relative">
                                         <button
-                                            className="h-7 px-2 rounded-md text-[10px] font-medium flex items-center gap-1 transition-all hover:bg-white/[0.04] border"
-                                            style={{ color: 'rgba(255,255,255,0.4)', borderColor: 'rgba(255,255,255,0.06)' }}
-                                            onClick={() => setShowModelPicker(!showModelPicker)}
-                                            title="Select AI model"
+                                            className="h-6 px-2 rounded text-[9px] font-mono font-semibold flex items-center gap-1 transition-all"
+                                            style={{
+                                                background: userTier === 'free' ? 'rgba(157,78,221,0.08)' : userTier === 'creator' ? 'rgba(157,78,221,0.12)' : 'rgba(0,245,212,0.08)',
+                                                color: userTier === 'studio' ? '#00f5d4' : '#9d4edd',
+                                                border: `1px solid ${userTier === 'studio' ? 'rgba(0,245,212,0.15)' : 'rgba(157,78,221,0.15)'}`,
+                                            }}
+                                            onClick={() => {
+                                                // Cycle through available models for the user's tier
+                                                const available = getModelsForTier(userTier).map(m => m.id);
+                                                if (available.length <= 1) return;
+                                                const idx = available.indexOf(selectedModel);
+                                                const next = available[(idx + 1) % available.length];
+                                                setSelectedModel(next);
+                                            }}
+                                            title={`Model: ${AI_MODELS.find(m => m.id === selectedModel)?.label || 'Kimi'}`}
                                         >
-                                            <span className="max-w-[80px] truncate">{AI_MODELS.find(m => m.id === selectedModel)?.label || 'Model'}</span>
-                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
+                                            {AI_MODELS.find(m => m.id === selectedModel)?.label || 'Kimi'}
+                                            {getModelsForTier(userTier).length > 1 && (
+                                                <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
+                                            )}
                                         </button>
-                                        {showModelPicker && (
-                                            <>
-                                                <div className="fixed inset-0 z-40" onClick={() => setShowModelPicker(false)} />
-                                                <div className="absolute top-full mt-1 right-0 z-50 w-72 rounded-lg border border-border overflow-hidden" style={{ background: 'var(--bg-card)', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
-                                                    <div className="px-3 py-2 border-b border-border">
-                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Select AI Model</p>
-                                                    </div>
-                                                    <div className="max-h-80 overflow-y-auto py-1">
-                                                        {(['free', 'creator', 'studio'] as ModelTier[]).map(tier => {
-                                                            const tierModels = AI_MODELS.filter(m => m.tier === tier);
-                                                            const tierInfo = TIERS[tier];
-                                                            return (
-                                                                <div key={tier}>
-                                                                    <div className="px-3 py-1.5 flex items-center gap-2">
-                                                                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: tierInfo.color }}>{tierInfo.name}</span>
-                                                                        {tierInfo.price > 0 && <span className="text-[9px] text-muted-foreground">${tierInfo.price}/mo</span>}
-                                                                    </div>
-                                                                    {tierModels.map(model => {
-                                                                        const accessible = isModelAccessible(model.id, userTier);
-                                                                        const isSelected = selectedModel === model.id;
-                                                                        return (
-                                                                            <button
-                                                                                key={model.id}
-                                                                                className={`w-full px-3 py-1.5 flex items-center gap-2 text-left transition-all ${accessible ? 'hover:bg-white/[0.04] cursor-pointer' : 'opacity-40 cursor-not-allowed'} ${isSelected ? 'bg-indigo-500/10' : ''}`}
-                                                                                onClick={() => {
-                                                                                    if (accessible) {
-                                                                                        setSelectedModel(model.id);
-                                                                                        setShowModelPicker(false);
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                <div className="flex-1 min-w-0">
-                                                                                    <div className="flex items-center gap-1.5">
-                                                                                        <span className={`text-[11px] font-medium ${isSelected ? 'text-indigo-400' : 'text-foreground/80'}`}>{model.label}</span>
-                                                                                        {model.badge && <span className="text-[8px] font-bold px-1 py-px rounded" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>{model.badge}</span>}
-                                                                                    </div>
-                                                                                    <span className="text-[9px] text-muted-foreground">{model.provider}</span>
-                                                                                </div>
-                                                                                {!accessible && <span className="text-[9px] text-muted-foreground">🔒</span>}
-                                                                                {isSelected && <Check className="w-3 h-3 text-indigo-400 shrink-0" />}
-                                                                            </button>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
                                     </div>
-                                </>
+                                </> 
                             )}
                         </div>
 
