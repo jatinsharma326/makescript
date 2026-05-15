@@ -11,10 +11,8 @@ const VALID_OVERLAY_TYPES = [
     'scene-transition',
     'broll-video',
     'gif-reaction',
-    'visual-illustration',
     'ai-generated-image',
     'dynamic-broll',
-    'visual-illustration',
     'ai-motion-graphic',
 ];
 
@@ -623,7 +621,7 @@ function pickBestSceneForText(text: string, lastScene?: string): { scene: string
 /**
  * Strict scene matching — only returns a scene if the text contains a strong keyword.
  * Returns null if no keyword match is found (no hash fallback).
- * Used to decide: visual-illustration (matched) vs ai-generated-image (not matched).
+ * Used to decide whether a segment deserves an AI motion graphic.
  * NOW uses scoring for better accuracy.
  */
 function matchSceneToTextStrict(text: string): string | null {
@@ -639,7 +637,7 @@ function matchSceneToText(text: string): string {
 }
 
 /**
- * Post-process AI suggestions: keep ONLY keyword-matched visual-illustration overlays.
+ * Post-process AI suggestions: keep ONLY keyword-matched AI motion graphics.
  * Drop everything else — NO generic ai-generated-image fallbacks allowed.
  */
 function enforceContentMatchedOverlays(
@@ -667,12 +665,12 @@ function enforceContentMatchedOverlays(
             motionCount++;
             result.push({
                 segmentId: s.segmentId,
-                type: 'visual-illustration',
+                type: 'ai-motion-graphic',
                 props: {
-                    scene: best.scene,
                     label: s.props.caption || extractLabelFromText(seg.text) || seg.text.substring(0, 40),
                     color: s.props.color || getProColor(hashString(s.segmentId)),
-                    transition: 'fade-in',
+                    topic: best.scene,
+                    mood: 'energetic',
                 },
             });
         } else {
@@ -682,11 +680,11 @@ function enforceContentMatchedOverlays(
     }
 
     console.log(`[Enforce] RESULT: kept ${motionCount} motion graphics, dropped ${droppedCount}`);
-    // Sanity check: ensure we never return ai-generated-image
+    // Sanity check: ensure we never return ai-generated-image or old illustration overlays
     for (const r of result) {
-        if (r.type === 'ai-generated-image') {
-            console.error(`[Enforce] BUG: returned ai-generated-image for ${r.segmentId}`);
-            r.type = 'visual-illustration';
+        if (r.type === 'ai-generated-image' || r.type === 'visual-illustration') {
+            console.error(`[Enforce] BUG: returned ${r.type} for ${r.segmentId}`);
+            r.type = 'ai-motion-graphic';
         }
     }
     return result;

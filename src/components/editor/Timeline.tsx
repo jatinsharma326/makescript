@@ -34,7 +34,7 @@ const OVERLAY_COLORS: Record<string, string> = {
 };
 
 const OVERLAY_LABELS: Record<string, string> = {
-    'visual-illustration': 'Illustration',
+    'visual-illustration': 'Old Graphic',
     'emoji-reaction': 'Emoji',
     'lower-third': 'Lower Third',
     'highlight-box': 'Highlight',

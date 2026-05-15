@@ -448,14 +448,12 @@ export default function EditorPage() {
         const images = subtitles.filter(s => s.overlay?.type === 'ai-generated-image');
         const kinetic = subtitles.filter(s => s.overlay?.type === 'kinetic-text');
         const gifs = subtitles.filter(s => s.overlay?.type === 'gif-reaction');
-        const illustrations = subtitles.filter(s => s.overlay?.type === 'visual-illustration');
         const emojis = subtitles.filter(s => s.overlay?.type === 'emoji-reaction');
         const effects = subtitles.filter(s => s.effect);
         const transitions = subtitles.filter(s => s.transition);
 
         if (images.length > 0) addLog(`${images.length} AI images (load when video plays)`);
         if (kinetic.length > 0) addLog(`${kinetic.length} kinetic text overlays`);
-        if (illustrations.length > 0) addLog(`${illustrations.length} animated illustrations`);
         if (gifs.length > 0) addLog(`${gifs.length} GIF reactions`);
         if (emojis.length > 0) addLog(`${emojis.length} emoji reactions`);
         if (effects.length > 0) addLog(`${effects.length} video effects`);
@@ -774,8 +772,7 @@ export default function EditorPage() {
             if (overlaysCount > 0) {
                 const imageCount = newSubtitles.filter(s => s.overlay?.type === 'ai-generated-image').length;
                 const motionCount = newSubtitles.filter(s => s.overlay?.type === 'ai-motion-graphic').length;
-                const sceneCount = newSubtitles.filter(s => s.overlay?.type === 'visual-illustration').length;
-                addLog(`Step 2 done: ${overlaysCount} overlays (${sceneCount} visual, ${motionCount} motion graphic, ${imageCount} AI images)`);
+                addLog(`Step 2 done: ${overlaysCount} overlays (${motionCount} AI motion graphics, ${imageCount} AI images)`);
                 let finalSubs = newSubtitles;
                 if (imageCount > 0) {
                     finalSubs = await preGenerateAIImages(finalSubs);
@@ -784,7 +781,7 @@ export default function EditorPage() {
                     finalSubs = await preGenerateMotionSVGs(finalSubs);
                 }
                 updateState({ subtitles: finalSubs, isGenerating: false });
-                toast(`AI overlays applied — ${sceneCount} motion graphics, ${imageCount} AI images!`, 'success');
+                toast(`AI overlays applied — ${motionCount} AI motion graphics, ${imageCount} AI images!`, 'success');
                 setProcessingStep('done');
                 setTimeout(() => setProcessingStep('idle'), 2000);
                 logOverlaySummary(finalSubs);

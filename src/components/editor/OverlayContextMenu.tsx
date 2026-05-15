@@ -124,8 +124,7 @@ export const OverlayContextMenu: React.FC<OverlayContextMenuProps> = ({
         { type: 'scene-transition', label: 'Cinematic Cut', color: 'text-purple-500', description: 'Smooth scene transitions' },
         { type: 'glowing-particles', label: 'Particle FX', color: 'text-cyan-500', description: 'Professional particle effects' },
         { type: 'zoom-effect', label: 'Camera Zoom', color: 'text-blue-500', description: 'Cinematic zoom effect' },
-        { type: 'visual-illustration', label: 'Illustration', color: 'text-pink-500', description: 'Animated vector scenes' },
-        { type: 'ai-motion-graphic', label: 'Generative SVG', color: 'text-pink-500', description: 'Auto-generated raw SVG graphic' },
+        { type: 'ai-motion-graphic', label: 'AI Graphic', color: 'text-pink-500', description: 'Generated motion graphic' },
         { type: 'gif-reaction', label: 'GIF Reaction', color: 'text-orange-500', description: 'Animated GIF matched to content' },
     ];
 
@@ -175,11 +174,12 @@ export const OverlayContextMenu: React.FC<OverlayContextMenuProps> = ({
 
             if (config) {
                 if (config.type === 'visual-illustration') {
+                    config.type = 'ai-motion-graphic';
                     config.props = {
-                        ...config.props,
-                        displayMode: config.props.displayMode || 'full',
-                        transition: config.props.transition || 'fade-in',
-                        soundEffect: config.props.soundEffect || 'none',
+                        label: String(config.props.label || segmentText.substring(0, 40)),
+                        color: String(config.props.color || '#ec4899'),
+                        topic: String(config.props.scene || config.props.topic || 'general'),
+                        mood: String(config.props.mood || 'energetic'),
                     };
                 }
                 if (onApplyConfig) {
@@ -409,7 +409,7 @@ export const OverlayContextMenu: React.FC<OverlayContextMenuProps> = ({
                         className="btn-primary mt-2 w-full py-2.5 text-sm rounded-lg gap-2"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
-                        Apply Illustration
+                        Apply Graphic
                     </button>
                 </div>
             )}

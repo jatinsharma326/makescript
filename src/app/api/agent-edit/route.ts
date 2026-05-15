@@ -71,12 +71,10 @@ OVERLAY TYPES (choose the best type for each segment):
 3. "ai-generated-image" u2014 AI-GENERATED CINEMATIC IMAGE. Use for background scenery.
    Props: { "imagePrompt": "detailed cinematic image description, 50-100 words", "caption": "2-4 word label", "color": "<hex>" }
 
-4. "visual-illustration" u2014 PREMIUM PRE-BUILT ANIMATED SVG SCENES.
-   Props: { "scene": "globe|rocket-launch|money-flow|explosion-burst|brain-idea|connections|solar-system", "color": "<hex>", "label": "LABEL" }
-
 OVERLAY STRATEGY:
 - Overlay 50-70% of segments. Skip filler.
-- Use a MIX of types: 40% ai-motion-graphic, 20% kinetic-text, 20% ai-generated-image, 20% visual-illustration.
+- Use a MIX of types: 55% ai-motion-graphic, 25% kinetic-text, 20% ai-generated-image.
+- Do NOT use visual-illustration. It is deprecated.
 - NEVER overlay consecutive segments u2014 minimum 1 segment gap.
 - Every overlay MUST have a unique label/caption specific to the segment content.
 AVAILABLE EFFECTS (applied to the base video layer):
@@ -300,11 +298,12 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
             color: seg.overlay.props?.color || '#6366f1',
           };
         } else if (seg.overlay.type === 'visual-illustration') {
+          seg.overlay.type = 'ai-motion-graphic';
           seg.overlay.props = {
-            ...seg.overlay.props,
-            scene: seg.overlay.props?.scene || 'connections',
             label: seg.overlay.props?.label || extractKeyPhrase(text),
             color: seg.overlay.props?.color || '#6366f1',
+            topic: seg.overlay.props?.scene || seg.overlay.props?.topic || 'general',
+            mood: seg.overlay.props?.mood || 'energetic',
           };
         } else if (seg.overlay.type === 'ai-motion-graphic') {
           // Keep ai-motion-graphic with proper props
@@ -697,12 +696,12 @@ function generateLocalEditingPlan(
           const color = OVERLAY_COLORS[contentHash % OVERLAY_COLORS.length];
           lastUsedScene = bestScene.scene;
           segment.overlay = {
-              type: 'visual-illustration',
+              type: 'ai-motion-graphic',
               props: {
-                  scene: bestScene.scene,
                   label: extractKeyPhrase(seg.text),
                   color,
-                  transition: 'fade-in',
+                  topic: bestScene.scene,
+                  mood: 'energetic',
               },
           };
 

@@ -14,10 +14,8 @@ const VALID_OVERLAY_TYPES = [
     'scene-transition',
     'broll-video',
     'gif-reaction',
-    'visual-illustration',
     'ai-generated-image',
     'dynamic-broll',
-    'visual-illustration',
     'ai-motion-graphic',
 ];
 

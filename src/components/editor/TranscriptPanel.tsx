@@ -24,7 +24,8 @@ const PROMPT_OVERLAY_TYPES = ['ai-generated-image'];
 // Consolidated overlay templates - filter out redundant/duplicate types
 // We keep only one AI image generation option instead of multiple similar ones
 const CONSOLIDATED_OVERLAY_TYPES = [
-    'ai-generated-image',    // AI-generated image with custom prompt (covers visual-illustration, ai-motion-graphic, dynamic-broll)
+    'ai-motion-graphic',     // AI-generated animated motion graphic
+    'ai-generated-image',    // AI-generated image with custom prompt
     'kinetic-text',          // Animated text pop-in
     'transcript-motion',     // Word-by-word animated text
     'emoji-reaction',        // Pop-up emoji
@@ -63,7 +64,8 @@ const STOCK_OVERLAY_TYPES = [
     'gif-reaction',        // Stock GIF from Giphy/Pexels/Pixabay
     'image-card',          // Stock image as B-roll
     'broll-video',         // Stock video B-roll
-    'ai-generated-image',  // AI-generated image with custom prompt (covers visual-illustration, ai-motion-graphic, dynamic-broll)
+    'ai-motion-graphic',   // AI-generated animated motion graphic
+    'ai-generated-image',  // AI-generated image with custom prompt
     'kinetic-text',        // Animated text pop-in
     'transcript-motion',   // Word-by-word animated text
     'emoji-reaction',      // Pop-up emoji

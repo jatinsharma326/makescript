@@ -559,12 +559,12 @@ function enforceVisualIllustrationsClient(
             lastScene = best.scene;
             result.push({
                 segmentId: s.segmentId,
-                type: 'visual-illustration',
+                type: 'ai-motion-graphic',
                 props: {
-                    scene: best.scene,
                     label: s.props.caption || extractLabelFromText(seg.text) || seg.text.substring(0, 40),
                     color: s.props.color || getProColor(hashString(seg.text)),
-                    transition: 'fade-in',
+                    topic: best.scene,
+                    mood: 'energetic',
                 },
             });
         }
@@ -842,12 +842,12 @@ async function selectProOverlayWithErnieImage(text: string, count: number, uniqu
     lastUsedScene = finalScene;
     const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
     return {
-        type: 'visual-illustration',
+        type: 'ai-motion-graphic',
         props: {
-            scene: finalScene,
             label: label || text.substring(0, 30),
             color,
-            transition: transitions[contentHash % transitions.length],
+            topic: finalScene,
+            mood: transitions[contentHash % transitions.length] === 'zoom-in' ? 'energetic' : 'dramatic',
         },
     };
 }
@@ -900,12 +900,12 @@ function selectProOverlayWithUniqueSeed(text: string, count: number, uniqueSeed:
     lastUsedScene = finalScene;
     const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
     return {
-        type: 'visual-illustration',
+        type: 'ai-motion-graphic',
         props: {
-            scene: finalScene,
             label: label || text.substring(0, 30),
             color,
-            transition: transitions[contentHash % transitions.length],
+            topic: finalScene,
+            mood: transitions[contentHash % transitions.length] === 'zoom-in' ? 'energetic' : 'dramatic',
         },
     };
 }
@@ -1122,12 +1122,12 @@ function selectProOverlay(text: string, count: number): OverlayConfig {
 
             const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
             return {
-                type: 'visual-illustration',
+                type: 'ai-motion-graphic',
                 props: {
-                    scene: finalScene,
                     label: label || '',
                     color,
-                    transition: transitions[count % transitions.length],
+                    topic: finalScene,
+                    mood: transitions[count % transitions.length] === 'zoom-in' ? 'energetic' : 'dramatic',
                 },
             };
         }
@@ -1143,12 +1143,12 @@ function selectProOverlay(text: string, count: number): OverlayConfig {
             lastUsedScene = finalScene;
             const transitions = ['fade-in', 'slide-in', 'zoom-in'] as const;
             return {
-                type: 'visual-illustration',
+                type: 'ai-motion-graphic',
                 props: {
-                    scene: finalScene,
                     label: label || text.substring(0, 30),
                     color,
-                    transition: transitions[count % transitions.length],
+                    topic: finalScene,
+                    mood: transitions[count % transitions.length] === 'zoom-in' ? 'energetic' : 'dramatic',
                 },
             };
         }

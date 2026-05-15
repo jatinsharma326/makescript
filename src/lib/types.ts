@@ -193,8 +193,8 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
   },
   {
     type: 'visual-illustration',
-    name: 'Visual Illustration',
-    description: 'Animated SVG scene matching content',
+    name: 'Legacy Graphic',
+    description: 'Legacy animated scene for old projects',
     icon: '🎨',
     defaultProps: { scene: 'solar-system', label: '', color: '#6366f1', displayMode: 'overlay', transition: 'fade-in', soundEffect: 'none' },
   },
