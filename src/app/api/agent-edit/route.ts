@@ -296,12 +296,14 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
             mood: seg.overlay.props?.mood || 'energetic',
           };
         } else {
-          // Keep whatever overlay type the AI chose (visual-illustration, kinetic-text, etc.)
-          // Just ensure it has basic props
+          // AI returned an unknown overlay type - convert to ai-motion-graphic
+          seg.overlay.type = 'ai-motion-graphic';
           seg.overlay.props = {
             ...seg.overlay.props,
             label: seg.overlay.props?.label || extractKeyPhrase(text),
             color: seg.overlay.props?.color || '#6366f1',
+            topic: seg.overlay.props?.topic || 'general',
+            mood: seg.overlay.props?.mood || 'energetic',
           };
         }
       }

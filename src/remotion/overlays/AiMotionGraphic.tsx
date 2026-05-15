@@ -143,18 +143,12 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
         );
     }
 
-    // PRIORITY 3: Canvas-based motion graphic (fallback when no SVG)
-    if (label || text) {
-        return (
-            <CanvasMotionGraphic
-                text={text || ''}
-                label={label}
-                color={color}
-                mood="energetic"
-                startFrame={startFrame}
-                endFrame={endFrame}
-            />
-        );
+    // PRIORITY 3: If no AI-generated React code or SVG, don't show a fallback.
+    // Let the video play through without an ugly text overlay.
+    // The CanvasMotionGraphic was previously used here but it just showed
+    // simple text with colors which looked unprofessional.
+    if (!reactCode && !svgContent) {
+        return null;
     }
 
     // FALLBACK: Image-based motion graphic
