@@ -752,7 +752,7 @@ async function generateLocalMotionGraphics(subtitles: SubtitleInput[]): Promise<
                 props: {
                     label: label || seg.text.substring(0, 40),
                     color,
-                    topic: topicInfo.primaryTopic || 'general',
+                    topic: 'general',
                     mood: 'energetic',
                 },
             };
