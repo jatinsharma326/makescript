@@ -286,15 +286,22 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
             seed,
             imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt.substring(0, 120)}, cinematic`)}?width=768&height=512&nologo=true&seed=${seed}`,
           };
-        } else {
-          // Force ai-motion-graphic
-          seg.overlay.type = 'ai-motion-graphic';
+        } else if (seg.overlay.type === 'ai-motion-graphic') {
+          // Keep ai-motion-graphic with proper props
           seg.overlay.props = {
             ...seg.overlay.props,
             label: seg.overlay.props?.label || extractKeyPhrase(text),
             color: seg.overlay.props?.color || '#6366f1',
             topic: seg.overlay.props?.topic || 'general',
             mood: seg.overlay.props?.mood || 'energetic',
+          };
+        } else {
+          // Keep whatever overlay type the AI chose (visual-illustration, kinetic-text, etc.)
+          // Just ensure it has basic props
+          seg.overlay.props = {
+            ...seg.overlay.props,
+            label: seg.overlay.props?.label || extractKeyPhrase(text),
+            color: seg.overlay.props?.color || '#6366f1',
           };
         }
       }

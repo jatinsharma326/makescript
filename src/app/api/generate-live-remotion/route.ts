@@ -190,7 +190,14 @@ Add 100-200 background particles (small circles) that match the scene mood.
 - Do NOT import React separately
 - Export: export const FocusMode = () => { ... }; export default FocusMode;
 - Return ONLY raw JavaScript code, no markdown, no explanations
-- Code must start with: import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";`;
+- Code must start with: import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+
+CRITICAL - TRANSPARENT BACKGROUND:
+- This component is rendered AS AN OVERLAY on top of a video. The user's video MUST remain visible.
+- The AbsoluteFill background MUST be transparent or semi-transparent. Use backgroundColor: "transparent" or "rgba(0,0,0,0.3)" at most.
+- NEVER use opaque backgroundColor like "#0b0d1a", "#000000", "#111", "black", etc.
+- SVG elements should be the visual content, the background is the user's video.
+- Think of it like a HUD/overlay on top of video, NOT a replacement for video.`;
 
     const userPrompt = `Create the Remotion component now. Each of the 6 scenes MUST have SVG shapes that visually illustrate the transcript content (not just text).
 

@@ -63,7 +63,6 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
             const endFrame = Math.round(seg.endTime * fps);
             if (frame >= startFrame && frame <= endFrame) {
                 const isFullScreenGraphic =
-                    seg.overlay.type === 'ai-motion-graphic' ||
                     seg.overlay.type === 'visual-illustration' ||
                     seg.overlay.type === 'dynamic-broll' ||
                     (seg.overlay.type === 'ai-generated-image' && seg.overlay.props.displayMode === 'fullscreen');
@@ -475,10 +474,6 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                         );
                     }
                     case 'ai-motion-graphic': {
-                        const isGlobal = !!seg.overlay.props.global;
-                        const actualStartFrame = isGlobal ? 0 : startFrame;
-                        const actualEndFrame = isGlobal ? Math.round(subtitles[subtitles.length - 1].endTime * fps) : endFrame;
-                        
                         return (
                             <AiMotionGraphic
                                 key={seg.id}
@@ -488,8 +483,8 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 imageUrl={seg.overlay.props.imageUrl ? String(seg.overlay.props.imageUrl) : undefined}
                                 label={seg.overlay.props.label ? String(seg.overlay.props.label) : undefined}
                                 color={seg.overlay.props.color ? String(seg.overlay.props.color) : undefined}
-                                startFrame={actualStartFrame}
-                                endFrame={actualEndFrame}
+                                startFrame={startFrame}
+                                endFrame={endFrame}
                             />
                         );
                     }
