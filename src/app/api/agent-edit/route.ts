@@ -59,16 +59,9 @@ THINK LIKE A PROFESSIONAL EDITOR:
 
 OVERLAY TYPES (choose the best type for each segment):
 
-1. "visual-illustration" u2014 PREMIUM PRE-BUILT ANIMATED SVG SCENES. Use this for ANY segment that deserves a visual overlay.
-   Props: { "scene": "<scene-id>", "color": "<hex>", "label": "2-4 word CAPITALIZED label" }
-   This displays a gorgeous, 60fps animated vector scene on top of the video. USE THIS AS YOUR PRIMARY OVERLAY TYPE.
-   AVAILABLE SCENES (Choose the most relevant one for the topic):
-   - Science/Tech: 'solar-system', 'rocket-launch', 'brain-idea', 'connections', 'code-terminal', 'atom-science', 'gear-system', 'magnet-attract'
-   - Business/Growth: 'growth-chart', 'money-flow', 'arrow-growth', 'target-bullseye', 'checkmark-success', 'diamond-gem'
-   - Nature/World: 'globe', 'nature-tree', 'mountain-peak', 'water-wave', 'fire-blaze', 'lightning'
-   - Concepts/Life: 'clock-time', 'heartbeat', 'energy-pulse', 'eye-vision', 'shield-protect', 'crown-royal'
-   - Action/Events: 'explosion-burst', 'celebration', 'city-skyline'
-   - Everyday: 'shopping-cart', 'cooking', 'person-walking', 'music-notes', 'book-reading', 'camera'
+1. "ai-motion-graphic" u2014 LIVE AI-GENERATED REMOTION REACT CODE. Use this for ANY segment that deserves a visual overlay.
+   Props: { "label": "2-4 word CAPITALIZED label", "color": "<hex>", "topic": "<topic-keyword>", "mood": "energetic|calm|dramatic|warm" }
+   This generates a UNIQUE animated React component for each segment. USE THIS AS YOUR PRIMARY OVERLAY TYPE.
 
 2. "ai-generated-image" u2014 AI-GENERATED CINEMATIC IMAGE. Use for segments that would benefit from a photo-realistic background.
    Props: { "imagePrompt": "detailed cinematic image description, 50-100 words", "caption": "2-4 word label", "color": "<hex>" }
@@ -76,7 +69,7 @@ OVERLAY TYPES (choose the best type for each segment):
 
 OVERLAY STRATEGY:
 - Overlay 40-60% of segments. Skip filler.
-- Use "visual-illustration" for most overlays u2014 it creates clean, professional animated graphics instantly.
+- Use "ai-motion-graphic" for most overlays u2014 it creates unique animated graphics.
 - Use "ai-generated-image" for 2-4 segments that would look best with a cinematic photo background.
 - NEVER overlay consecutive segments u2014 minimum 1 segment gap.
 - Every overlay MUST have a unique label/caption specific to the segment content.
@@ -120,7 +113,7 @@ Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
       {
         "segmentId": "seg_0",
         "action": "keep",
-        "overlay": { "type": "visual-illustration", "props": { "scene": "rocket-launch", "color": "#ef4444", "label": "GETTING STARTED" } },
+        "overlay": { "type": "ai-motion-graphic", "props": { "label": "GETTING STARTED", "color": "#ef4444", "topic": "launch", "mood": "energetic" } },
         "effect": { "type": "zoom-in", "intensity": 1.2 },
         "transition": null
       },
@@ -302,24 +295,15 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
             topic: seg.overlay.props?.topic || 'general',
             mood: seg.overlay.props?.mood || 'energetic',
           };
-        } else if (seg.overlay.type === 'visual-illustration') {
-          // Keep visual-illustration with proper props
-          seg.overlay.props = {
-            ...seg.overlay.props,
-            label: seg.overlay.props?.label || extractKeyPhrase(text),
-            color: seg.overlay.props?.color || '#6366f1',
-            scene: seg.overlay.props?.scene || 'connections',
-          };
         } else {
-          // AI returned an unknown overlay type - convert to visual-illustration
-          const scenes = ['solar-system', 'growth-chart', 'globe', 'rocket-launch', 'brain-idea', 'connections', 'clock-time', 'heartbeat', 'money-flow', 'lightning', 'city-skyline'];
-          const randomScene = scenes[Math.floor(Math.random() * scenes.length)];
-          seg.overlay.type = 'visual-illustration';
+          // AI returned an unknown overlay type - convert to ai-motion-graphic
+          seg.overlay.type = 'ai-motion-graphic';
           seg.overlay.props = {
             ...seg.overlay.props,
             label: seg.overlay.props?.label || extractKeyPhrase(text),
             color: seg.overlay.props?.color || '#6366f1',
-            scene: seg.overlay.props?.scene || randomScene,
+            topic: seg.overlay.props?.topic || 'general',
+            mood: seg.overlay.props?.mood || 'energetic',
           };
         }
       }
