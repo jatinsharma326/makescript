@@ -547,66 +547,82 @@ export default function EditorPage() {
     };
 
     const preGenerateMotionSVGs = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
-        // Find segments that request motion graphics but haven't been upgraded to the global version yet
+        // Find segments that request motion graphics but haven't been generated yet
         const motionSegs = subs.filter(
-            s => s.overlay?.type === 'ai-motion-graphic' && (!s.overlay?.props?.reactCode || !s.overlay?.props?.global)
+            s => s.overlay?.type === 'ai-motion-graphic' && !s.overlay?.props?.reactCode
         );
         if (motionSegs.length === 0) return subs;
 
-        addLog(`Generating ${motionSegs.length} motion graphic components...`);
+        addLog(`Generating ${motionSegs.length} unique motion graphic components concurrently...`);
 
         const reactCodeMap = new Map<string, string>();
         const fullTranscript = subs.map(s => s.text).join(' ');
-        const totalDuration = subs[subs.length - 1].endTime;
 
-        try {
-            const firstSeg = motionSegs[0];
-            const label = String(firstSeg.overlay!.props.label || 'Video');
-            const topic = String(firstSeg.overlay!.props.topic || 'general');
-            const color = String(firstSeg.overlay!.props.color || '#6366f1');
-            const mood = String(firstSeg.overlay!.props.mood || 'energetic');
-            
-            addLog(`Calling Kimi AI for ${Math.round(totalDuration)}s video (${fullTranscript.length} chars transcript)...`);
-            
-            const res = await fetch('/api/generate-live-remotion', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: firstSeg.text,
-                    mood,
-                    topic,
-                    color,
-                    label,
-                    durationInSeconds: Math.round(totalDuration),
-                    fullTranscript,
-                    title: label
-                }),
-            });
-            
-            const data = await res.json();
-            
-            if (data.success && data.reactCode) {
-                addLog(`Global Motion Graphic ready! (${data.codeLength || data.reactCode.length} chars of React code)`);
-                return subs.map(s => {
-                    if (s.id === firstSeg.id && s.overlay) {
-                        s.overlay.props = { ...s.overlay.props, reactCode: data.reactCode, global: true };
-                        return s;
-                    }
-                    // Remove ai-motion-graphic from other segments to avoid duplicates
-                    if (s.overlay?.type === 'ai-motion-graphic') {
-                        s.overlay = undefined;
-                    }
-                    return s;
+        const generateOneMotion = async (seg: any, idx: number) => {
+            const label = String(seg.overlay!.props.label || 'Visual');
+            const topic = String(seg.overlay!.props.topic || 'general');
+            const color = String(seg.overlay!.props.color || '#6366f1');
+            const mood = String(seg.overlay!.props.mood || 'energetic');
+            const durationInSeconds = seg.endTime - seg.startTime;
+
+            try {
+                addLog(`[Kimi] Starting generation for segment ${idx + 1}/${motionSegs.length}: "${label}"...`);
+                
+                const res = await fetch('/api/generate-live-remotion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: seg.text,
+                        mood,
+                        topic,
+                        color,
+                        label,
+                        durationInSeconds,
+                        fullTranscript,
+                        title: label
+                    }),
                 });
+                
+                const data = await res.json();
+                
+                if (data.success && data.reactCode) {
+                    addLog(`[Kimi] Success for segment ${idx + 1}! (${data.codeLength || data.reactCode.length} chars)`);
+                    return { id: seg.id, reactCode: data.reactCode };
+                } else {
+                    addLog(`[Kimi] Failed for segment ${idx + 1}: ${data.error || 'Unknown error'}`);
+                    return null;
+                }
+            } catch (err: any) {
+                addLog(`[Kimi] Error for segment ${idx + 1}: ${err.message || String(err)}`);
+                return null;
             }
-            
-            addLog(`Global Motion Graphic API failed: ${data.error || 'Unknown error'} (status: ${res.status})`);
-        } catch (err: any) {
-            addLog(`Motion Graphics generation error: ${err.message || String(err)}`);
-            console.error('[preGenerateMotionGraphics] Error:', err);
+        };
+
+        // Run all Kimi generations concurrently to avoid Vercel timeouts
+        const results = await Promise.allSettled(
+            motionSegs.map((seg, i) => generateOneMotion(seg, i))
+        );
+
+        let successCount = 0;
+        for (const r of results) {
+            if (r.status === 'fulfilled' && r.value) {
+                reactCodeMap.set(r.value.id, r.value.reactCode);
+                successCount++;
+            }
         }
 
-        return subs;
+        addLog(`Successfully generated ${successCount}/${motionSegs.length} motion graphics.`);
+
+        // Map the generated code back to the segments
+        return subs.map(s => {
+            if (s.overlay?.type === 'ai-motion-graphic') {
+                const code = reactCodeMap.get(s.id);
+                if (code) {
+                    s.overlay.props = { ...s.overlay.props, reactCode: code, global: false };
+                }
+            }
+            return s;
+        });
     };
 
     const handleGenerateOverlays = async (currentSubtitles = state.subtitles) => {
