@@ -25,195 +25,185 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
 export const FocusMode = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const localFrame = frame % durationInFrames;
+  const localFrame = frame;
+  const totalFrames = 18 * 30; // 540
 
-  // Central coordinates for explosion
-  const cx = 540;
-  const cy = 960;
-
-  // Mushroom cloud parameters
-  const cloudGrowth = spring({
-    frame: localFrame,
-    fps,
-    config: { mass: 1.2, stiffness: 80, damping: 25 },
-    durationInFrames: 100,
-  });
-  const stemHeight = safeInterpolate(localFrame, [0, 60, 120], [0, 300, 600], {
+  // Flash size – fades out
+  const flashRadius = safeInterpolate(localFrame, [0, 10, 30], [80, 120, 0], {
     extrapolateRight: "clamp",
   });
-  const capRadius = cloudGrowth * 180;
-  const stemWidth = 60;
-
-  // Flash parameters
-  const flashOpacity = safeInterpolate(localFrame, [0, 10, 30], [1, 0.8, 0], {
-    extrapolateRight: "clamp",
-  });
-  const flashRadius = safeInterpolate(localFrame, [0, 30], [80, 200], {
+  const flashOpacity = safeInterpolate(localFrame, [0, 10, 30], [0.9, 0.6, 0], {
     extrapolateRight: "clamp",
   });
 
-  // Shockwave rings
-  const rings = [
-    { delay: 0, maxR: 600, color: "#ff6600", strokeW: 4 },
-    { delay: 8, maxR: 500, color: "#ff4400", strokeW: 3 },
-    { delay: 16, maxR: 400, color: "#ff2200", strokeW: 2 },
-  ];
+  // Shockwave ring sizes and opacity
+  const ring1R = safeInterpolate(localFrame, [0, 40], [40, 400], { extrapolateRight: "clamp" });
+  const ring1Opacity = safeInterpolate(localFrame, [0, 30, 40], [0.8, 0.4, 0], { extrapolateRight: "clamp" });
+  const ring2R = safeInterpolate(localFrame, [5, 45], [30, 500], { extrapolateRight: "clamp" });
+  const ring2Opacity = safeInterpolate(localFrame, [5, 35, 45], [0.7, 0.3, 0], { extrapolateRight: "clamp" });
+  const ring3R = safeInterpolate(localFrame, [10, 50], [20, 600], { extrapolateRight: "clamp" });
+  const ring3Opacity = safeInterpolate(localFrame, [10, 40, 50], [0.6, 0.2, 0], { extrapolateRight: "clamp" });
 
-  // Debris particles: 50 small circles flying outward
-  const particleCount = 50;
-  const debris = [];
-  for (let i = 0; i < particleCount; i++) {
-    const angle = (i / particleCount) * Math.PI * 2 + localFrame * 0.02;
-    const speed = 2 + (i % 5) * 0.5;
-    const dist = localFrame * speed * 1.2;
-    const size = 2 + (i % 3);
-    const color = i % 2 === 0 ? "#ff6600" : "#ffaa00";
-    debris.push({ angle, speed, dist, size, color });
-  }
+  // Mushroom cloud growth
+  const stemHeight = safeInterpolate(localFrame, [5, 40], [0, 250], { extrapolateRight: "clamp" });
+  const cloudRadius = safeInterpolate(localFrame, [10, 50], [0, 140], { extrapolateRight: "clamp" });
 
-  // Background particles (ash, dust)
-  const bgParticles = 80;
-  const bgPart = [];
-  for (let i = 0; i < bgParticles; i++) {
-    const x = (i * 137 + 50) % 1080;
-    const y = (i * 97 + 30) % 1920;
-    const driftX = Math.sin(i * 1.3 + localFrame * 0.02) * 30;
-    const driftY = Math.sin(i * 2.1 + localFrame * 0.015) * 40;
-    bgPart.push({ x, y, driftX, driftY, r: 1 + (i % 3), opacity: 0.2 + Math.sin(i + localFrame * 0.03) * 0.15 });
-  }
+  // Dust particles – simple circles floating outward & up
+  const dustCount = 80;
+  const dust = Array.from({ length: dustCount }).map((_, i) => {
+    const seed = i * 137.508; // golden angle
+    const angle = (seed % 360) * (Math.PI / 180);
+    const speed = 1.5 + (i % 5) * 0.8;
+    const dist = localFrame * speed * 0.4 + (i % 20) * 3;
+    const x = 540 + Math.cos(angle) * dist;
+    const y = 960 - localFrame * 0.6 * (1 + (i % 3) * 0.2) - Math.sin(angle) * dist * 0.1;
+    const size = 1 + (i % 5) * 1.5;
+    const opacity = Math.max(0, 1 - dist / 600 - localFrame / 200);
+    const color = `hsl(30, 80%, ${50 + (i % 30)}%)`;
+    return { x, y, size, opacity, color };
+  });
 
   return (
     <AbsoluteFill
       style={{
         backgroundColor: "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
       <svg
         viewBox="0 0 1080 1920"
         style={{ width: "100%", height: "100%", position: "absolute" }}
       >
-        {/* Background floating ash particles */}
-        {bgPart.map((p, idx) => (
+        {/* Desert ground line */}
+        <rect
+          x={0}
+          y={1100}
+          width={1080}
+          height={820}
+          fill="rgba(160, 120, 60, 0.15)"
+        />
+        <line
+          x1={0}
+          y1={1100}
+          x2={1080}
+          y2={1100}
+          stroke="rgba(200, 160, 60, 0.3)"
+          strokeWidth={2}
+        />
+
+        {/* Background dust */}
+        {dust.map((d, i) => (
           <circle
-            key={`bg-${idx}`}
-            cx={p.x + p.driftX}
-            cy={p.y + p.driftY}
-            r={p.r}
-            fill="#aaaaaa"
-            opacity={p.opacity}
+            key={i}
+            cx={d.x}
+            cy={d.y}
+            r={d.size}
+            fill={d.color}
+            opacity={d.opacity * 0.5}
           />
         ))}
 
-        {/* Mushroom cloud – stem */}
-        <rect
-          x={cx - stemWidth / 2}
-          y={cy - stemHeight}
-          width={stemWidth}
-          height={stemHeight}
-          rx={20}
-          fill="#8b4513"
-          opacity={0.8 + 0.2 * Math.sin(localFrame * 0.1)}
+        {/* Shockwave rings */}
+        <circle
+          cx={540}
+          cy={960}
+          r={ring1R}
+          fill="none"
+          stroke="#ff6600"
+          strokeWidth={4}
+          opacity={ring1Opacity}
         />
-
-        {/* Mushroom cloud – cap (drawn as multiple overlapping ellipses for a puffy look) */}
-        <ellipse
-          cx={cx}
-          cy={cy - stemHeight - capRadius * 0.4}
-          rx={capRadius}
-          ry={capRadius * 0.6}
-          fill="#ff4500"
-          opacity={0.7}
+        <circle
+          cx={540}
+          cy={960}
+          r={ring2R}
+          fill="none"
+          stroke="#ff4400"
+          strokeWidth={3}
+          opacity={ring2Opacity}
         />
-        <ellipse
-          cx={cx - capRadius * 0.25}
-          cy={cy - stemHeight - capRadius * 0.5}
-          rx={capRadius * 0.5}
-          ry={capRadius * 0.45}
-          fill="#ff6600"
-          opacity={0.6}
-        />
-        <ellipse
-          cx={cx + capRadius * 0.2}
-          cy={cy - stemHeight - capRadius * 0.55}
-          rx={capRadius * 0.5}
-          ry={capRadius * 0.5}
-          fill="#ffaa00"
-          opacity={0.5}
+        <circle
+          cx={540}
+          cy={960}
+          r={ring3R}
+          fill="none"
+          stroke="#ff2200"
+          strokeWidth={2}
+          opacity={ring3Opacity}
         />
 
         {/* Central flash */}
         <circle
-          cx={cx}
-          cy={cy}
+          cx={540}
+          cy={960}
           r={flashRadius}
           fill="#ffcc00"
           opacity={flashOpacity}
         />
+        <circle
+          cx={540}
+          cy={960}
+          r={flashRadius * 0.6}
+          fill="#ffffff"
+          opacity={flashOpacity * 0.7}
+        />
 
-        {/* Shockwave rings */}
-        {rings.map((ring, idx) => {
-          const r = safeInterpolate(
-            localFrame,
-            [0, 30, 60],
-            [0, ring.maxR, ring.maxR + 100],
-            { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
-          );
-          const op = safeInterpolate(
-            localFrame,
-            [0, 40],
-            [1, 0],
-            { extrapolateRight: "clamp" }
-          );
+        {/* Mushroom cloud – stem */}
+        <path
+          d={`M 460 ${960 + stemHeight * 0.1} Q 460 ${960 - stemHeight * 0.4}, 540 ${960 - stemHeight * 0.6} Q 620 ${960 - stemHeight * 0.4}, 620 ${960 + stemHeight * 0.1}`}
+          fill="rgba(200, 100, 30, 0.7)"
+        />
+        {/* Mushroom cloud – cap */}
+        <ellipse
+          cx={540}
+          cy={960 - stemHeight * 0.6}
+          rx={cloudRadius}
+          ry={cloudRadius * 0.7}
+          fill="rgba(220, 120, 40, 0.8)"
+        />
+        <ellipse
+          cx={540}
+          cy={960 - stemHeight * 0.6}
+          rx={cloudRadius * 0.7}
+          ry={cloudRadius * 0.5}
+          fill="rgba(240, 160, 60, 0.6)"
+        />
+
+        {/* Debris particles flying outward */}
+        {Array.from({ length: 35 }).map((_, i) => {
+          const angle = (i / 35) * Math.PI * 2;
+          const speed = 4 + (i % 7) * 1.2;
+          const dist = localFrame * speed * 0.5 + (i % 10) * 2;
+          const x = 540 + Math.cos(angle) * dist;
+          const y = 960 + Math.sin(angle) * dist * 0.5 - localFrame * 0.3;
+          const size = 2 + (i % 4) * 2;
+          const opacity = Math.max(0, 1 - dist / 500);
           return (
             <circle
-              key={`ring-${idx}`}
-              cx={cx}
-              cy={cy}
-              r={r + ring.delay * 2}
-              fill="none"
-              stroke={ring.color}
-              strokeWidth={ring.strokeW}
-              opacity={op * 0.8}
-            />
-          );
-        })}
-
-        {/* Debris particles */}
-        {debris.map((p, idx) => {
-          const dx = Math.cos(p.angle) * p.dist;
-          const dy = Math.sin(p.angle) * p.dist - localFrame * 4; // upwards motion
-          const opacity = Math.max(0, 1 - p.dist / 800);
-          return (
-            <circle
-              key={`debris-${idx}`}
-              cx={cx + dx}
-              cy={cy + dy}
-              r={p.size}
-              fill={p.color}
+              key={i}
+              cx={x}
+              cy={y}
+              r={size}
+              fill={i % 2 === 0 ? "#ff6600" : "#ffaa00"}
               opacity={opacity}
             />
           );
         })}
 
-        {/* Additional debris – random sparks */}
-        {Array.from({ length: 20 }).map((_, i) => {
-          const angle = (i / 20) * Math.PI * 2 + localFrame * 0.05;
-          const dist = localFrame * (4 + (i % 3) * 1.5);
-          return (
-            <line
-              key={`spark-${i}`}
-              x1={cx + Math.cos(angle) * dist}
-              y1={cy + Math.sin(angle) * dist}
-              x2={cx + Math.cos(angle) * (dist + 6)}
-              y2={cy + Math.sin(angle) * (dist + 6)}
-              stroke={
-                i % 2 === 0 ? "#ff7700" : "#ffcc00"
-              }
-              strokeWidth={1.5 + (i % 2)}
-              opacity={Math.max(0, 1 - dist / 500)}
-            />
-          );
-        })}
+        {/* Title text with very low opacity */}
+        <text
+          x={540}
+          y={1800}
+          textAnchor="middle"
+          fontSize={36}
+          fontFamily="sans-serif"
+          fill="rgba(255,200,100,0.4)"
+          letterSpacing={4}
+        >
+          The Nuclear Age
+        </text>
       </svg>
     </AbsoluteFill>
   );

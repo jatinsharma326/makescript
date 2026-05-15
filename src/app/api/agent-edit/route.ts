@@ -61,13 +61,22 @@ THINK LIKE A PROFESSIONAL EDITOR:
 
 OVERLAY TYPES (choose the best type for each segment):
 
-1. "ai-motion-graphic" u2014 LIVE AI-GENERATED REMOTION REACT CODE. Use this for ANY segment that deserves a visual overlay.
+1. "ai-motion-graphic" u2014 LIVE AI-GENERATED REMOTION REACT CODE. Use this for 30-40% of overlays.
    Props: { "label": "2-4 word CAPITALIZED label", "color": "<hex>", "topic": "<topic-keyword>", "mood": "energetic|calm|dramatic|warm" }
-   This generates a UNIQUE animated React component for each segment. USE THIS AS YOUR PRIMARY OVERLAY TYPE.
+   This generates a UNIQUE animated React component for each segment.
+
+2. "kinetic-text" u2014 DYNAMIC ANIMATED TEXT. Use for quotes, numbers, or key phrases.
+   Props: { "text": "Short phrase", "style": "pop|reveal|glitch|bounce", "color": "<hex>" }
+
+3. "ai-generated-image" u2014 AI-GENERATED CINEMATIC IMAGE. Use for background scenery.
+   Props: { "imagePrompt": "detailed cinematic image description, 50-100 words", "caption": "2-4 word label", "color": "<hex>" }
+
+4. "visual-illustration" u2014 PREMIUM PRE-BUILT ANIMATED SVG SCENES.
+   Props: { "scene": "globe|rocket-launch|money-flow|explosion-burst|brain-idea|connections|solar-system", "color": "<hex>", "label": "LABEL" }
 
 OVERLAY STRATEGY:
-- Overlay 40-60% of segments. Skip filler.
-- Use "ai-motion-graphic" for ALL overlays. Do NOT use any other type of overlay.
+- Overlay 50-70% of segments. Skip filler.
+- Use a MIX of types: 40% ai-motion-graphic, 20% kinetic-text, 20% ai-generated-image, 20% visual-illustration.
 - NEVER overlay consecutive segments u2014 minimum 1 segment gap.
 - Every overlay MUST have a unique label/caption specific to the segment content.
 AVAILABLE EFFECTS (applied to the base video layer):
@@ -282,6 +291,20 @@ Remember: Return ONLY the JSON object, no markdown fencing, no explanation. The 
             color: seg.overlay.props?.color || '#6366f1',
             seed,
             imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`${prompt.substring(0, 120)}, cinematic`)}?width=768&height=512&nologo=true&seed=${seed}`,
+          };
+        } else if (seg.overlay.type === 'kinetic-text') {
+          seg.overlay.props = {
+            ...seg.overlay.props,
+            text: seg.overlay.props?.text || extractKeyPhrase(text),
+            style: seg.overlay.props?.style || 'pop',
+            color: seg.overlay.props?.color || '#6366f1',
+          };
+        } else if (seg.overlay.type === 'visual-illustration') {
+          seg.overlay.props = {
+            ...seg.overlay.props,
+            scene: seg.overlay.props?.scene || 'connections',
+            label: seg.overlay.props?.label || extractKeyPhrase(text),
+            color: seg.overlay.props?.color || '#6366f1',
           };
         } else if (seg.overlay.type === 'ai-motion-graphic') {
           // Keep ai-motion-graphic with proper props
