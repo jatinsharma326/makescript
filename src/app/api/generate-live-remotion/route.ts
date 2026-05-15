@@ -144,11 +144,11 @@ const FocusMode = () => {
     <AbsoluteFill style={{ background: '#0a0a0f' }}>
       {showPrev && (
         <div style={{ opacity: prevOpacity }}>
-          <Scene{sceneIndex} frame={localFrame + framesPerScene} fps={fps} totalFrames={framesPerScene} text={\`${sceneTexts[sceneIndex - 1]?.substring(0, 100) || ''}\`} />
+          <Scene{sceneIndex} frame={localFrame + framesPerScene} fps={fps} totalFrames={framesPerScene} text={\`\${sceneTexts[sceneIndex - 1]?.substring(0, 100) || ''}\`} />
         </div>
       )}
       <div style={{ opacity: currentOpacity }}>
-        <Scene{sceneIndex + 1} frame={localFrame} fps={fps} totalFrames={framesPerScene} text={\`${sceneTexts[sceneIndex]?.substring(0, 100) || ''}\`} />
+        <Scene{sceneIndex + 1} frame={localFrame} fps={fps} totalFrames={framesPerScene} text={\`\${sceneTexts[sceneIndex]?.substring(0, 100) || ''}\`} />
       </div>
     </AbsoluteFill>
   );
