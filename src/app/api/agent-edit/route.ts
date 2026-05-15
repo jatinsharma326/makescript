@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+
 // ═══════════════════════════════════════════════════════════════
 //  /api/agent-edit — Agentic Editing Plan Generator
 //  Single LLM call → complete editing plan like a pro video editor

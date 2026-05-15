@@ -22,340 +22,198 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
 };
 
 
-const FADE_DURATION = 15; // frames
-
 export const FocusMode = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const totalFrames = 18 * fps; // 540
-  const framesPerScene = Math.floor(totalFrames / 6);
-  const sceneIndex = Math.floor(frame / framesPerScene);
-  const localFrame = frame - sceneIndex * framesPerScene;
-  const sceneProgress = localFrame / framesPerScene;
+  const localFrame = frame % durationInFrames;
 
-  // Helper to fade scenes in/out
-  const getSceneOpacity = (i) => {
-    if (i < sceneIndex - 1 || i > sceneIndex + 1) return 0;
-    if (i === sceneIndex) {
-      // fade out at end
-      if (localFrame > framesPerScene - FADE_DURATION) {
-        const fadeStart = framesPerScene - FADE_DURATION;
-        return safeInterpolate(localFrame, [fadeStart, framesPerScene], [1, 0], {
-          extrapolateRight: "clamp",
-        });
-      }
-      return 1;
-    }
-    if (i === sceneIndex + 1) {
-      // fade in at beginning
-      if (localFrame < FADE_DURATION) {
-        return safeInterpolate(localFrame, [0, FADE_DURATION], [0, 1], {
-          extrapolateLeft: "clamp",
-        });
-      }
-      return 0;
-    }
-    // i === sceneIndex - 1: only visible if it's fading out (handled by the first case)
-    return 0;
-  };
+  // Central coordinates for explosion
+  const cx = 540;
+  const cy = 960;
 
-  // Compute spring for some animations
-  const springVal = (localFrame) => {
-    return spring({
-      frame: localFrame,
-      fps,
-      config: { damping: 12, stiffness: 80 },
-    });
-  };
+  // Mushroom cloud parameters
+  const cloudGrowth = spring({
+    frame: localFrame,
+    fps,
+    config: { mass: 1.2, stiffness: 80, damping: 25 },
+    durationInFrames: 100,
+  });
+  const stemHeight = safeInterpolate(localFrame, [0, 60, 120], [0, 300, 600], {
+    extrapolateRight: "clamp",
+  });
+  const capRadius = cloudGrowth * 180;
+  const stemWidth = 60;
 
-  // Background particles (small floating circles)
-  const particles = Array.from({ length: 120 }, (_, i) => {
-    const seedX = (i * 79) % 1080;
-    const seedY = (i * 137) % 1920;
-    const size = 1 + (i % 3);
-    const baseX = seedX;
-    const baseY = seedY;
-    const shiftX = Math.sin(frame * 0.003 + i) * 30;
-    const shiftY = Math.cos(frame * 0.002 + i * 1.3) * 20;
-    return (
-      <circle
-        key={i}
-        cx={baseX + shiftX}
-        cy={baseY + shiftY}
-        r={size}
-        fill="rgba(255,255,255,0.25)"
-      />
-    );
+  // Flash parameters
+  const flashOpacity = safeInterpolate(localFrame, [0, 10, 30], [1, 0.8, 0], {
+    extrapolateRight: "clamp",
+  });
+  const flashRadius = safeInterpolate(localFrame, [0, 30], [80, 200], {
+    extrapolateRight: "clamp",
   });
 
-  // Scene 0 & 3 & 5: Explosion / mushroom cloud / shockwaves
-  const ExplosionScene = ({ opacity }) => (
-    <g style={{ opacity }}>
-      {/* Shockwave rings */}
-      {Array.from({ length: 3 }, (_, i) => {
-        const r = 50 + localFrame * 5 + i * 30;
-        const maxR = 500 + i * 60;
-        const strokeW = safeInterpolate(r, [0, maxR], [4, 0]);
-        const op = safeInterpolate(r, [0, maxR], [0.8, 0]);
-        return (
-          <circle
-            key={i}
-            cx={540}
-            cy={960}
-            r={Math.min(r, maxR)}
-            fill="none"
-            stroke={i % 2 === 0 ? "#ff8800" : "#ff3300"}
-            strokeWidth={strokeW}
-            opacity={op}
-          />
-        );
-      })}
-      {/* Central flash */}
-      <circle
-        cx={540}
-        cy={960}
-        r={safeInterpolate(localFrame, [0, 30], [120, 0], { extrapolateRight: "clamp" })}
-        fill="#ffff00"
-        opacity={safeInterpolate(localFrame, [0, 30], [0.9, 0])}
-      />
-      {/* Debris particles */}
-      {Array.from({ length: 50 }, (_, i) => {
-        const angle = (i / 50) * Math.PI * 2;
-        const dist = localFrame * (2.5 + (i % 6));
-        return (
-          <circle
-            key={i}
-            cx={540 + Math.cos(angle) * dist}
-            cy={960 + Math.sin(angle) * dist}
-            r={1.5 + (i % 3)}
-            fill={i % 2 === 0 ? "#ff6600" : "#ffaa00"}
-            opacity={safeInterpolate(dist, [0, 400], [1, 0])}
-          />
-        );
-      })}
-      {/* Mushroom cloud shape using paths */}
-      {localFrame > 10 && (
-        <g opacity={safeInterpolate(localFrame, [10, 40], [0, 0.9], { extrapolateRight: "clamp" })}>
-          <path
-            d={`M 480,900 Q 520,780 540,720 Q 560,780 600,900 Z`}
-            fill="#444"
-            stroke="#666"
-            strokeWidth={2}
-          />
-          <ellipse cx={540} cy={700} rx={90} ry={50} fill="#555" opacity={0.6} />
-          <ellipse cx={540} cy={680} rx={120} ry={30} fill="#666" opacity={0.4} />
-          <ellipse cx={540} cy={660} rx={80} ry={20} fill="#777" opacity={0.3} />
-        </g>
-      )}
-    </g>
-  );
-
-  // Scene 1: Mushroom cloud rising + rain/snow
-  const CloudScene = ({ opacity }) => (
-    <g style={{ opacity }}>
-      {/* Large cloud formation */}
-      <circle cx={540} cy={840} r={120} fill="rgba(100,100,110,0.5)" />
-      <circle cx={460} cy={860} r={90} fill="rgba(110,110,120,0.4)" />
-      <circle cx={620} cy={850} r={100} fill="rgba(105,105,115,0.45)" />
-      <circle cx={500} cy={800} r={80} fill="rgba(120,120,130,0.3)" />
-      <circle cx={580} cy={810} r={70} fill="rgba(125,125,135,0.3)" />
-      <circle cx={540} cy={760} r={60} fill="rgba(130,130,140,0.25)" />
-
-      {/* Falling raindrops / snowflakes */}
-      {Array.from({ length: 80 }, (_, i) => {
-        const startY = (i * 47) % 1920;
-        const shiftY = (localFrame * 3 + i * 17) % 1920;
-        const x = (i * 73) % 1080;
-        const len = 4 + (i % 4);
-        return (
-          <line
-            key={i}
-            x1={x}
-            y1={(startY + shiftY) % 1920}
-            x2={x}
-            y2={((startY + shiftY) % 1920) + len}
-            stroke="rgba(200,220,255,0.6)"
-            strokeWidth={1}
-            strokeLinecap="round"
-          />
-        );
-      })}
-    </g>
-  );
-
-  // Scene 2: Bar chart, dollar signs, gold coins, green arrow
-  const EconomyScene = ({ opacity }) => (
-    <g style={{ opacity }}>
-      {/* Bar chart rising */}
-      {Array.from({ length: 5 }, (_, i) => {
-        const barHeight = spring({
-          frame: localFrame,
-          fps,
-          config: { damping: 15, stiffness: 50 },
-          delay: i * 8,
-        }) * (150 + i * 40);
-        return (
-          <rect
-            key={i}
-            x={180 + i * 160}
-            y={1100 - barHeight}
-            width={100}
-            height={barHeight}
-            fill={`hsl(${i * 30 + 180}, 70%, 50%)`}
-            opacity={0.8}
-            rx={8}
-          />
-        );
-      })}
-      {/* Dollar signs floating */}
-      {Array.from({ length: 20 }, (_, i) => {
-        const angle = Math.sin(frame * 0.02 + i * 1.7) * 0.5;
-        const x = 300 + i * 40 + Math.sin(frame * 0.01 + i) * 100;
-        const y = 700 + Math.cos(frame * 0.015 + i * 2) * 150 + localFrame * 2;
-        return (
-          <text
-            key={i}
-            x={x}
-            y={y}
-            fill="#4ade80"
-            fontSize={18 + (i % 3) * 8}
-            textAnchor="middle"
-            opacity={0.7}
-            transform={`rotate(${angle * 30}, ${x}, ${y})`}
-          >
-            $
-          </text>
-        );
-      })}
-      {/* Gold coins */}
-      {Array.from({ length: 10 }, (_, i) => {
-        const cx = 200 + i * 80 + Math.sin(frame * 0.02 + i) * 30;
-        const cy = 1400 + Math.sin(frame * 0.03 + i * 1.2) * 40;
-        return (
-          <g key={i}>
-            <circle cx={cx} cy={cy} r={20} fill="#fbbf24" opacity={0.8} />
-            <text
-              x={cx}
-              y={cy + 6}
-              fill="#b45309"
-              fontSize={16}
-              textAnchor="middle"
-              fontWeight="bold"
-            >
-              $
-            </text>
-          </g>
-        );
-      })}
-      {/* Green upward arrow */}
-      <polygon
-        points="990,890 1050,890 1020,840"
-        fill="#22c55e"
-        opacity={safeInterpolate(localFrame, [0, 20], [0, 1])}
-      />
-      <rect
-        x={1015}
-        y={890}
-        width={10}
-        height={60}
-        fill="#22c55e"
-        opacity={safeInterpolate(localFrame, [0, 20], [0, 1])}
-      />
-    </g>
-  );
-
-  // Scene 4: Radar, crosshair, warning, red pulses, military grid
-  const RadarScene = ({ opacity }) => (
-    <g style={{ opacity }}>
-      {/* Radar circle */}
-      <circle cx={540} cy={960} r={250} fill="none" stroke="#ff4444" strokeWidth={2} opacity={0.3} />
-      <circle cx={540} cy={960} r={250} fill="none" stroke="#ff4444" strokeWidth={1} opacity={0.1} />
-
-      {/* Sweeping radar line */}
-      <line
-        x1={540}
-        y1={960}
-        x2={540 + Math.cos((frame * 0.02) % (Math.PI * 2)) * 250}
-        y2={960 + Math.sin((frame * 0.02) % (Math.PI * 2)) * 250}
-        stroke="#ff6666"
-        strokeWidth={3}
-        opacity={0.6}
-      />
-
-      {/* Crosshair */}
-      <line x1={340} y1={960} x2={740} y2={960} stroke="#ff8888" strokeWidth={1.5} />
-      <line x1={540} y1={760} x2={540} y2={1160} stroke="#ff8888" strokeWidth={1.5} />
-      <circle cx={540} cy={960} r={20} fill="none" stroke="#ff4444" strokeWidth={2} />
-
-      {/* Warning symbols */}
-      <g transform="translate(150, 300)">
-        <polygon points="0,-30 25,20 -25,20" fill="none" stroke="#ffaa00" strokeWidth={3} />
-        <text x={0} y={8} fill="#ffaa00" fontSize={18} textAnchor="middle">!</text>
-      </g>
-      <g transform="translate(930, 1500)">
-        <polygon points="0,-30 25,20 -25,20" fill="none" stroke="#ffaa00" strokeWidth={3} />
-        <text x={0} y={8} fill="#ffaa00" fontSize={18} textAnchor="middle">!</text>
-      </g>
-
-      {/* Red alert pulses */}
-      <circle
-        cx={540}
-        cy={960}
-        r={30 + Math.sin(frame * 0.1) * 15}
-        fill="rgba(255,0,0,0.2)"
-      />
-      <circle
-        cx={540}
-        cy={960}
-        r={60 + Math.sin(frame * 0.08) * 20}
-        fill="rgba(255,0,0,0.1)"
-      />
-
-      {/* Military grid lines */}
-      {Array.from({ length: 10 }, (_, i) => (
-        <line
-          key={i}
-          x1={i * 120}
-          y1={0}
-          x2={i * 120}
-          y2={1920}
-          stroke="rgba(255,100,100,0.08)"
-          strokeWidth={1}
-        />
-      ))}
-      {Array.from({ length: 10 }, (_, i) => (
-        <line
-          key={i}
-          x1={0}
-          y1={i * 192}
-          x2={1080}
-          y2={i * 192}
-          stroke="rgba(255,100,100,0.08)"
-          strokeWidth={1}
-        />
-      ))}
-    </g>
-  );
-
-  // Determine which scenes to render
-  const scenes = [
-    <ExplosionScene key="s0" opacity={getSceneOpacity(0)} />,
-    <CloudScene key="s1" opacity={getSceneOpacity(1)} />,
-    <EconomyScene key="s2" opacity={getSceneOpacity(2)} />,
-    <ExplosionScene key="s3" opacity={getSceneOpacity(3)} />,
-    <RadarScene key="s4" opacity={getSceneOpacity(4)} />,
-    <ExplosionScene key="s5" opacity={getSceneOpacity(5)} />,
+  // Shockwave rings
+  const rings = [
+    { delay: 0, maxR: 600, color: "#ff6600", strokeW: 4 },
+    { delay: 8, maxR: 500, color: "#ff4400", strokeW: 3 },
+    { delay: 16, maxR: 400, color: "#ff2200", strokeW: 2 },
   ];
 
+  // Debris particles: 50 small circles flying outward
+  const particleCount = 50;
+  const debris = [];
+  for (let i = 0; i < particleCount; i++) {
+    const angle = (i / particleCount) * Math.PI * 2 + localFrame * 0.02;
+    const speed = 2 + (i % 5) * 0.5;
+    const dist = localFrame * speed * 1.2;
+    const size = 2 + (i % 3);
+    const color = i % 2 === 0 ? "#ff6600" : "#ffaa00";
+    debris.push({ angle, speed, dist, size, color });
+  }
+
+  // Background particles (ash, dust)
+  const bgParticles = 80;
+  const bgPart = [];
+  for (let i = 0; i < bgParticles; i++) {
+    const x = (i * 137 + 50) % 1080;
+    const y = (i * 97 + 30) % 1920;
+    const driftX = Math.sin(i * 1.3 + localFrame * 0.02) * 30;
+    const driftY = Math.sin(i * 2.1 + localFrame * 0.015) * 40;
+    bgPart.push({ x, y, driftX, driftY, r: 1 + (i % 3), opacity: 0.2 + Math.sin(i + localFrame * 0.03) * 0.15 });
+  }
+
   return (
-    <AbsoluteFill style={{ backgroundColor: "transparent" }}>
-      {/* Background particles */}
-      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", width: "100%", height: "100%" }}>
-        {particles}
-      </svg>
-      {/* Scenes overlay */}
-      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", width: "100%", height: "100%" }}>
-        {scenes}
+    <AbsoluteFill
+      style={{
+        backgroundColor: "transparent",
+      }}
+    >
+      <svg
+        viewBox="0 0 1080 1920"
+        style={{ width: "100%", height: "100%", position: "absolute" }}
+      >
+        {/* Background floating ash particles */}
+        {bgPart.map((p, idx) => (
+          <circle
+            key={`bg-${idx}`}
+            cx={p.x + p.driftX}
+            cy={p.y + p.driftY}
+            r={p.r}
+            fill="#aaaaaa"
+            opacity={p.opacity}
+          />
+        ))}
+
+        {/* Mushroom cloud – stem */}
+        <rect
+          x={cx - stemWidth / 2}
+          y={cy - stemHeight}
+          width={stemWidth}
+          height={stemHeight}
+          rx={20}
+          fill="#8b4513"
+          opacity={0.8 + 0.2 * Math.sin(localFrame * 0.1)}
+        />
+
+        {/* Mushroom cloud – cap (drawn as multiple overlapping ellipses for a puffy look) */}
+        <ellipse
+          cx={cx}
+          cy={cy - stemHeight - capRadius * 0.4}
+          rx={capRadius}
+          ry={capRadius * 0.6}
+          fill="#ff4500"
+          opacity={0.7}
+        />
+        <ellipse
+          cx={cx - capRadius * 0.25}
+          cy={cy - stemHeight - capRadius * 0.5}
+          rx={capRadius * 0.5}
+          ry={capRadius * 0.45}
+          fill="#ff6600"
+          opacity={0.6}
+        />
+        <ellipse
+          cx={cx + capRadius * 0.2}
+          cy={cy - stemHeight - capRadius * 0.55}
+          rx={capRadius * 0.5}
+          ry={capRadius * 0.5}
+          fill="#ffaa00"
+          opacity={0.5}
+        />
+
+        {/* Central flash */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={flashRadius}
+          fill="#ffcc00"
+          opacity={flashOpacity}
+        />
+
+        {/* Shockwave rings */}
+        {rings.map((ring, idx) => {
+          const r = safeInterpolate(
+            localFrame,
+            [0, 30, 60],
+            [0, ring.maxR, ring.maxR + 100],
+            { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
+          );
+          const op = safeInterpolate(
+            localFrame,
+            [0, 40],
+            [1, 0],
+            { extrapolateRight: "clamp" }
+          );
+          return (
+            <circle
+              key={`ring-${idx}`}
+              cx={cx}
+              cy={cy}
+              r={r + ring.delay * 2}
+              fill="none"
+              stroke={ring.color}
+              strokeWidth={ring.strokeW}
+              opacity={op * 0.8}
+            />
+          );
+        })}
+
+        {/* Debris particles */}
+        {debris.map((p, idx) => {
+          const dx = Math.cos(p.angle) * p.dist;
+          const dy = Math.sin(p.angle) * p.dist - localFrame * 4; // upwards motion
+          const opacity = Math.max(0, 1 - p.dist / 800);
+          return (
+            <circle
+              key={`debris-${idx}`}
+              cx={cx + dx}
+              cy={cy + dy}
+              r={p.size}
+              fill={p.color}
+              opacity={opacity}
+            />
+          );
+        })}
+
+        {/* Additional debris – random sparks */}
+        {Array.from({ length: 20 }).map((_, i) => {
+          const angle = (i / 20) * Math.PI * 2 + localFrame * 0.05;
+          const dist = localFrame * (4 + (i % 3) * 1.5);
+          return (
+            <line
+              key={`spark-${i}`}
+              x1={cx + Math.cos(angle) * dist}
+              y1={cy + Math.sin(angle) * dist}
+              x2={cx + Math.cos(angle) * (dist + 6)}
+              y2={cy + Math.sin(angle) * (dist + 6)}
+              stroke={
+                i % 2 === 0 ? "#ff7700" : "#ffcc00"
+              }
+              strokeWidth={1.5 + (i % 2)}
+              opacity={Math.max(0, 1 - dist / 500)}
+            />
+          );
+        })}
       </svg>
     </AbsoluteFill>
   );

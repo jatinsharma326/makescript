@@ -22,24 +22,8 @@ export const maxDuration = 60;
  * Returns an array of scene descriptions that tell the AI WHAT to draw.
  */
 function extractVisualScenes(transcript: string, title: string): string[] {
-  const sentences = transcript
-    .replace(/([.!?])\s+/g, '$1|')
-    .split('|')
-    .map(s => s.trim())
-    .filter(s => s.length > 5);
-
-  // Split into 6 roughly equal chunks for 6 scenes
-  const chunkSize = Math.max(1, Math.ceil(sentences.length / 6));
-  const scenes: string[] = [];
-
-  for (let i = 0; i < 6; i++) {
-    const chunk = sentences.slice(i * chunkSize, (i + 1) * chunkSize);
-    const text = chunk.join(' ') || title || 'Introduction';
-    const visual = analyzeVisualContent(text, i);
-    scenes.push(`Scene ${i + 1}: "${text.substring(0, 80)}" → DRAW: ${visual}`);
-  }
-
-  return scenes;
+  const visual = analyzeVisualContent(transcript || title, 0);
+  return [`Scene 1: "${(transcript.substring(0, 80) || title)}" → DRAW: ${visual}`];
 }
 
 /**
@@ -171,21 +155,17 @@ Example - Drawing a GLOBE scene:
 
 === STRUCTURE ===
 const totalFrames = ${durationInSeconds} * 30;
-const framesPerScene = Math.floor(totalFrames / 6);
-const sceneIndex = Math.floor(frame / framesPerScene);
-const localFrame = frame - sceneIndex * framesPerScene;
-const sceneProgress = localFrame / framesPerScene;
+const localFrame = frame;
 
-Each scene MUST render SVG shapes that visually depict the transcript content for that time segment.
-Add 30-frame crossfade between scenes using opacity interpolation.
-Add 100-200 background particles (small circles) that match the scene mood.
+The scene MUST render SVG shapes that visually depict the transcript content for this time segment.
+Add 50-100 background particles (small circles) that match the scene mood.
 
 === TECHNICAL RULES ===
 - Component name: FocusMode
 - Use: AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate from "remotion"
 - Canvas: 1080x1920 vertical
 - Duration: exactly ${durationInSeconds} seconds at 30fps
-- EXACTLY 6 scenes, each with DIFFERENT SVG visuals matching the transcript
+- EXACTLY 1 scene containing SVG visuals matching the transcript
 - Do NOT use TypeScript annotations
 - Do NOT import React separately
 - Export: export const FocusMode = () => { ... }; export default FocusMode;
