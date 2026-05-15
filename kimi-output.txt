@@ -1,0 +1,146 @@
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import React, { useMemo } from "react";
+
+const PARTICLE_COUNT = 300;
+const CENTER_X = 540;
+const CENTER_Y = 960;
+const PRIMARY = "#6366f1";
+
+const particleColors = ["#ffffff", "#e0e7ff", "#a5b4fc", "#818cf8", "#6366f1"];
+
+const LiveGraphic: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+
+  // 30-frame crossfade for entrance and exit
+  const entranceOpacity = interpolate(frame, [0, 30], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const exitOpacity = interpolate(
+    frame,
+    [durationInFrames - 30, durationInFrames],
+    [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+  const opacity = Math.min(entranceOpacity, exitOpacity);
+
+  // Spring for label scale
+  const labelScale = spring({
+    frame: frame - 10,
+    fps,
+    config: { damping: 12, stiffness: 80, mass: 0.5 },
+  });
+
+  // Generate random particles
+  const particles = useMemo(() => {
+    return Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+      id: i,
+      startX: Math.random() * 1080,
+      startY: Math.random() * 1920,
+      delay: Math.random() * 30,
+      speed: 0.5 + Math.random() * 1.5,
+      size: 1.5 + Math.random() * 3,
+      color: particleColors[Math.floor(Math.random() * particleColors.length)],
+    }));
+  }, []);
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: "#0b0d1a",
+        opacity,
+      }}
+    >
+      {/* Glow at center */}
+      <div
+        style={{
+          position: "absolute",
+          left: CENTER_X - 100,
+          top: CENTER_Y - 100,
+          width: 200,
+          height: 200,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${PRIMARY}55 0%, transparent 70%)`,
+        }}
+      />
+
+      {/* Particles */}
+      {particles.map((p) => {
+        const progress = Math.min(
+          (frame - p.delay) / (90 - p.delay),
+          1
+        );
+        const eased = 1 - Math.pow(1 - progress, 2);
+        const x = interpolate(eased, [0, 1], [p.startX, CENTER_X]);
+        const y = interpolate(eased, [0, 1], [p.startY, CENTER_Y]);
+        const particleOpacity = interpolate(
+          frame,
+          [p.delay, p.delay + 10, durationInFrames - 15, durationInFrames],
+          [0, 1, 1, 0],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        );
+
+        return (
+          <div
+            key={p.id}
+            style={{
+              position: "absolute",
+              left: x - p.size / 2,
+              top: y - p.size / 2,
+              width: p.size,
+              height: p.size,
+              borderRadius: "50%",
+              backgroundColor: p.color,
+              opacity: particleOpacity * 0.8,
+              boxShadow: `0 0 ${p.size}px ${p.color}44`,
+            }}
+          />
+        );
+      })}
+
+      {/* Central label */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: `translate(-50%, -50%) scale(${labelScale})`,
+          color: "#ffffff",
+          fontFamily: "Helvetica, Arial, sans-serif",
+          fontWeight: 800,
+          fontSize: 80,
+          letterSpacing: 12,
+          textShadow: `0 0 40px ${PRIMARY}, 0 0 80px ${PRIMARY}66`,
+          textAlign: "center",
+          whiteSpace: "nowrap",
+        }}
+      >
+        GREAT ATTRACTOR
+      </div>
+
+      {/* Subtle subtitle */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, calc(-50% + 80px))",
+          color: "#a5b4fc",
+          fontFamily: "Helvetica, Arial, sans-serif",
+          fontWeight: 300,
+          fontSize: 24,
+          letterSpacing: 6,
+          opacity: interpolate(frame, [20, 40], [0, 0.6], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          }),
+        }}
+      >
+        PULLING OUR GALAXY
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+export default LiveGraphic;
