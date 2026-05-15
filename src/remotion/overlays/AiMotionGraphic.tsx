@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img, random } from 'remotion';
 import * as Babel from '@babel/standalone';
 import { CanvasMotionGraphic } from './CanvasMotionGraphic';
-import { TranscriptSceneRenderer } from './TranscriptSceneRenderer';
 
 interface AiMotionGraphicProps {
     reactCode?: string;
@@ -13,7 +12,6 @@ interface AiMotionGraphicProps {
     color?: string;
     startFrame: number;
     endFrame: number;
-    scenePlan?: any; // Will be typed more specifically once we define the interface
 }
 
 // Error boundary to catch errors in dynamically evaluated React components
@@ -44,7 +42,6 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     color = '#6366f1',
     startFrame,
     endFrame,
-    scenePlan,
 }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
@@ -97,17 +94,6 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     const opacity = Math.min(enterOpacity, exitOpacity);
 
     if (frame < startFrame || frame > endFrame) return null;
-
-    // PRIORITY 1: Scene plan (AI-generated JSON scene descriptions rendered reliably)
-    if (scenePlan && scenePlan.scenes && scenePlan.scenes.length > 0) {
-        return (
-            <TranscriptSceneRenderer
-                scenePlan={scenePlan}
-                startFrame={startFrame}
-                endFrame={endFrame}
-            />
-        );
-    }
 
     if (evalError) {
         return (
