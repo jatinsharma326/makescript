@@ -47,13 +47,20 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     const { fps } = useVideoConfig();
 
     const { Component: DynamicComponent, error: evalError } = useMemo(() => {
-        if (!reactCode) return { Component: null, error: null };
+        if (!reactCode) {
+            console.warn('[AiMotionGraphic] No reactCode provided, skipping evaluation');
+            return { Component: null, error: null };
+        }
+        
+        console.log(`[AiMotionGraphic] Evaluating reactCode: ${reactCode.length} chars, first 100: ${reactCode.substring(0, 100)}`);
         
         try {
             const transpiled = Babel.transform(reactCode, {
                 presets: ['env', 'react', 'typescript'],
                 filename: 'dynamic.tsx',
             }).code;
+            
+            console.log(`[AiMotionGraphic] Babel transpilation succeeded: ${transpiled?.length} chars`);
 
             const scope = {
                 React,
@@ -78,9 +85,15 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
             const createComponent = new Function('scope', evalCode);
             const Component = createComponent(scope);
             
+            if (!Component) {
+                console.error('[AiMotionGraphic] Component is null/undefined after evaluation! Check export names.');
+                return { Component: null, error: 'Component not found in exports. Expected FocusMode, LiveGraphic, or default export.' };
+            }
+            
+            console.log(`[AiMotionGraphic] ✅ Component loaded successfully: ${Component.name || 'anonymous'}`);
             return { Component: Component as React.FC<any>, error: null };
         } catch (err: any) {
-            console.error('[LiveMotionGraphic] Failed to compile/evaluate React code:', err);
+            console.error('[AiMotionGraphic] ❌ Failed to compile/evaluate React code:', err);
             return { Component: null, error: err.message || String(err) };
         }
     }, [reactCode]);
@@ -107,7 +120,12 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     if (DynamicComponent) {
         return (
             <AbsoluteFill style={{ opacity, pointerEvents: 'none', zIndex: 20 }}>
-                <ErrorBoundary fallback={<div style={{ display: 'none' }} />}>
+                <ErrorBoundary fallback={
+                    <AbsoluteFill style={{ backgroundColor: 'rgba(255,100,0,0.85)', zIndex: 99, padding: 40, color: 'white', fontFamily: 'monospace', justifyContent: 'center', alignItems: 'center' }}>
+                        <h2 style={{ fontSize: 32 }}>Motion Graphic Runtime Error</h2>
+                        <p style={{ fontSize: 18 }}>The AI-generated component crashed during rendering. Check browser console for details.</p>
+                    </AbsoluteFill>
+                }>
                     <DynamicComponent />
                 </ErrorBoundary>
             </AbsoluteFill>
