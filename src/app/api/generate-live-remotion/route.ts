@@ -31,71 +31,179 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ reactCode: '', success: false, error: 'CROF_API_KEY not configured' });
     }
 
-    const scriptContent = fullTranscript?.substring(0, 1500) || text;
+    // Use FULL transcript (up to 3000 chars) for better scene parsing
+    const scriptContent = fullTranscript?.substring(0, 3000) || text;
+
+    // Divide transcript into approximate sections (will be refined by AI)
+    const transcriptWords = scriptContent.split(/\s+/);
+    const wordsPerScene = Math.max(2, Math.floor(transcriptWords.length / 6));
+    const sceneTexts = [];
+    for (let i = 0; i < 6; i++) {
+      const start = i * wordsPerScene;
+      const end = i === 5 ? transcriptWords.length : (i + 1) * wordsPerScene;
+      sceneTexts.push(transcriptWords.slice(start, end).join(' '));
+    }
 
     const systemPrompt = `### SYSTEM INSTRUCTIONS ###
-You are a creative Remotion developer who creates stunning motion graphics for ANY video topic.
+You are a creative Remotion developer who creates stunning, CONTENT-AWARE motion graphics.
 
-YOUR FIRST TASK - DETECT THE TOPIC:
+## YOUR CORE TASK
 
-Read the title and script carefully. Determine what category the content falls into.
+You will receive a full video transcript. You MUST:
+1. Parse the transcript and divide it into 6 CONTENT-BASED sections (each section is a meaningful part of the transcript)
+2. For EACH of the 6 sections, create a UNIQUE visual scene that:
+   - DISPLAYS THE ACTUAL TRANSCRIPT WORDS from that section as styled text on screen
+   - Has a UNIQUE background (different gradient, pattern, or visual for each scene)
+   - Has UNIQUE animated particles matching the TOPIC of that specific section
+   - Uses COLORS that match the mood/theme of that section's content
+   - Has its own animation style (different from other scenes)
+3. Chain all 6 scenes together with smooth crossfade transitions
+
+## TRANSCRIPT TO VISUALIZE
 
 TITLE: ${title || "Video"}
+TOPIC CATEGORY: ${topic || 'general'}
+MOOD: ${mood || 'energetic'}
+BASE COLOR: ${color || '#6366f1'}
 
-SCRIPT CONTENT: ${scriptContent}
+FULL SCRIPT:
+${scriptContent}
 
-CATEGORIES:
-News, War and Geopolitics, Entertainment, Anime, Gaming, Technology, Science, History, Nature, Sports, Music, Food, Travel, Business, Health, Education
+## APPROXIMATE SCENE DIVISION (use these as guide, re-split by content logic):
+Scene 1: "${sceneTexts[0]?.substring(0, 150) || 'Introduction'}"
+Scene 2: "${sceneTexts[1]?.substring(0, 150) || 'Main point 1'}"
+Scene 3: "${sceneTexts[2]?.substring(0, 150) || 'Main point 2'}"
+Scene 4: "${sceneTexts[3]?.substring(0, 150) || 'Main point 3'}"
+Scene 5: "${sceneTexts[4]?.substring(0, 150) || 'Key insight'}"
+Scene 6: "${sceneTexts[5]?.substring(0, 150) || 'Conclusion'}"
 
-VISUAL STYLE RULES:
-- Match visuals to detected category
-- Use cinematic, high-quality motion design
-- Add particles relevant to topic (stars, pixels, petals, etc.)
+## SCENE VISUAL RULES (CRITICAL)
+Each scene MUST be VISUALLY DISTINCT from the others:
 
-TRANSITION BETWEEN SCENES & DURATION:
-The total video duration MUST strictly match ${durationInSeconds} seconds.
+Scene 1 (Intro): Large title/text centered, cinematic reveal animation, slow particles
+Scene 2: Different background gradient, different particle type, text animates from one side
+Scene 3: Different visual layout, different particle behavior, different text placement
+Scene 4: Different color palette shift, unique shape animations orbiting text
+Scene 5: Different particle system (burst/spiral), text with different animation
+Scene 6 (Conclusion): Grand finale style, celebratory particles, strong typography
 
-CRITICAL:
-- EXACTLY 6 scenes
-- NO more, NO less
+For each scene's particles, choose a type RELEVANT TO THAT SCENE'S CONTENT:
+- Technology: hexagon/pixel/code particles, blue/cyan colors
+- Nature: leaf/floating petal particles, green/earth tones
+- Science: atom/molecule particles, purple/blue colors
+- Business: geometric/rising particles, gold/blue colors
+- Music: note/equalizer particles, vibrant colors
+- Sports: speed/energy particles, bold colors
+- History: vintage/parchment particles, warm tones
+- Entertainment: sparkle/starburst particles, bright colors
+- Health/Education: organic/circle particles, calming colors
+- Food: organic/steam particles, warm appetizing colors
+- Travel: map/pin/wander particles, adventure colors
+- Gaming: pixel/glitch particles, neon colors
+- News/War: data/pulse particles, serious tones
+- General: mix of geometric particles with the base color
 
-Use this math:
-const totalFrames = ${durationInSeconds} * 30;
-const framesPerScene = Math.floor(totalFrames / 6);
-const sceneIndex = Math.floor(frame / framesPerScene);
+## TIMING
+Total duration: ${durationInSeconds} seconds at 30fps
+Total frames: ${durationInSeconds} * 30 = ${Math.round(durationInSeconds * 30)}
+Frames per scene: Math.floor(totalFrames / 6) = ${Math.floor(Math.round(durationInSeconds * 30) / 6)}
+Crossfade between scenes: 30 frames (1 second)
 
-TECHNICAL REQUIREMENTS:
-- Use React + Remotion only
-- Use AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate
+## REQUIRED CODE STRUCTURE
+Your code MUST follow this pattern:
+\`\`\`
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, random } from 'remotion';
+
+// Scene 1 content (first part of transcript displayed here)
+const Scene1 = ({ frame, fps, totalFrames, text }) => (
+  // UNIQUE background gradient
+  // UNIQUE particle system (topic-relevant, 200-400 particles)
+  // TRANSCRIPT TEXT displayed with animations
+  // Smooth entrance animation
+);
+
+// Scene 2 - different visuals, different particles, different text
+const Scene2 = ({ frame, fps, totalFrames, text }) => ( ... );
+
+// Scene 3, 4, 5, 6 similarly...
+
+const FocusMode = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const totalFrames = ${Math.round(durationInSeconds * 30)};
+  const framesPerScene = Math.floor(totalFrames / 6);
+  const sceneIndex = Math.min(5, Math.floor(frame / framesPerScene));
+  const localFrame = frame - sceneIndex * framesPerScene;
+  
+  // Crossfade between scenes
+  const showPrev = sceneIndex > 0 && localFrame < 30;
+  const prevOpacity = showPrev ? interpolate(localFrame, [0, 30], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0;
+  const currentOpacity = interpolate(localFrame, [0, 30], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  
+  return (
+    <AbsoluteFill style={{ background: '#0a0a0f' }}>
+      {showPrev && (
+        <div style={{ opacity: prevOpacity }}>
+          <Scene{sceneIndex} frame={localFrame + framesPerScene} fps={fps} totalFrames={framesPerScene} text={\`${sceneTexts[sceneIndex - 1]?.substring(0, 100) || ''}\`} />
+        </div>
+      )}
+      <div style={{ opacity: currentOpacity }}>
+        <Scene{sceneIndex + 1} frame={localFrame} fps={fps} totalFrames={framesPerScene} text={\`${sceneTexts[sceneIndex]?.substring(0, 100) || ''}\`} />
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+export default FocusMode;
+\`\`\`
+
+IMPORTANT: Replace the placeholder text strings with the ACTUAL transcript text for each section.
+Scene text should show the meaningful spoken words, not generic placeholders.
+
+## TECHNICAL REQUIREMENTS
+- Use React + Remotion only (React is global, no import needed)
+- Use AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, random from 'remotion'
 - Component name: FocusMode
-- Add 200-400 animated particles
-- Use smooth transitions + 30-frame crossfade
+- Each scene: 200-400 animated particles
+- Smooth 30-frame crossfade transitions between scenes
+- Do NOT use TypeScript type annotations
 - Do NOT use any external libraries
-- Do NOT use TypeScript type annotations (no React.FC, no : string, etc.)
-- Do NOT import React separately, it is available globally
+- Video is 1080x1920 (vertical / portrait format)
+- Use the 'random' function from remotion for deterministic randomness per frame
 
-OUTPUT RULES:
+## OUTPUT RULES
 - Return ONLY valid, syntactically perfect JavaScript/JSX code
 - No explanations. No markdown fences. No comments before the code.
-- The code must start with an import statement
+- The code must start with "import { AbsoluteFill,"
 - Provide only the raw code.`;
 
     const userPrompt = `### USER REQUEST ###
-Create a Remotion animation for this video:
+Create a CONTENT-AWARE Remotion animation for this video transcript.
+
+The animation MUST visualize the actual transcript content — each scene displays its portion of the spoken words with visuals that match what is being discussed.
 
 TITLE: ${title || "Video"}
+TOPIC: ${topic || 'general'}
+MOOD: ${mood || 'energetic'}
+DURATION: ${durationInSeconds}s
+DIMENSIONS: 1080x1920 (vertical)
 
-SCRIPT CONTENT: ${scriptContent}
+FULL TRANSCRIPT:
+${scriptContent}
 
-The video MUST:
-- Have exactly 6 scenes
-- Match ${durationInSeconds}s duration perfectly
-- Be 1080x1920 vertical
-- Use professional motion graphics
-- Component name must be FocusMode
-- Export it as default: export default FocusMode;
+CRITICAL REQUIREMENTS:
+1. Parse the transcript into 6 CONTENT-BASED scenes (not arbitrary splits)
+2. Each scene displays its OWN portion of the transcript text on screen
+3. Each scene has UNIQUE background, particles, colors, and animations
+4. Particle types must match the topic of each specific scene section
+5. Smooth 30-frame crossfade between scenes
+6. Component name: FocusMode, export default FocusMode
+7. Code must start with: import { AbsoluteFill,
+8. Video is 1080x1920 vertical
+9. 200-400 particles per scene
+10. Return ONLY the raw JavaScript/JSX code — no explanations, no markdown
 
-Return only the raw code.`;
+Generate the full FocusMode component with all 6 unique scenes.`;
 
     console.log(`[GenerateLiveRemotion] Calling ${CROF_MODEL} via crof.ai for ${durationInSeconds}s video`);
 
@@ -111,8 +219,8 @@ Return only the raw code.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 4096,
+        temperature: 0.8,
+        max_tokens: 8192,
       }),
     });
 
@@ -262,6 +370,7 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
     const hasExport = code.includes('export default') || code.includes('export const');
     const hasAbsoluteFill = code.includes('AbsoluteFill');
     const hasUseCurrentFrame = code.includes('useCurrentFrame');
+    const hasRemotionImport = code.includes("from 'remotion'") || code.includes('from "remotion"');
 
     if (!hasImport || !hasExport || !hasAbsoluteFill || !hasUseCurrentFrame) {
       console.error(`[GenerateLiveRemotion] Validation failed: import=${hasImport}, export=${hasExport}, AbsoluteFill=${hasAbsoluteFill}, useCurrentFrame=${hasUseCurrentFrame}`);
