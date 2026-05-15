@@ -485,9 +485,11 @@ export default function EditorPage() {
                 });
                 clearTimeout(timer);
                 const data = await res.json();
-                if (data.success && data.imageUrl) {
-                    addLog(`Image ${i + 1}/${imageSegs.length} OK (${Math.round(data.imageUrl.length / 1024)}KB)`);
-                    return { id: seg.id, imageUrl: data.imageUrl as string };
+                const imageUrl = data.imageUrl || data.fallbackUrl;
+                if (imageUrl) {
+                    const source = data.success ? 'OK' : 'fallback';
+                    addLog(`Image ${i + 1}/${imageSegs.length} ${source} (${String(imageUrl).startsWith('data:') ? `${Math.round(String(imageUrl).length / 1024)}KB` : 'URL'})`);
+                    return { id: seg.id, imageUrl: imageUrl as string };
                 }
                 return null;
             } catch {
@@ -555,10 +557,40 @@ export default function EditorPage() {
 
         addLog(`Generating ${motionSegs.length} unique motion graphic components concurrently...`);
 
-        const reactCodeMap = new Map<string, string>();
+        const generatedMap = new Map<string, Record<string, unknown>>();
         const fullTranscript = subs.map(s => s.text).join(' ');
 
-        const generateOneMotion = async (seg: any, idx: number) => {
+        const generateMotionImageFallback = async (
+            seg: SubtitleSegment,
+            idx: number,
+            label: string,
+            topic: string,
+            color: string
+        ): Promise<Record<string, unknown> | null> => {
+            try {
+                const prompt = `Premium motion graphics background for "${label}", ${topic}, dynamic cinematic visual, particles, neon accents, high contrast`;
+                const res = await fetch('/api/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt,
+                        width: 1024,
+                        height: 768,
+                        seed: (Date.now() + idx) % 1000000,
+                        steps: 8,
+                        guidanceScale: 1,
+                    }),
+                });
+                const data = await res.json();
+                const imageUrl = data.imageUrl || data.fallbackUrl;
+                if (!imageUrl) return null;
+                return { imageUrl, label, topic, color, global: false };
+            } catch {
+                return null;
+            }
+        };
+
+        const generateOneMotion = async (seg: SubtitleSegment, idx: number) => {
             const label = String(seg.overlay!.props.label || 'Visual');
             const topic = String(seg.overlay!.props.topic || 'general');
             const color = String(seg.overlay!.props.color || '#6366f1');
@@ -587,15 +619,43 @@ export default function EditorPage() {
                 
                 if (data.success && data.reactCode) {
                     addLog(`[Kimi] Success for segment ${idx + 1}! (${data.codeLength || data.reactCode.length} chars)`);
-                    return { id: seg.id, reactCode: data.reactCode };
+                    return { id: seg.id, props: { reactCode: data.reactCode, global: false } };
                 } else {
                     addLog(`[Kimi] Failed for segment ${idx + 1}: ${data.error || 'Unknown error'}`);
-                    return null;
                 }
-            } catch (err: any) {
-                addLog(`[Kimi] Error for segment ${idx + 1}: ${err.message || String(err)}`);
-                return null;
+            } catch (err: unknown) {
+                addLog(`[Kimi] Error for segment ${idx + 1}: ${err instanceof Error ? err.message : String(err)}`);
             }
+
+            try {
+                addLog(`[Kimi] Trying SVG fallback for segment ${idx + 1}...`);
+                const svgRes = await fetch('/api/generate-motion-svg', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: seg.text,
+                        mood,
+                        topic,
+                        color,
+                        label,
+                    }),
+                });
+                const svgData = await svgRes.json();
+                if (svgData.success && svgData.svgContent) {
+                    addLog(`[Kimi] SVG fallback OK for segment ${idx + 1}`);
+                    return { id: seg.id, props: { svgContent: svgData.svgContent, global: false } };
+                }
+            } catch (err: unknown) {
+                addLog(`[Kimi] SVG fallback failed for segment ${idx + 1}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+
+            const imageFallback = await generateMotionImageFallback(seg, idx, label, topic, color);
+            if (imageFallback) {
+                addLog(`[Kimi] Image fallback OK for segment ${idx + 1}`);
+                return { id: seg.id, props: imageFallback };
+            }
+
+            return null;
         };
 
         // Run all Kimi generations concurrently to avoid Vercel timeouts
@@ -606,7 +666,7 @@ export default function EditorPage() {
         let successCount = 0;
         for (const r of results) {
             if (r.status === 'fulfilled' && r.value) {
-                reactCodeMap.set(r.value.id, r.value.reactCode);
+                generatedMap.set(r.value.id, r.value.props);
                 successCount++;
             }
         }
@@ -616,9 +676,9 @@ export default function EditorPage() {
         // Map the generated code back to the segments
         return subs.map(s => {
             if (s.overlay?.type === 'ai-motion-graphic') {
-                const code = reactCodeMap.get(s.id);
-                if (code) {
-                    s.overlay.props = { ...s.overlay.props, reactCode: code, global: false };
+                const generatedProps = generatedMap.get(s.id);
+                if (generatedProps) {
+                    s.overlay.props = { ...s.overlay.props, ...generatedProps };
                 }
             }
             return s;
@@ -774,7 +834,7 @@ export default function EditorPage() {
     }, [state.isTranscribing, state.subtitles, state.isGenerating, state.projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ... handlers for timeline, layout etc ...
-    const handleSegmentUpdate = (id: string, updates: any) => {
+    const handleSegmentUpdate = (id: string, updates: Partial<SubtitleSegment>) => {
         const newSubs = state.subtitles.map(s => s.id === id ? { ...s, ...updates } : s);
         updateState({ subtitles: newSubs });
     };
@@ -988,7 +1048,7 @@ export default function EditorPage() {
 
     const overlayCount = state.subtitles.filter(seg => seg.overlay).length;
 
-    const applyOverlay = (segmentId: string, overlayType: OverlayType, props: any) => {
+    const applyOverlay = (segmentId: string, overlayType: OverlayType, props: Record<string, unknown>) => {
         const newSubtitles = state.subtitles.map(s =>
             s.id === segmentId ? { ...s, overlay: { type: overlayType, props } } : s
         );
@@ -1414,7 +1474,7 @@ export default function EditorPage() {
                         return (
                             <OverlayContextMenu key={activePopup.segmentId} segmentId={activePopup.segmentId}
                                 segmentText={seg?.text || ''} existingOverlayType={seg?.overlay?.type}
-                                existingProps={seg?.overlay?.props} onApply={(type, props) => applyOverlay(activePopup.segmentId, type, props)}
+                                existingProps={seg?.overlay?.props} onApply={(type, props) => applyOverlay(activePopup.segmentId, type, props ?? {})}
                                 onApplyConfig={(config) => {
                                     const targetId = activePopup?.segmentId || state.selectedSegmentId;
                                     if (!targetId) return;

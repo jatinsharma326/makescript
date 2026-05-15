@@ -1,7 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img, random } from 'remotion';
+import React, { useMemo } from 'react';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, Img } from 'remotion';
 import * as Babel from '@babel/standalone';
-import { CanvasMotionGraphic } from './CanvasMotionGraphic';
 
 interface AiMotionGraphicProps {
     reactCode?: string;
@@ -16,14 +15,14 @@ interface AiMotionGraphicProps {
 
 // Error boundary to catch errors in dynamically evaluated React components
 class ErrorBoundary extends React.Component<{ children: React.ReactNode; fallback: React.ReactNode }, { hasError: boolean }> {
-    constructor(props: any) {
+    constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
         super(props);
         this.state = { hasError: false };
     }
     static getDerivedStateFromError() {
         return { hasError: true };
     }
-    componentDidCatch(error: any) {
+    componentDidCatch(error: unknown) {
         console.error('[LiveMotionGraphic] Evaluation error:', error);
     }
     render() {
@@ -36,7 +35,6 @@ import * as Remotion from 'remotion';
 export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
     reactCode,
     svgContent,
-    text,
     imageUrl,
     label,
     color = '#6366f1',
@@ -91,10 +89,10 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
             }
             
             console.log(`[AiMotionGraphic] ✅ Component loaded successfully: ${Component.name || 'anonymous'}`);
-            return { Component: Component as React.FC<any>, error: null };
-        } catch (err: any) {
+            return { Component: Component as React.FC, error: null };
+        } catch (err: unknown) {
             console.error('[AiMotionGraphic] ❌ Failed to compile/evaluate React code:', err);
-            return { Component: null, error: err.message || String(err) };
+            return { Component: null, error: err instanceof Error ? err.message : String(err) };
         }
     }, [reactCode]);
 
@@ -161,15 +159,6 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
         );
     }
 
-    // PRIORITY 3: If no AI-generated React code or SVG, don't show a fallback.
-    // Let the video play through without an ugly text overlay.
-    // The CanvasMotionGraphic was previously used here but it just showed
-    // simple text with colors which looked unprofessional.
-    if (!reactCode && !svgContent) {
-        return null;
-    }
-
-    // FALLBACK: Image-based motion graphic
     // FALLBACK: Image-based motion graphic
     if (imageUrl) {
         const slideUp = interpolate(localFrame, [0, 15], [40, 0], { extrapolateRight: 'clamp' });
@@ -278,6 +267,12 @@ export const AiMotionGraphic: React.FC<AiMotionGraphicProps> = ({
                 }} />
             </AbsoluteFill>
         );
+    }
+
+    // PRIORITY 3: If no AI-generated React code, SVG, or image, don't show a fallback.
+    // Let the video play through without an ugly text overlay.
+    if (!reactCode && !svgContent) {
+        return null;
     }
 
     return null;

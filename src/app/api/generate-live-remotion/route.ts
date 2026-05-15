@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const CROF_API = 'https://crof.ai/v2/chat/completions';
 const CROF_API_KEY = process.env.CROF_API_KEY || '';
 const CROF_MODEL = 'kimi-k2.6-precision';
+const CROF_TIMEOUT_MS = 30000;
 
 interface MotionReactRequest {
   text: string;
@@ -190,6 +191,7 @@ Return ONLY the raw JavaScript code starting with the import statement.`;
 
     const res = await fetch(CROF_API, {
       method: 'POST',
+      signal: AbortSignal.timeout(CROF_TIMEOUT_MS),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${CROF_API_KEY}`,
@@ -369,8 +371,8 @@ const safeInterpolate = (value, inputRange, outputRange, options) => {
       source: CROF_MODEL
     });
 
-  } catch (error: any) {
-    const msg = error?.message || String(error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     console.error(`[GenerateLiveRemotion] Error: ${msg}`);
     return NextResponse.json(
       { reactCode: '', success: false, error: msg },

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const CROF_API = process.env.CROF_API_URL || 'https://crof.ai/v2/chat/completions';
 const CROF_API_KEY = process.env.CROF_API_KEY || '';
 const CROF_MODEL = process.env.CROF_MODEL || 'kimi-k2.6-precision';
+const CROF_TIMEOUT_MS = 20000;
 
 interface MotionSvgRequest {
   text: string;
@@ -70,6 +71,7 @@ async function callLLM(systemPrompt: string, userPrompt: string): Promise<string
       console.log(`[MotionSVG] Calling ${CROF_MODEL} via crof.ai (attempt ${attempt}/2)`);
       const res = await fetch(CROF_API, {
         method: 'POST',
+        signal: AbortSignal.timeout(CROF_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CROF_API_KEY}`,
