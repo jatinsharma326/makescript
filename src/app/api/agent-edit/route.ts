@@ -63,14 +63,9 @@ OVERLAY TYPES (choose the best type for each segment):
    Props: { "label": "2-4 word CAPITALIZED label", "color": "<hex>", "topic": "<topic-keyword>", "mood": "energetic|calm|dramatic|warm" }
    This generates a UNIQUE animated React component for each segment. USE THIS AS YOUR PRIMARY OVERLAY TYPE.
 
-2. "ai-generated-image" u2014 AI-GENERATED CINEMATIC IMAGE. Use for segments that would benefit from a photo-realistic background.
-   Props: { "imagePrompt": "detailed cinematic image description, 50-100 words", "caption": "2-4 word label", "color": "<hex>" }
-   Write vivid, specific imagePrompts u2014 describe the actual scene, lighting, mood, composition.
-
 OVERLAY STRATEGY:
 - Overlay 40-60% of segments. Skip filler.
-- Use "ai-motion-graphic" for most overlays u2014 it creates unique animated graphics.
-- Use "ai-generated-image" for 2-4 segments that would look best with a cinematic photo background.
+- Use "ai-motion-graphic" for ALL overlays. Do NOT use any other type of overlay.
 - NEVER overlay consecutive segments u2014 minimum 1 segment gap.
 - Every overlay MUST have a unique label/caption specific to the segment content.
 AVAILABLE EFFECTS (applied to the base video layer):
@@ -127,7 +122,7 @@ Return a SINGLE JSON object (no markdown, no explanation, just valid JSON):
       {
         "segmentId": "seg_4",
         "action": "keep",
-        "overlay": { "type": "ai-generated-image", "props": { "imagePrompt": "Aerial view of a modern city skyline at golden hour, dramatic clouds, warm amber light reflecting off glass skyscrapers, cinematic shallow depth of field, professional color grading", "caption": "CITY GROWTH", "color": "#f59e0b" } },
+        "overlay": { "type": "ai-motion-graphic", "props": { "label": "CITY GROWTH", "color": "#f59e0b", "topic": "growth", "mood": "energetic" } },
         "effect": { "type": "ken-burns", "intensity": 1.15, "direction": "left" },
         "transition": null
       }

@@ -199,9 +199,9 @@ CRITICAL - TRANSPARENT BACKGROUND:
 - SVG elements should be the visual content, the background is the user's video.
 - Think of it like a HUD/overlay on top of video, NOT a replacement for video.`;
 
-    const userPrompt = `Create the Remotion component now. Each of the 6 scenes MUST have SVG shapes that visually illustrate the transcript content (not just text).
+    const userPrompt = `Create the Remotion component now. The scene MUST have SVG shapes that visually illustrate the transcript content (not just text).
 
-Follow the Visual Scene Plan above. For each scene, draw the described SVG elements.
+Follow the Visual Scene Plan above. Draw the described SVG elements.
 
 Return ONLY the raw JavaScript code starting with the import statement.`;
 
