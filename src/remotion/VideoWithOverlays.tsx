@@ -488,6 +488,7 @@ export const VideoWithOverlays: React.FC<VideoWithOverlaysProps> = ({
                                 imageUrl={seg.overlay.props.imageUrl ? String(seg.overlay.props.imageUrl) : undefined}
                                 label={seg.overlay.props.label ? String(seg.overlay.props.label) : undefined}
                                 color={seg.overlay.props.color ? String(seg.overlay.props.color) : undefined}
+                                scenePlan={seg.overlay.props.scenePlan ? seg.overlay.props.scenePlan : undefined}
                                 startFrame={actualStartFrame}
                                 endFrame={actualEndFrame}
                             />

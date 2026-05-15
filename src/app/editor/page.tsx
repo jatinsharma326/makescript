@@ -549,7 +549,7 @@ export default function EditorPage() {
     const preGenerateMotionSVGs = async (subs: SubtitleSegment[]): Promise<SubtitleSegment[]> => {
         // Find segments that request motion graphics but haven't been upgraded to the global version yet
         const motionSegs = subs.filter(
-            s => s.overlay?.type === 'ai-motion-graphic' && (!s.overlay?.props?.reactCode || !s.overlay?.props?.global)
+            s => s.overlay?.type === 'ai-motion-graphic' && (!s.overlay?.props?.scenePlan || !s.overlay?.props?.global)
         );
         if (motionSegs.length === 0) return subs;
 
@@ -585,11 +585,11 @@ export default function EditorPage() {
             
             const data = await res.json();
             
-            if (data.success && data.reactCode) {
-                addLog(`Global Motion Graphic ready! (${data.codeLength || data.reactCode.length} chars of React code)`);
+            if (data.success && data.scenePlan) {
+                addLog(`Global Motion Graphic ready! (${data.codeLength || JSON.stringify(data.scenePlan).length} chars of scene data)`);
                 return subs.map(s => {
                     if (s.id === firstSeg.id && s.overlay) {
-                        s.overlay.props = { ...s.overlay.props, reactCode: data.reactCode, global: true };
+                        s.overlay.props = { ...s.overlay.props, scenePlan: data.scenePlan, global: true };
                         return s;
                     }
                     // Remove ai-motion-graphic from other segments to avoid duplicates
